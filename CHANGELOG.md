@@ -3,6 +3,12 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.8.5] - 2026-11-06
+
+### Corregido
+- **Avisos de productos importados a mano**: un aviso (en la app y por Telegram) de un producto que el usuario pegó a mano, por ejemplo de Ferretería Ibérica, no decía que su precio no se consulta en directo, así que parecía que BuscaTron había comprobado esa tienda. Ahora el motivo añade «precio importado a mano hace X h, no en directo».
+- 1 prueba nueva (95 en total).
+
 ## [0.8.4] - 2026-11-07
 
 ### Añadido

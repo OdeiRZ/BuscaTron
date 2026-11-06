@@ -91,6 +91,11 @@ def borra_aviso(aviso_id):
         c.execute("UPDATE avisos SET oculto=1 WHERE id=?", (aviso_id,))
 
 
+def _edad(ts):
+    h = (time.time() - ts) / 3600
+    return "hace menos de 1 h" if h < 1 else f"hace {round(h)} h" if h < 48 else f"hace {round(h / 24)} días"
+
+
 def vacia_avisos():
     with bd.conecta() as c:
         c.execute("DELETE FROM avisos")
@@ -150,6 +155,8 @@ def revisa(seg_id, enviar=True):
                 motivo = _motivo(c, seg, x)
                 if not motivo:
                     continue
+                if x.get("importado"):      # no se consulta en directo: es lo que el usuario pegó a mano
+                    motivo += f" · precio importado a mano {_edad(x['importado'])}, no en directo"
                 ult = c.execute("SELECT precio, ts FROM avisos WHERE seg_id=? AND url=? ORDER BY ts DESC LIMIT 1",
                                 (seg_id, x["url"])).fetchone()
                 if ult and x["precio"] >= ult["precio"] - 0.005 and ts - ult["ts"] < REAVISO_DIAS * 86400:

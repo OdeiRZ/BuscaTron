@@ -114,6 +114,16 @@ class Avisos(Base):
         seguimiento.borra_aviso(a["id"])
         self.assertEqual([x["id"] for x in seguimiento.avisos()], [b["id"]])
 
+    def test_un_aviso_de_un_precio_importado_dice_que_no_es_en_directo(self):
+        self.sid = seguimiento.guarda({"consulta": "marvel", "objetivo": "40", "canales": "telegram"})
+        directo = item(30, url="https://t.es/directo")
+        importado = {**item(31, url="https://f.es/importado"), "importado": time.time() - 5 * 3600}
+        r = self.revisa_con([directo, importado], {"t.es": {"encontrados": 2, "error": None}})
+        motivos = {x["url"]: x["motivo"] for x in r["avisos"]}
+        self.assertNotIn("importado", motivos["https://t.es/directo"])
+        self.assertIn("importado a mano hace 5 h, no en directo", motivos["https://f.es/importado"])
+        self.assertIn("no en directo", self.enviados[0][2])                     # y también en el mensaje de Telegram
+
     def test_vaciar_avisos(self):
         self.sid = seguimiento.guarda({"consulta": "marvel", "objetivo": "40"})
         self.busca(30)
