@@ -158,6 +158,26 @@ class Producto(unittest.TestCase):
         self.assertIsNone(extract.datos_producto("<html><body>Nada que vender</body></html>"))
 
 
+class IdiomaDeLaFicha(unittest.TestCase):
+    def test_detalles_de_amazon_con_marcas_invisibles(self):
+        h = '<ul><li><span class="a-text-bold">Idioma \u200f : \u200e </span><span>Francés</span></li><li><span>Marca : \u200e </span><span>Asmodee</span></li></ul>'
+        self.assertEqual(extract.idioma_pagina(h), "Francés")
+
+    def test_tabla_de_detalles_y_valor_en_la_misma_linea(self):
+        self.assertEqual(extract.idioma_pagina("<table><tr><th>Idioma</th><td>Español</td></tr></table>"), "Español")
+        self.assertEqual(extract.idioma_pagina("<p>Idioma: Castellano, Inglés</p>"), "Castellano, Inglés")
+        self.assertEqual(extract.idioma_pagina("<span>Language:</span> <span>English</span>"), "English")
+
+    def test_sin_el_campo(self):
+        self.assertIsNone(extract.idioma_pagina("<p>Un juego estupendo para toda la familia</p>"))
+        self.assertIsNone(extract.idioma_pagina("<p>Idioma de la interfaz de usuario de la tienda y de las condiciones de venta aplicables en todos los casos</p>"))
+
+    def test_codigo_del_idioma(self):
+        for v, c in (("Francés", "otro"), ("Español", "es"), ("Castellano", "es"), ("Inglés", "en"), ("Español, Inglés", "es"),
+                     ("Italiano", "otro"), ("Spanish", "es"), ("", None), (None, None)):
+            self.assertEqual(extract.codigo_idioma(v), c, v)
+
+
 class Envio(unittest.TestCase):
     def test_envio_gratis_desde(self):
         h = "<p>Envío gratis a partir de 49 € en península</p><p>Gastos de envío: 4,95 €</p>"

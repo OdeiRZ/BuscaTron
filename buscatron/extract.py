@@ -290,6 +290,40 @@ def datos_producto(html, url=""):
     return None
 
 
+# ---- idioma real de un producto (ficha) --------------------------------------------------------------
+
+MARCAS_UNICODE = re.compile(r"[\u200e\u200f\u202a-\u202e]+")
+ETIQUETA_IDIOMA = re.compile(r"^(?:idiomas?|language|languages|langue|sprache)\b[\s:：-]*(.*)$", re.I)
+
+
+def idioma_pagina(html):
+    """Valor del campo «Idioma» de la ficha de un producto («Francés», «Español, Inglés»…) o None.
+    Lee las filas de detalles de Amazon y de otras tiendas, tanto «Idioma: Francés» como etiqueta y valor en elementos separados."""
+    p = _Parser("")
+    p.feed(html)
+    textos = [MARCAS_UNICODE.sub("", e[1]).strip() for e in p.eventos if e[0] == "x"]
+    for i, t in enumerate(textos):
+        m = ETIQUETA_IDIOMA.match(re.sub(r"\s+", " ", t))
+        if not m:
+            continue
+        valor = m.group(1).strip(" :：") or next((x.strip(" :：") for x in textos[i + 1:i + 3] if x.strip(" :：")), "")
+        if valor and len(valor) <= 60:
+            return valor
+    return None
+
+
+def codigo_idioma(valor):
+    """'es' | 'en' | 'otro' a partir del texto de la ficha; None si está vacío. Si admite varios idiomas, manda el castellano."""
+    n = normaliza(valor or "")
+    if not n.strip():
+        return None
+    if re.search(r"\b(castellano|espanol|spanish)\b", n):
+        return "es"
+    if re.search(r"\b(ingles|english)\b", n):
+        return "en"
+    return "otro"
+
+
 # ---- gastos de envío --------------------------------------------------------------------------------
 
 _GRATIS = re.compile(r"(?:env[ií]os?|portes|gastos de env[ií]o)(?:\s+[\w\-]+){0,3}?\s+(?:gratis|gratuitos?)[^.\d€]{0,45}?"

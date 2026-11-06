@@ -148,7 +148,9 @@ svg.graf-svg{width:100%;height:auto;display:block}
       <button id="go">Buscar</button>
     </div>
     <label class="sw"><input type="checkbox" id="sinag" checked> Ocultar agotados</label>
-    <label class="sw"><input type="checkbox" id="soloes" checked> Solo castellano</label>
+    <div style="margin-top:10px"><label for="idioma">Idioma de los juegos</label>
+      <select id="idioma"><option value="castellano">Solo castellano: oculta los que dicen otro idioma</option><option value="estricto">Castellano estricto: solo los que lo indican o lo parecen</option><option value="todos">Cualquier idioma</option></select>
+      <p class="ayuda" style="margin-top:4px">Muchas tiendas no ponen el idioma en el título. Cada producto lleva una etiqueta con lo que se sabe de él, y los avisos de los seguimientos comprueban además la ficha del producto.</p></div>
 
     <details id="mas">
       <summary>Más fuentes y opciones <span class="n" id="n-mas"></span></summary>
@@ -218,7 +220,8 @@ svg.graf-svg{width:100%;height:auto;display:block}
         <div><label for="s-horas">Revisar cada (horas)</label><input type="number" id="s-horas" inputmode="decimal" step="0.25" min="0.25" value="12"></div>
       </div>
       <label class="sw"><input type="checkbox" id="s-sinag" checked> Ignorar agotados</label>
-      <label class="sw"><input type="checkbox" id="s-es" checked> Solo productos en castellano</label>
+      <div style="margin-top:6px"><label for="s-idioma">Idioma de los juegos</label>
+        <select id="s-idioma"><option value="castellano">Solo castellano</option><option value="estricto">Castellano estricto</option><option value="todos">Cualquier idioma</option></select></div>
       <details>
         <summary>Más fuentes y opciones</summary>
         <label class="sw"><input type="checkbox" id="s-preventas"> Incluir preventas</label>
@@ -364,11 +367,14 @@ function filtrosN(){const n=['incluir','excluir','pmin','pmax'].filter(i=>$(i).v
 const OPC=['preventas','conenvio','segmano','abierta'];
 function opcionesN(){const n=OPC.filter(i=>$(i).checked).length;$('n-mas').textContent=n?`${n} activa${n>1?'s':''}`:'';
   $('region').disabled=!$('abierta').checked;
-  try{localStorage.setItem('bt-opc',JSON.stringify({...Object.fromEntries(OPC.map(i=>[i,$(i).checked])),region:$('region').value,paginas:$('paginas').value,sinag:$('sinag').checked,soloes:$('soloes').checked}))}catch(e){}}
-[...OPC,'region','paginas','sinag','soloes'].forEach(i=>$(i).onchange=opcionesN);
+  try{localStorage.setItem('bt-opc',JSON.stringify({...Object.fromEntries(OPC.map(i=>[i,$(i).checked])),region:$('region').value,paginas:$('paginas').value,sinag:$('sinag').checked,idioma:$('idioma').value}))}catch(e){}}
+[...OPC,'region','paginas','sinag','idioma'].forEach(i=>$(i).onchange=opcionesN);
 try{const o=JSON.parse(localStorage.getItem('bt-opc')||'{}');OPC.forEach(i=>{if(i in o)$(i).checked=!!o[i];});if(o.region)$('region').value=o.region;if(o.paginas)$('paginas').value=o.paginas;
-  if('sinag' in o)$('sinag').checked=!!o.sinag;if('soloes' in o)$('soloes').checked=!!o.soloes;}catch(e){}
+  if('sinag' in o)$('sinag').checked=!!o.sinag;if(o.idioma)$('idioma').value=o.idioma;}catch(e){}
 opcionesN();
+function idiomaTag(x){
+  const n={es:x.idioma_seguro?'Castellano':'Parece castellano',en:x.idioma_seguro?'Inglés':'Parece inglés',otro:'Otro idioma'}[x.idioma];
+  return n?`<span class="tag ${x.idioma==='es'?'ok':'ko'}">${n}</span>`:'';}
 function relativo(ts){const h=(Date.now()/1000-ts)/3600;return h<1?'hace menos de 1 h':h<48?`hace ${Math.round(h)} h`:`hace ${Math.round(h/24)} días`;}
 function pintaLista(){const c=$('lista-res');if(!c)return;
   c.innerHTML=ultimos.map((x,i)=>tarjeta(x,i,ultimoBody.con_envio)).join('');
@@ -379,13 +385,13 @@ function tarjeta(x,i,conEnvio){
   return `<div class="res ${i===0?'best':''}"><a class="cuerpo" href="${esc(x.url)}" target="_blank" rel="noopener">
     <div class="pr">${euro(usaTotal?x.total:x.precio)}${sub}</div>
     <div class="info"><div class="t">${esc(x.titulo)}</div>
-    <div class="meta"><span class="tag">${esc(nombreT(x.tienda))}</span>${i===0?'<span class="tag ok">Más barato</span>':''}${x.minimo?'<span class="tag ok">Mínimo histórico</span>':''}${sm?'<span class="tag">Segunda mano</span>':''}${x.estado?`<span class="tag">${esc(x.estado)}</span>`:''}${x.importado?`<span class="tag pre">Importado ${relativo(x.importado)}</span>`:''}${x.preventa?'<span class="tag pre">Preventa</span>':''}${x.agotado?'<span class="tag ko">Agotado</span>':''}${web?'<span class="tag pre">Otra web</span>':''}</div></div></a>
+    <div class="meta"><span class="tag">${esc(nombreT(x.tienda))}</span>${idiomaTag(x)}${i===0?'<span class="tag ok">Más barato</span>':''}${x.minimo?'<span class="tag ok">Mínimo histórico</span>':''}${sm?'<span class="tag">Segunda mano</span>':''}${x.estado?`<span class="tag">${esc(x.estado)}</span>`:''}${x.importado?`<span class="tag pre">Importado ${relativo(x.importado)}</span>`:''}${x.preventa?'<span class="tag pre">Preventa</span>':''}${x.agotado?'<span class="tag ko">Agotado</span>':''}${web?'<span class="tag pre">Otra web</span>':''}</div></div></a>
     <button type="button" class="graf" data-i="${i}" title="Historial de precios" aria-label="Ver historial de precios">📈</button></div>`;}
 function cuerpoForm(){return {q:$('q').value,incluir:$('incluir').value,excluir:$('excluir').value,pmin:$('pmin').value,pmax:$('pmax').value,
-  top:$('top').value,sin_agotados:$('sinag').checked,castellano:$('soloes').checked,tiendas:tiendas.filter(t=>t.activa).map(t=>t.host),
+  top:$('top').value,sin_agotados:$('sinag').checked,castellano:$('idioma').value!=='todos',idioma:$('idioma').value,tiendas:tiendas.filter(t=>t.activa).map(t=>t.host),
   preventas:$('preventas').checked,con_envio:$('conenvio').checked,segunda_mano:$('segmano').checked,abierta:$('abierta').checked,region:$('region').value,paginas:$('paginas').value};}
 function aplicaParams(p){$('q').value=p.q||'';$('incluir').value=p.incluir||'';$('excluir').value=p.excluir||'';$('pmin').value=p.pmin??'';$('pmax').value=p.pmax??'';
-  if(p.top)$('top').value=p.top;$('sinag').checked=p.sin_agotados!==false;$('soloes').checked=p.castellano!==false;
+  if(p.top)$('top').value=p.top;$('sinag').checked=p.sin_agotados!==false;$('idioma').value=p.idioma||(p.castellano===false?'todos':'castellano');
   $('preventas').checked=!!p.preventas;$('conenvio').checked=!!p.con_envio;$('segmano').checked=!!p.segunda_mano;$('abierta').checked=!!p.abierta;
   if(p.region)$('region').value=p.region;if(p.paginas)$('paginas').value=p.paginas;filtrosN();opcionesN();}
 function muestra(r,body,guardada){
@@ -417,7 +423,7 @@ $('f').onsubmit=async e=>{e.preventDefault();const b=$('go');b.disabled=true;b.t
   finally{b.disabled=false;b.textContent='Buscar';}};
 
 /* búsquedas recientes (guardadas con sus resultados) */
-function resumenParams(p){const e=[p.pmin&&`desde ${p.pmin} €`,p.pmax&&`hasta ${p.pmax} €`,p.incluir&&`con ${p.incluir}`,p.excluir&&`sin ${p.excluir}`,p.segunda_mano&&'segunda mano',p.abierta&&'otras webs'].filter(Boolean);
+function resumenParams(p){const e=[p.idioma==='estricto'&&'castellano estricto',p.idioma==='todos'&&'cualquier idioma',p.pmin&&`desde ${p.pmin} €`,p.pmax&&`hasta ${p.pmax} €`,p.incluir&&`con ${p.incluir}`,p.excluir&&`sin ${p.excluir}`,p.segunda_mano&&'segunda mano',p.abierta&&'otras webs'].filter(Boolean);
   return e.length?esc(e.join(', ')):'sin filtros';}
 async function cargaRec(restaurar){
   const l=await api('busquedas');recientes=Array.isArray(l)?l:[];
@@ -435,7 +441,7 @@ $('rec-vaciar').onclick=async()=>{if(confirm('¿Borrar todas las búsquedas guar
 
 function vigilar(){limpiaSeg();$('s-consulta').value=$('q').value;$('s-nombre').value=$('q').value;$('s-incluir').value=$('incluir').value;
   $('s-excluir').value=$('excluir').value;$('s-pmin').value=$('pmin').value;$('s-pmax').value=$('pmax').value;
-  $('s-sinag').checked=$('sinag').checked;$('s-es').checked=$('soloes').checked;
+  $('s-sinag').checked=$('sinag').checked;$('s-idioma').value=$('idioma').value;
   $('s-preventas').checked=$('preventas').checked;$('s-conenvio').checked=$('conenvio').checked;$('s-segmano').checked=$('segmano').checked;
   $('s-abierta').checked=$('abierta').checked;$('s-region').value=$('region').value;$('s-paginas').value=$('paginas').value;
   ir('seguir');$('sf-det').open=true;}
@@ -508,8 +514,8 @@ $('sf').onsubmit=async e=>{e.preventDefault();
   const canales=['app',$('c-telegram').checked&&'telegram',$('c-correo').checked&&'correo'].filter(Boolean).join(',');
   const r=await api('seguimientos',{accion:'guardar',id:$('s-id').value||undefined,nombre:$('s-nombre').value,consulta:$('s-consulta').value,
     incluir:$('s-incluir').value,excluir:$('s-excluir').value,pmin:$('s-pmin').value,pmax:$('s-pmax').value,objetivo:$('s-objetivo').value,
-    bajo_historico:$('s-hist').value,cada_horas:$('s-horas').value,sin_agotados:$('s-sinag').checked,castellano:$('s-es').checked,canales,
-    opciones:{preventas:$('s-preventas').checked,con_envio:$('s-conenvio').checked,segunda_mano:$('s-segmano').checked,abierta:$('s-abierta').checked,region:$('s-region').value,paginas:$('s-paginas').value}});
+    bajo_historico:$('s-hist').value,cada_horas:$('s-horas').value,sin_agotados:$('s-sinag').checked,castellano:$('s-idioma').value!=='todos',canales,
+    opciones:{preventas:$('s-preventas').checked,con_envio:$('s-conenvio').checked,segunda_mano:$('s-segmano').checked,abierta:$('s-abierta').checked,region:$('s-region').value,paginas:$('s-paginas').value,idioma:$('s-idioma').value}});
   if(r.error){aviso(r.error);return;} limpiaSeg();$('sf-det').open=false;pintaSeg(r);aviso('Seguimiento guardado');};
 async function cargaSeg(){pintaSeg(await api('seguimientos'));}
 function pintaSeg(l){segs=l;$('seg-lista').innerHTML=l.length?l.map(s=>{
@@ -531,12 +537,12 @@ function proxima(s){const t=(s.ultima||0)+s.cada_horas*3600,ahora=Date.now()/100
   if(!s.ultima||t<=ahora)return 'toca ya (se lanza sola en menos de un minuto si BuscaTron está en marcha)';
   const h=(t-ahora)/3600;return `en ${h<1?Math.max(1,Math.round(h*60))+' min':Math.round(h*10)/10+' h'} (${fecha(t)})`;}
 function extrasSeg(s){const o=s.opciones||{};
-  const e=[o.preventas&&'preventas',o.con_envio&&'con envío',o.segunda_mano&&'segunda mano',o.abierta&&`otras webs (${{es:'España',ue:'UE',mundo:'todo el mundo'}[o.region]||'España'})`,o.paginas&&`${o.paginas} páginas`].filter(Boolean);
+  const e=[o.idioma==='estricto'&&'castellano estricto',o.idioma==='todos'&&'cualquier idioma',o.preventas&&'preventas',o.con_envio&&'con envío',o.segunda_mano&&'segunda mano',o.abierta&&`otras webs (${{es:'España',ue:'UE',mundo:'todo el mundo'}[o.region]||'España'})`,o.paginas&&`${o.paginas} páginas`].filter(Boolean);
   return e.length?`<div class="l">➕ ${esc(e.join(' · '))}</div>`:'';}
 function editaSeg(id){const s=segs.find(x=>x.id===id);$('sf-tit').textContent='✏️ Editar seguimiento';$('s-id').value=s.id;
   $('s-nombre').value=s.nombre;$('s-consulta').value=s.consulta;$('s-incluir').value=s.incluir;$('s-excluir').value=s.excluir;
   $('s-pmin').value=s.pmin??'';$('s-pmax').value=s.pmax??'';$('s-objetivo').value=s.objetivo??'';$('s-hist').value=s.bajo_historico||'';
-  $('s-horas').value=s.cada_horas;$('s-sinag').checked=!!s.sin_agotados;$('s-es').checked=!!s.castellano;
+  $('s-horas').value=s.cada_horas;$('s-sinag').checked=!!s.sin_agotados;$('s-idioma').value=(s.opciones&&s.opciones.idioma)||(s.castellano?'castellano':'todos');
   const o=s.opciones||{};$('s-preventas').checked=!!o.preventas;$('s-conenvio').checked=!!o.con_envio;$('s-segmano').checked=!!o.segunda_mano;$('s-abierta').checked=!!o.abierta;$('s-region').value=o.region||'es';$('s-paginas').value=o.paginas||'';
   $('c-telegram').checked=s.canales.includes('telegram');$('c-correo').checked=s.canales.includes('correo');$('sf-det').open=true;scrollTo(0,0);}
 async function pausa(id){const s=segs.find(x=>x.id===id);pintaSeg(await api('seguimientos',{accion:'guardar',...s,activo:!s.activo,sin_agotados:!!s.sin_agotados}));}

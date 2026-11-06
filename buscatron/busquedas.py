@@ -5,7 +5,7 @@ import time
 from . import bd
 
 MAXIMO = 12     # búsquedas que se conservan; al pasar de ahí se borran las más antiguas
-CLAVES = ("q", "incluir", "excluir", "pmin", "pmax", "top", "sin_agotados", "castellano", "preventas", "con_envio",
+CLAVES = ("q", "incluir", "excluir", "pmin", "pmax", "top", "sin_agotados", "castellano", "idioma", "preventas", "con_envio",
           "segunda_mano", "abierta", "region", "paginas")
 
 

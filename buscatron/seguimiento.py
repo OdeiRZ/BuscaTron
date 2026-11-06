@@ -8,7 +8,7 @@ from . import bd, motor, notifica
 
 CAMPOS = ("nombre", "consulta", "incluir", "excluir", "pmin", "pmax", "objetivo", "bajo_historico",
           "sin_agotados", "castellano", "opciones", "canales", "cada_horas", "activo")
-OPCIONES = {"preventas": False, "con_envio": False, "segunda_mano": False, "abierta": False, "region": "es", "paginas": None}
+OPCIONES = {"preventas": False, "con_envio": False, "segunda_mano": False, "abierta": False, "region": "es", "paginas": None, "idioma": None}
 MIN_OBSERVACIONES = 4      # mínimo de precios previos de un artículo para fiarse de su media
 REAVISO_DIAS = 30
 _cerrojo = threading.Lock()
@@ -44,7 +44,8 @@ def _opciones(o):
     region = o.get("region") if o.get("region") in ("es", "ue", "mundo") else "es"
     paginas = _num(o.get("paginas", ""))
     return {"preventas": bool(o.get("preventas")), "con_envio": bool(o.get("con_envio")), "segunda_mano": bool(o.get("segunda_mano")),
-            "abierta": bool(o.get("abierta")), "region": region, "paginas": int(min(max(paginas, 1), 6)) if paginas else None}
+            "abierta": bool(o.get("abierta")), "region": region, "paginas": int(min(max(paginas, 1), 6)) if paginas else None,
+            "idioma": o.get("idioma") if o.get("idioma") in ("castellano", "estricto", "todos") else None}
 
 
 def guarda(d):
@@ -148,6 +149,17 @@ def revisa(seg_id, enviar=True):
                                     None, seg["pmin"], seg["pmax"], seg_id,
                                     castellano=bool(seg["castellano"]), **opciones_de(seg))
         limpia_avisos(seg_id, res, informe)
+        opc = opciones_de(seg)
+        modo = motor.modo_idioma(bool(seg["castellano"]), opc.get("idioma"))
+        if modo != "todos":
+            # Los títulos no siempre dicen el idioma (Amazon traduce los suyos): antes de avisar se mira la ficha del producto.
+            with bd.conecta() as c0:
+                dudosos = [x for x in res if not (x.get("idioma") == "es" and x.get("idioma_seguro")) and _motivo(c0, seg, {**x, "_ts": ts})]
+            lista = motor.cfg.carga()
+            for x in dudosos:
+                cod = motor.verifica_idioma(x, lista)
+                if cod:
+                    x["idioma"], x["idioma_seguro"], x["idioma_verificado"] = cod, True, True
         nuevos = []
         with bd.conecta() as c:
             for x in res:
@@ -155,6 +167,10 @@ def revisa(seg_id, enviar=True):
                 motivo = _motivo(c, seg, x)
                 if not motivo:
                     continue
+                if modo != "todos" and not motor.permite(x.get("idioma", "?"), x.get("idioma_seguro", False), modo):
+                    continue                  # su ficha dice que no está en castellano
+                if modo != "todos" and not (x.get("idioma") == "es" and x.get("idioma_seguro")):
+                    motivo += " · idioma no verificado"
                 if x.get("importado"):      # no se consulta en directo: es lo que el usuario pegó a mano
                     motivo += f" · precio importado a mano {_edad(x['importado'])}, no en directo"
                 ult = c.execute("SELECT precio, ts FROM avisos WHERE seg_id=? AND url=? ORDER BY ts DESC LIMIT 1",

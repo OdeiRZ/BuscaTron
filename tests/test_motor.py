@@ -120,6 +120,86 @@ class Buscar(unittest.TestCase):
         self.assertFalse(a["Juego B"]["minimo"])              # sin historial no hay mínimo
 
 
+class ClasificaIdioma(unittest.TestCase):
+    def test_lo_que_dice_expresamente_es_seguro(self):
+        for t, esperado in (("Marvel Champions: Civil War (Castellano)", ("es", True)), ("Edición en español", ("es", True)),
+                            ("Hero pack (Inglés)", ("en", True)), ("Jeu en Français", ("otro", True)),
+                            ("Game, 1 to 4 Players, Ages 14+", ("en", True))):
+            self.assertEqual(motor.idioma_de(t), esperado, t)
+
+    def test_deduccion_por_las_palabras(self):
+        self.assertEqual(motor.idioma_de("Marvel Champions: La Tiranía del Cráneo Rojo"), ("es", False))          # artículos y acentos
+        self.assertEqual(motor.idioma_de("Fundas Marvel Champions Guardians of the Galaxy Logo"), ("?", False))   # mezcla: no se afirma nada
+        self.assertEqual(motor.idioma_de("INSERTO MARVEL CHAMPIONS: THE CARD GAME FS-MARCH"), ("en", False))
+        self.assertEqual(motor.idioma_de("Civil War Expansion - Marvel Champions"), ("?", False))                  # sin pistas
+        self.assertEqual(motor.idioma_de("Marvel Champions: Vision"), ("?", False))
+
+    def test_los_tres_modos(self):
+        casos = {"Juego (Castellano)": (True, True, True), "Los héroes de la caja": (True, True, True),
+                 "Juego English": (False, False, True), "The Game of the Year": (True, False, True), "Marvel Champions Vision": (True, False, True)}
+        for t, (castellano, estricto, todos) in casos.items():
+            self.assertEqual((motor.pasa_idioma(t, "castellano"), motor.pasa_idioma(t, "estricto"), motor.pasa_idioma(t, "todos")),
+                             (castellano, estricto, todos), t)
+
+
+class IdiomaDeLaTienda(unittest.TestCase):
+    def it(self, *titulos):
+        return [{"titulo": t} for t in titulos]
+
+    def test_la_preposicion_de_y_heroes_cuentan_como_espanol(self):
+        self.assertEqual(motor.idioma_de("Marvel champions the card game deadpool pack de heroes"), ("?", False))   # mezcla: no se afirma inglés
+        self.assertEqual(motor.idioma_de("Pack de héroes Hulk"), ("es", False))
+
+    def test_una_tienda_en_su_mayoria_castellana_aporta_su_prior(self):
+        espanola = self.it("Juego A (Castellano)", "Los héroes de la caja", "Pack de héroes Hulk", "Marvel Champions: Motivos Siniestros")
+        self.assertEqual(motor.prior_tienda(espanola), "es")
+        self.assertEqual(motor.idioma_con_tienda("Marvel Champions: Motivos Siniestros", "es"), ("es", False))
+        self.assertEqual(motor.idioma_con_tienda("Marvel Champions: Motivos Siniestros", None), ("?", False))
+
+    def test_una_tienda_mixta_no_aporta_prior_ni_cambia_lo_que_se_ve_claro(self):
+        amazon = self.it("Hero Pack Hulk - Card Game", "Hero Pack Thor - Card Game", "Ficha (Castellano)", "Los héroes de la caja", "Pack de héroes Wasp")
+        self.assertIsNone(motor.prior_tienda(amazon))
+        self.assertEqual(motor.idioma_con_tienda("Game of the Year", "es"), ("en", False))   # el prior solo rellena lo que no se sabe
+
+
+class IdiomaEnLaBusqueda(unittest.TestCase):
+    def setUp(self):
+        d = tempfile.mkdtemp()
+        self.parches = [mock.patch.object(bd, "RUTA", os.path.join(d, "t.db")), mock.patch.object(ajustes, "RUTA", os.path.join(d, "c.json")),
+                        mock.patch.object(tiendas, "guarda", lambda l: None), mock.patch.object(tiendas, "carga", lambda: [{"host": "a.es", "activa": True}])]
+        titulos = ["Juego (Castellano)", "Los héroes de la caja", "Juego English", "The Game of the Year", "Marvel Champions Vision"]
+        self.parches.append(mock.patch.object(motor, "_tienda", lambda t, c, nav=None, paginas=1: (t["host"], [
+            {"titulo": x, "url": "https://x/" + str(i), "precio": 10.0 + i, "agotado": False, "preventa": False, "estado": ""} for i, x in enumerate(titulos)], None)))
+        for p in self.parches:
+            p.start()
+        ajustes.guarda({"usar_navegador": False, "segunda_mano_sembrada": True, "amazon_automatico": True})
+
+    def tearDown(self):
+        for p in self.parches:
+            p.stop()
+
+    def titulos(self, **kw):
+        return [x["titulo"] for x in motor.buscar("juego", **kw)[0]]
+
+    def test_castellano_es_el_modo_por_defecto_y_oculta_solo_lo_expreso(self):
+        self.assertEqual(self.titulos(), ["Juego (Castellano)", "Los héroes de la caja", "The Game of the Year", "Marvel Champions Vision"])
+
+    def test_estricto_deja_solo_lo_que_esta_o_parece_en_castellano(self):
+        self.assertEqual(self.titulos(idioma="estricto"), ["Juego (Castellano)", "Los héroes de la caja"])
+
+    def test_todos_no_filtra_y_el_parametro_antiguo_sigue_valiendo(self):
+        self.assertEqual(len(self.titulos(idioma="todos")), 5)
+        self.assertEqual(len(self.titulos(castellano=False)), 5)                      # compatibilidad con «castellano» a secas
+        self.assertEqual(len(self.titulos(idioma="no-existe", castellano=True)), 4)   # un valor desconocido se ignora
+
+    def test_cada_resultado_dice_su_idioma(self):
+        r = {x["titulo"]: (x["idioma"], x["idioma_seguro"]) for x in motor.buscar("juego", idioma="todos")[0]}
+        self.assertEqual(r["Juego (Castellano)"], ("es", True))
+        self.assertEqual(r["Los héroes de la caja"], ("es", False))
+        self.assertEqual(r["Juego English"], ("en", True))
+        self.assertEqual(r["Marvel Champions Vision"], ("?", False))
+
+
 class Cortesia(unittest.TestCase):
     """BuscaTron no machaca las tiendas: pausas, tope de direcciones, 429 y tiendas caídas."""
 

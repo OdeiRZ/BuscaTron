@@ -189,7 +189,7 @@ class Handler(BaseHTTPRequestHandler):
             res, inf = motor.buscar(c.get("q", "").strip(), c.get("incluir", ""), c.get("excluir", ""),
                                     bool(c.get("sin_agotados", True)), c.get("tiendas"),
                                     _num(c.get("pmin", "")), _num(c.get("pmax", "")),
-                                    castellano=bool(c.get("castellano", True)), preventas=bool(c.get("preventas")),
+                                    castellano=bool(c.get("castellano", True)), idioma=c.get("idioma") if c.get("idioma") in motor.MODOS_IDIOMA else None, preventas=bool(c.get("preventas")),
                                     con_envio=bool(c.get("con_envio")), segunda_mano=bool(c.get("segunda_mano")),
                                     abierta=bool(c.get("abierta")), region=c.get("region") if c.get("region") in ("es", "ue", "mundo") else "es",
                                     paginas=int(_num(c.get("paginas", "")) or 0) or None)

@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS seguimientos(
 CREATE TABLE IF NOT EXISTS busquedas(
     id INTEGER PRIMARY KEY AUTOINCREMENT, ts REAL, consulta TEXT, firma TEXT, params TEXT, resultados TEXT, total INTEGER, informe TEXT, webs TEXT);
 CREATE INDEX IF NOT EXISTS ix_busquedas ON busquedas(ts);
+CREATE TABLE IF NOT EXISTS idiomas(url TEXT PRIMARY KEY, valor TEXT, codigo TEXT, ts REAL);
 CREATE TABLE IF NOT EXISTS importados(
     host TEXT, ts REAL, consulta TEXT, titulo TEXT, url TEXT, precio REAL, agotado INTEGER DEFAULT 0, preventa INTEGER DEFAULT 0);
 CREATE INDEX IF NOT EXISTS ix_importados ON importados(host, ts);

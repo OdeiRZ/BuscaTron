@@ -104,10 +104,97 @@ OTROS_IDIOMAS = re.compile(r"\b(ingles|inglesa|english|frances|francesa|francais
 ES = re.compile(r"\b(castellano|espanol|espanola)\b")
 
 
+EN_EXPLICITO = re.compile(r"\b(ingles|inglesa|english|players|playing time|minutes)\b|\bages \d+")
+ES_PALABRAS = {"el", "la", "los", "las", "del", "de", "al", "para", "con", "sin", "una", "uno", "juego", "juegos", "carta", "cartas", "heroe", "heroes",
+               "escenario", "escenarios", "jugadores", "tapete", "fundas", "funda", "ampliacion", "caja", "dados", "tablero", "campana"}
+EN_PALABRAS = {"the", "of", "and", "for", "with", "your", "players", "ages", "minutes", "playing", "time", "game", "card", "cards",
+               "scenario", "scenarios", "campaign", "playmat", "official", "core"}
+MODOS_IDIOMA = ("castellano", "estricto", "todos")
+
+
+def idioma_de(titulo):
+    """Idioma de un producto según su título: (código, seguro).
+    código: 'es' | 'en' | 'otro' | '?' (no se sabe). seguro: el título lo dice expresamente (Castellano, Inglés, Français…);
+    si no, es una deducción por las palabras (artículos y términos españoles frente a ingleses)."""
+    n = extract.normaliza(titulo)
+    if ES.search(n):
+        return "es", True
+    if OTROS_IDIOMAS.search(n):
+        return ("en" if EN_EXPLICITO.search(n) else "otro"), True
+    palabras = set(n.split())
+    es = len(palabras & ES_PALABRAS) + (1 if re.search(r"[ñáéíóúü¿¡]", titulo.lower()) else 0)
+    en = len(palabras & EN_PALABRAS)
+    if es >= 1 and es >= en:
+        return "es", False
+    if es == 0 and en >= 2:
+        return "en", False
+    return "?", False
+
+
+def permite(cod, seguro, modo):
+    """castellano: oculta solo lo que dice expresamente otro idioma · estricto: deja solo lo que está o parece en castellano ·
+    todos: no filtra."""
+    if modo == "todos":
+        return True
+    if modo == "estricto":
+        return cod == "es"
+    return not (cod in ("en", "otro") and seguro)
+
+
+def modo_idioma(castellano=True, idioma=None):
+    return idioma if idioma in MODOS_IDIOMA else ("castellano" if castellano else "todos")
+
+
+def verifica_idioma(x, lista=None):
+    """El idioma REAL del producto, leyendo su ficha («Idioma: Francés»): el título no basta, porque algunas tiendas
+    (Amazon) traducen los títulos de sus anuncios. Devuelve 'es' | 'en' | 'otro' | None (no se pudo saber).
+    Guarda el resultado 30 días para no volver a pedir la ficha."""
+    if "btitem=" in x["url"]:
+        return None                                       # lo importado a mano no tiene ficha que consultar
+    with bd.conecta() as c:
+        f = c.execute("SELECT codigo, ts FROM idiomas WHERE url=?", (x["url"],)).fetchone()
+    if f and time.time() - f["ts"] < 30 * 86400:
+        return f["codigo"] or None
+    t = next((t for t in (lista or cfg.carga()) if t["host"] == x.get("tienda")), {})
+    try:
+        if t.get("js") and navegador.disponible() and ajustes.carga()["usar_navegador"]:
+            st, html = navegador.get(x["url"], visible=False)
+        else:
+            st, html = fetch.get(x["url"], timeout=20)
+    except Exception:
+        return None
+    if st != 200:
+        return None
+    valor = extract.idioma_pagina(html)
+    cod = extract.codigo_idioma(valor)
+    with bd.conecta() as c:
+        c.execute("INSERT OR REPLACE INTO idiomas(url, valor, codigo, ts) VALUES(?,?,?,?)", (x["url"], valor or "", cod or "", time.time()))
+    return cod
+
+
+def pasa_idioma(titulo, modo):
+    return permite(*idioma_de(titulo), modo)
+
+
+def prior_tienda(items):
+    """'es' si la mayoría de los títulos reconocibles de una tienda están en castellano (así los que no dicen nada se
+    tratan como «parece castellano»); None si la tienda es mixta, como Amazon."""
+    cods = [idioma_de(x["titulo"])[0] for x in items]
+    es, otros = cods.count("es"), sum(1 for c in cods if c in ("en", "otro"))
+    return "es" if es >= 3 and es >= 2 * otros else None
+
+
+def idioma_con_tienda(titulo, prior):
+    cod, seguro = idioma_de(titulo)
+    if cod == "?" and prior == "es":
+        return "es", False
+    return cod, seguro
+
+
 def en_otro_idioma(titulo):
     """True si el título indica claramente otro idioma y no menciona el castellano."""
-    n = extract.normaliza(titulo)
-    return bool(OTROS_IDIOMAS.search(n)) and not ES.search(n)
+    cod, seguro = idioma_de(titulo)
+    return cod in ("en", "otro") and seguro
 
 
 def envio_de(t, precio):
@@ -145,13 +232,14 @@ def historial_de(url):
 
 
 def buscar(consulta, incluir="", excluir="", ocultar_agotados=True, hosts=None, pmin=None, pmax=None, seg_id=None,
-           castellano=True, preventas=False, con_envio=False, segunda_mano=False, abierta=False, region="es", paginas=None):
+           castellano=True, preventas=False, con_envio=False, segunda_mano=False, abierta=False, region="es", paginas=None, idioma=None):
     """Devuelve (resultados ordenados por precio, informe por tienda).
     preventas: incluir productos en preventa · con_envio: ordenar por precio + envío · segunda_mano: incluir
     Vinted, Milanuncios… · abierta: buscar también en webs que no están en la lista (region: es | ue | mundo)."""
     lista = cfg.carga()
     aj = ajustes.carga()
     paginas = paginas or int(aj.get("paginas") or 1)
+    modo = modo_idioma(castellano, idioma)
     activas = [t for t in lista if (t["host"] in hosts if hosts is not None else t.get("activa", True))]
     if not segunda_mano:
         activas = [t for t in activas if t.get("tipo") != "segunda_mano"]
@@ -162,12 +250,13 @@ def buscar(consulta, incluir="", excluir="", ocultar_agotados=True, hosts=None, 
     exc = extract.normaliza(excluir).split()
     nav = {"visible": False} if aj["usar_navegador"] and navegador.disponible() else None   # siempre en segundo plano
 
-    def pasa(x):
+    def pasa(x, prior=None):
+        x["idioma"], x["idioma_seguro"] = idioma_con_tienda(x["titulo"], prior)
         n = extract.normaliza(x["titulo"])
         return (all(w in n for w in inc) and not any(w in n for w in exc)
                 and not (ocultar_agotados and x["agotado"])
                 and not (x.get("preventa") and not preventas)
-                and not (castellano and en_otro_idioma(x["titulo"]))
+                and permite(x["idioma"], x["idioma_seguro"], modo)
                 and not (pmin is not None and x["precio"] < pmin) and not (pmax is not None and x["precio"] > pmax))
 
     res, informe = [], {}
@@ -181,8 +270,9 @@ def buscar(consulta, incluir="", excluir="", ocultar_agotados=True, hosts=None, 
                 resultados[i] = _tienda(por_host[host], consulta, {"visible": True}, paginas)
     for host, items, err in resultados:
         kept = 0
+        prior = prior_tienda(items)
         for x in items:
-            if pasa(x):
+            if pasa(x, prior):
                 x["tienda"], x["origen"] = host, por_host[host].get("tipo", "tienda")
                 res.append(x)
                 kept += 1
@@ -198,7 +288,7 @@ def buscar(consulta, incluir="", excluir="", ocultar_agotados=True, hosts=None, 
     if abierta:
         from . import abierta as web
         conocidos = {t["host"].replace("www.", "") for t in lista}
-        items, info = web.busca(consulta, region=region, excluir_hosts=conocidos, castellano=castellano, nav=nav)
+        items, info = web.busca(consulta, region=region, excluir_hosts=conocidos, castellano=(modo != "todos"), nav=nav)
         kept = 0
         for x in items:
             if pasa(x):
@@ -210,6 +300,8 @@ def buscar(consulta, incluir="", excluir="", ocultar_agotados=True, hosts=None, 
 
     previo = historial_previo({x["url"] for x in res})
     for x in res:
+        if "idioma" not in x:
+            x["idioma"], x["idioma_seguro"] = idioma_de(x["titulo"])
         t = por_host.get(x["tienda"], {})
         x["envio"] = envio_de(t, x["precio"])
         x["total"] = round(x["precio"] + (x["envio"] or 0), 2)
