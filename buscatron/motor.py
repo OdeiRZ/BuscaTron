@@ -3,42 +3,64 @@ import concurrent.futures as cf
 import time
 from urllib.parse import quote_plus
 
-from . import bd, fetch, extract, descubre, tiendas as cfg
+from . import ajustes, bd, fetch, extract, descubre, navegador, tiendas as cfg
 
-def _candidatas(t, consulta):
+def _candidatas(t, consulta, get):
     """URLs de búsqueda a probar, de más a menos fiable."""
     q = quote_plus(consulta)
     base = "https://" + t["host"]
     if t.get("plantilla"):
-        return [t["plantilla"].replace("{q}", q)], None
-    st, home = fetch.get(base + "/")
+        return [(t["plantilla"], t["plantilla"].replace("{q}", q))], None
+    st, home = get(base + "/")
     if st != 200:
         return [], f"portada HTTP {st}"
     pl = descubre.plantilla(home, base + "/")
-    urls = ([(pl, pl.replace("{q}", q))] if pl else [])
+    urls = [(pl, pl.replace("{q}", q))] if pl else []
     urls += [(base + p, base + p.format(q=q)) for p in cfg.PLANTILLAS]
     return urls, None
 
 
-def _tienda(t, consulta):
+def _intenta(t, consulta, get):
+    urls, err = _candidatas(t, consulta, get)
+    if err:
+        return [], err
+    for pl, url in urls:
+        st, html = get(url)
+        if st != 200:
+            err = f"HTTP {st}"
+            continue
+        r = extract.extrae(html, url, consulta)
+        if r:
+            t["plantilla"] = pl
+            return r, None
+        err = "sin resultados"
+    return [], err or "sin buscador detectable"
+
+
+def _tienda(t, consulta, nav=None):
+    """nav: None (sin navegador) o {'visible': bool}. Orden: método rápido y, si falla, navegador."""
+    h = t["host"]
     try:
-        urls, err = _candidatas(t, consulta)
-        if err:
-            return t["host"], [], err
-        for item in urls:
-            pl, url = item if isinstance(item, tuple) else (t["plantilla"], item)
-            st, html = fetch.get(url)
-            if st != 200:
-                err = f"HTTP {st}"
-                continue
-            r = extract.extrae(html, url, consulta)
+        if not (nav and t.get("js")):
+            r, err = _intenta(t, consulta, fetch.get)
             if r:
-                t["plantilla"] = pl
-                return t["host"], r, None
-            err = "sin resultados (¿carga con JavaScript?)"
-        return t["host"], [], err or "sin buscador detectable"
+                return h, r, None
+        if nav is None:
+            return h, [], (err or "sin resultados") + " (puede cargar con JavaScript: activa el navegador en Ajustes)"
+        visible = nav["visible"]
+        get = lambda u: navegador.get(u, visible=visible, esperar_humano=90 if visible else 0)
+        plant = t.get("plantilla")
+        r, err = _intenta(t, consulta, get)
+        if r:
+            t["js"] = True
+            return h, r, None
+        if plant is None:
+            t["plantilla"] = None
+        return h, [], err or "sin resultados"
+    except navegador.Desafio:
+        return h, [], "pide comprobación humana (captcha): activa «navegador visible» en Ajustes y resuélvela una vez"
     except Exception as e:
-        return t["host"], [], f"error: {str(e)[:60]}"
+        return h, [], f"error: {str(e)[:70]}"
 
 
 def buscar(consulta, incluir="", excluir="", ocultar_agotados=False, hosts=None, pmin=None, pmax=None, seg_id=None):
@@ -48,8 +70,10 @@ def buscar(consulta, incluir="", excluir="", ocultar_agotados=False, hosts=None,
     inc = extract.normaliza(incluir).split()
     exc = extract.normaliza(excluir).split()
     res, informe = [], {}
+    aj = ajustes.carga()
+    nav = {"visible": bool(aj["navegador_visible"])} if aj["usar_navegador"] and navegador.disponible() else None
     with cf.ThreadPoolExecutor(6) as ex:
-        for host, items, err in ex.map(lambda t: _tienda(t, consulta), activas):
+        for host, items, err in ex.map(lambda t: _tienda(t, consulta, nav), activas):
             kept = 0
             for x in items:
                 n = extract.normaliza(x["titulo"])

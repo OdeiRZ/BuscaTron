@@ -13,11 +13,14 @@ python -m buscatron --abrir              # interfaz web en http://127.0.0.1:8790
 python -m buscatron "marvel champions"   # búsqueda por línea de comandos
 ```
 
+Para tiendas que cargan con JavaScript puedes activar, en Ajustes, el navegador opcional (necesita `pip install playwright` y Chrome o Edge instalados; no se descarga ningún navegador). BuscaTron no intenta saltarse comprobaciones antibot: si una tienda pide un captcha, lo indica y, con la ventana visible, lo resuelves tú una vez.
+
 En la web puedes:
 
 - Buscar un producto y ver los N más baratos con enlace a la tienda.
 - Filtrar por palabras que debe contener o excluir, y por precio mínimo y máximo.
 - Ocultar agotados.
+- Vigilar búsquedas (pestaña Seguimiento): precio objetivo o bajada respecto a su media, revisión cada X horas y avisos por Telegram, correo o dentro de la app.
 - Activar, desactivar y añadir tiendas (basta el dominio, por ejemplo `ejemplo.es`).
 
 ## Cómo encuentra los productos
@@ -26,11 +29,11 @@ En la web puedes:
 2. Descarga los resultados y se queda con los enlaces cuyo texto contiene todas las palabras de la búsqueda, junto al primer precio vigente (ignora precios tachados) y si pone «agotado».
 3. Ordena por precio y guarda cada búsqueda en `buscatron.db` (SQLite) para tener historial.
 
-Limitaciones conocidas del prototipo: solo se lee la primera página de resultados de cada tienda, y no hay todavía envío de avisos ni barridos programados.
+Limitaciones conocidas: solo se lee la primera página de resultados de cada tienda, y el planificador solo trabaja mientras BuscaTron está abierto. Hay tiendas que bloquean cualquier acceso automático (por ejemplo Amazon) y no se pueden consultar.
 
 ## Archivos locales
 
-`tiendas.json` (tu lista de tiendas y los buscadores descubiertos) y `buscatron.db` (historial) se crean al usar la herramienta y no se suben al repositorio.
+`tiendas.json` (tu lista de tiendas y los buscadores descubiertos), `buscatron.db` (historial), `config.json` (tokens y ajustes) y `navegador_perfil/` (sesión del navegador opcional) se crean al usar la herramienta y no se suben al repositorio.
 
 ## Licencia
 

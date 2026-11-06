@@ -122,6 +122,13 @@ a{color:var(--ac);text-decoration:none}
     </div>
     <div class="acciones"><button type="button" class="sec" id="a-prueba-co">Enviar prueba</button></div>
   </div>
+  <div class="card">
+    <h2>Navegador (opcional)</h2>
+    <div class="mut" id="a-nav-info">Para tiendas que cargan los resultados con JavaScript, BuscaTron puede usar tu Chrome. Solo se usa si el método rápido no encuentra nada.</div>
+    <div class="chk"><label><input type="checkbox" id="a-nav"> Usar mi Chrome cuando haga falta</label>
+      <label><input type="checkbox" id="a-navvis"> Mostrar la ventana (para resolver tú una comprobación «no soy un robot»)</label></div>
+    <div class="mut" style="margin-top:6px">BuscaTron no intenta saltarse esas comprobaciones: si una tienda las pide, te lo indica.</div>
+  </div>
   <div class="acciones"><button id="a-guardar">Guardar ajustes</button></div>
   <div id="a-msg" class="mut" style="margin-top:8px"></div>
 </section>
@@ -207,9 +214,11 @@ async function cargaNavAv(){try{const l=await api('avisos');const v=Number(local
 
 /* ajustes */
 async function cargaAjustes(){const a=await api('ajustes');$('a-token').value=a.telegram_token;$('a-chat').value=a.telegram_chat;
-  $('a-srv').value=a.smtp_servidor;$('a-pto').value=a.smtp_puerto;$('a-usr').value=a.smtp_usuario;$('a-clv').value=a.smtp_clave;$('a-dst').value=a.correo_destino;}
+  $('a-srv').value=a.smtp_servidor;$('a-pto').value=a.smtp_puerto;$('a-usr').value=a.smtp_usuario;$('a-clv').value=a.smtp_clave;$('a-dst').value=a.correo_destino;
+  $('a-nav').checked=!!a.usar_navegador;$('a-navvis').checked=!!a.navegador_visible;$('a-nav').disabled=!a.navegador_disponible;
+  if(!a.navegador_disponible)$('a-nav-info').textContent='No disponible: instala Playwright (pip install playwright) y ten Chrome o Edge instalado.';}
 const ajustesForm=()=>({telegram_token:$('a-token').value,telegram_chat:$('a-chat').value,smtp_servidor:$('a-srv').value,
-  smtp_puerto:Number($('a-pto').value)||587,smtp_usuario:$('a-usr').value,smtp_clave:$('a-clv').value,correo_destino:$('a-dst').value});
+  smtp_puerto:Number($('a-pto').value)||587,smtp_usuario:$('a-usr').value,smtp_clave:$('a-clv').value,correo_destino:$('a-dst').value,usar_navegador:$('a-nav').checked,navegador_visible:$('a-navvis').checked});
 const msg=(t,ok)=>{$('a-msg').className=ok?'ok':'err';$('a-msg').textContent=t;};
 $('a-guardar').onclick=async()=>{await api('ajustes',ajustesForm());msg('Ajustes guardados.',true);};
 $('a-det').onclick=async()=>{const r=await api('detectar_chat',{telegram_token:$('a-token').value});

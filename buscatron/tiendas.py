@@ -20,11 +20,22 @@ tablerum.com www.outletgames.es www.ludusbelli.com banduawargames.com
 outlet-pc.es www.goblintrader.es""".split()
 
 
+# Buscadores que no se pueden descubrir desde la portada.
+CONOCIDAS = {
+    "www.masqueoca.com": "https://www.masqueoca.com/tienda/buscardo.asp?txtbusqueda={q}&dondebusco=1&vertodo=1&stockneg=1",
+}
+
+
 def carga():
     if os.path.exists(RUTA):
         with open(RUTA, encoding="utf-8") as f:
-            return json.load(f)
-    return [{"host": h, "activa": True, "plantilla": None} for h in INICIALES]
+            lista = json.load(f)
+    else:
+        lista = [{"host": h, "activa": True, "plantilla": None} for h in INICIALES]
+    for t in lista:
+        if not t.get("plantilla") and t["host"] in CONOCIDAS:
+            t["plantilla"] = CONOCIDAS[t["host"]]
+    return lista
 
 
 def guarda(tiendas):

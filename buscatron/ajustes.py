@@ -7,7 +7,8 @@ from . import tiendas as cfg
 RUTA = os.path.join(cfg.RAIZ, "config.json")
 SECRETOS = ("telegram_token", "smtp_clave")
 DEFECTO = {"telegram_token": "", "telegram_chat": "", "smtp_servidor": "", "smtp_puerto": 587,
-           "smtp_usuario": "", "smtp_clave": "", "correo_destino": ""}
+           "smtp_usuario": "", "smtp_clave": "", "correo_destino": "",
+           "usar_navegador": False, "navegador_visible": False}
 
 
 def carga():
@@ -31,4 +32,7 @@ def guarda(nuevos):
 def publico():
     """Ajustes con los secretos enmascarados, para mostrarlos en la web."""
     d = carga()
-    return {k: ("********" if k in SECRETOS and v else v) for k, v in d.items()}
+    from . import navegador
+    d = {k: ("********" if k in SECRETOS and v else v) for k, v in d.items()}
+    d["navegador_disponible"] = navegador.disponible()
+    return d
