@@ -338,10 +338,12 @@ async function revisa(id,b){b.disabled=true;b.textContent='Revisando…';await a
 /* avisos */
 async function cargaAvisos(){const l=await api('avisos');try{localStorage.setItem('bt-vistos',String(l.length?l[0].id:0))}catch(e){}
   $('nav-av').textContent='';
-  $('av-lista').innerHTML=l.length?l.map(a=>`<a class="res" href="${esc(a.url)}" target="_blank" rel="noopener"><div class="pr">${euro(a.precio)}</div>
+  $('av-lista').innerHTML=l.length?`<div class="cuenta" style="display:flex;justify-content:space-between;align-items:center">${l.length} aviso${l.length>1?'s':''}
+    <button type="button" class="peli mini" id="av-vaciar">Vaciar avisos</button></div>`+l.map(a=>`<a class="res" href="${esc(a.url)}" target="_blank" rel="noopener"><div class="pr">${euro(a.precio)}</div>
     <div class="info"><div class="t">${esc(a.titulo)}</div><div class="meta"><span class="tag">${esc(nombreT(a.tienda))}</span><span class="tag ok">${esc(a.motivo)}</span></div>
     <div class="mut" style="margin-top:4px">${fecha(a.ts)}</div></div></a>`).join('')
-    :'<div class="card vacio-msg"><span class="em">🔔</span>Todavía no hay avisos.<br>Cuando un producto vigilado baje de precio, saldrá aquí.</div>';}
+    :'<div class="card vacio-msg"><span class="em">🔔</span>Todavía no hay avisos.<br>Cuando un producto vigilado baje de precio, saldrá aquí.</div>';
+  if($('av-vaciar'))$('av-vaciar').onclick=async()=>{if(confirm('¿Borrar todos los avisos? Los productos que sigan cumpliendo tu búsqueda volverán a avisar en la próxima revisión.')){await api('avisos',{accion:'vaciar'});cargaAvisos();aviso('Avisos vaciados');}};}
 async function cargaNavAv(){try{const l=await api('avisos');const v=Number(localStorage.getItem('bt-vistos')||0);
   const n=l.filter(a=>a.id>v).length;$('nav-av').textContent=n?String(n):'';}catch(e){}}
 

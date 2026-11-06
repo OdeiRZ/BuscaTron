@@ -59,6 +59,22 @@ def avisos(limite=100):
         return [dict(r) for r in c.execute("SELECT * FROM avisos ORDER BY ts DESC LIMIT ?", (limite,))]
 
 
+def vacia_avisos():
+    with bd.conecta() as c:
+        c.execute("DELETE FROM avisos")
+
+
+def limpia_avisos(seg_id, res, informe):
+    """Retira los avisos que ya no cumplen la búsqueda (agotado, otro idioma, fuera de precio…).
+    Solo se tocan los de tiendas que han respondido en esta revisión: un fallo de red no borra nada."""
+    vivas = {x["url"] for x in res}
+    sin_respuesta = {h for h, i in informe.items() if i["error"]}
+    with bd.conecta() as c:
+        for r in c.execute("SELECT id, url, tienda FROM avisos WHERE seg_id=?", (seg_id,)).fetchall():
+            if r["url"] not in vivas and r["tienda"] not in sin_respuesta:
+                c.execute("DELETE FROM avisos WHERE id=?", (r["id"],))
+
+
 def _motivo(c, seg, x):
     """Devuelve el motivo del aviso o None."""
     if seg["objetivo"] is not None and x["precio"] <= seg["objetivo"]:
@@ -89,6 +105,7 @@ def revisa(seg_id, enviar=True):
         res, informe = motor.buscar(seg["consulta"], seg["incluir"], seg["excluir"], bool(seg["sin_agotados"]),
                                     None, seg["pmin"], seg["pmax"], seg_id,
                                     castellano=bool(seg["castellano"]))
+        limpia_avisos(seg_id, res, informe)
         nuevos = []
         with bd.conecta() as c:
             for x in res:

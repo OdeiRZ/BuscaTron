@@ -6,7 +6,7 @@ Buscador y vigilante de precios **local** para tiendas online españolas. Pensad
 - **Datos en vivo**: no usa cachés ni buscadores intermedios, así que el precio es el que ves en la tienda.
 - **Tus datos se quedan en tu equipo**: lista de tiendas, historial y tokens se guardan en archivos locales que no se suben al repositorio.
 
-> Estado: **prototipo funcional** (v0.5.0). Consulta el [CHANGELOG](CHANGELOG.md).
+> Estado: **prototipo funcional** (v0.5.1). Consulta el [CHANGELOG](CHANGELOG.md).
 
 ## Inicio rápido
 
@@ -41,6 +41,8 @@ Guarda una búsqueda y deja que BuscaTron la revise sola cada X horas mientras e
 
 ### 🔔 Avisos
 Lista de todo lo que ha saltado, con el motivo, la tienda y el enlace. Un contador rojo en la pestaña indica los nuevos.
+
+Cada revisión **retira los avisos que ya no cumplen tu búsqueda** (porque se agotó, es una preventa, está en otro idioma o salió de tu rango de precio), siempre que la tienda haya respondido: si una web falla, no se borra nada. Si un producto vuelve a estar disponible a un precio que cumple, avisa de nuevo. Con «Vaciar avisos» puedes limpiar la lista a mano.
 
 ### ⚙️ Ajustes
 - **Telegram** y **correo (SMTP)** para recibir los avisos, con botón de prueba.
