@@ -3,6 +3,15 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.5.1] - 2026-11-06
+
+### Añadido
+- Botón **«Vaciar avisos»** en la pestaña Avisos.
+- Pruebas de la limpieza de avisos (22 pruebas en total).
+
+### Corregido
+- **Avisos obsoletos**: los avisos guardados nunca se volvían a comprobar, así que un producto que se había colado antes de los arreglos de idioma y stock (por ejemplo, un pack en inglés no disponible) seguía apareciendo en la pestaña Avisos. Ahora cada revisión retira los avisos de productos que ya no cumplen la búsqueda (agotados, preventas, otro idioma o fuera de precio), solo para las tiendas que han respondido, de modo que un fallo de red no borra nada. Si el producto vuelve a estar disponible, avisa de nuevo.
+
 ## [0.5.0] - 2026-11-06
 
 ### Añadido

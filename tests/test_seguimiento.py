@@ -62,6 +62,36 @@ class Avisos(Base):
         self.busca(40)
         self.assertEqual(self.busca(20)["avisos"], [])
 
+    def revisa_con(self, items, informe):
+        with mock.patch("buscatron.motor.buscar", lambda *a, **k: (items, informe)):
+            return seguimiento.revisa(self.sid)
+
+    def test_retira_avisos_de_productos_que_ya_no_cumplen(self):
+        self.sid = seguimiento.guarda({"consulta": "marvel", "objetivo": "40"})
+        self.busca(30)
+        self.assertEqual(len(seguimiento.avisos()), 1)
+        # la tienda responde pero el producto ya no cumple (agotado, otro idioma, fuera de precio...)
+        self.revisa_con([], {"t.es": {"encontrados": 0, "error": None}})
+        self.assertEqual(seguimiento.avisos(), [])
+
+    def test_si_la_tienda_falla_no_se_borra_nada(self):
+        self.sid = seguimiento.guarda({"consulta": "marvel", "objetivo": "40"})
+        self.busca(30)
+        self.revisa_con([], {"t.es": {"encontrados": 0, "error": "HTTP 503"}})
+        self.assertEqual(len(seguimiento.avisos()), 1)
+
+    def test_vuelve_a_avisar_si_el_producto_regresa(self):
+        self.sid = seguimiento.guarda({"consulta": "marvel", "objetivo": "40"})
+        self.busca(30)
+        self.revisa_con([], {"t.es": {"encontrados": 0, "error": None}})
+        self.assertEqual(len(self.busca(30)["avisos"]), 1)
+
+    def test_vaciar_avisos(self):
+        self.sid = seguimiento.guarda({"consulta": "marvel", "objetivo": "40"})
+        self.busca(30)
+        seguimiento.vacia_avisos()
+        self.assertEqual(seguimiento.avisos(), [])
+
     def test_pendientes(self):
         self.sid = seguimiento.guarda({"consulta": "marvel", "cada_horas": "1"})
         self.assertEqual(seguimiento.pendientes(), [self.sid])

@@ -196,6 +196,10 @@ class Handler(BaseHTTPRequestHandler):
             else:
                 seguimiento.guarda(c)
             return seguimiento.lista()
+        if ruta == "/api/avisos":
+            if c.get("accion") == "vaciar":
+                seguimiento.vacia_avisos()
+            return seguimiento.avisos()
         if ruta == "/api/ajustes":
             pin = c.get("pin")
             if pin not in (None, "", "********") and len(pin) < 4:
