@@ -1,5 +1,6 @@
-"""Extractor genérico de productos: enlaces cuyo texto encaja con la búsqueda
-y el primer precio vigente que aparece después, antes del siguiente enlace."""
+"""Extractor genérico de productos: enlaces cuyo texto encaja con la búsqueda y el primer precio
+vigente de su tarjeta (dentro del enlace o justo después, antes del siguiente producto)."""
+import json
 import re
 import unicodedata
 from html.parser import HTMLParser
@@ -12,6 +13,9 @@ OCULTO = re.compile(r"display\s*:\s*none|visibility\s*:\s*hidden", re.I)
 VACIAS = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "source", "track", "wbr"}
 RESERVA = re.compile(r"reserva|en reposici[oó]n", re.I)
 AGOTADO = re.compile(r"agotad|en reposici[oó]n|vuelva a estar disponible|sin existencias|no hay existencias|sin stock|no disponible|out of stock|sold.?out|fuera de stock", re.I)
+PREVENTA = re.compile(r"pre-?venta|pre-?order|lanzamiento aproximado|pr[oó]ximamente|pr[oó]xima aparici[oó]n|fecha (?:de salida|prevista)|disponible a partir", re.I)
+ESTADO = re.compile(r"\b(precintado|sin abrir|sin estrenar|como nuevo|seminuevo|reacondicionado|nuevo|muy bueno|buen estado|bueno|aceptable|usado|segunda mano|para piezas|ha sido utilizado)\b", re.I)
+SIGUIENTE_TEXTO = {"siguiente", "next", ">", "»", "›", "pagina siguiente", "siguiente »", "siguiente >", "next »", "next >", "→"}
 
 
 def normaliza(texto):
@@ -29,7 +33,7 @@ def titulo_desde_url(url):
 
 
 def a_numero(s):
-    s = s.strip()
+    s = str(s).strip()
     if "," in s:
         s = s.replace(".", "").replace(",", ".")
     try:
@@ -42,12 +46,19 @@ class _Parser(HTMLParser):
     def __init__(self, base):
         super().__init__(convert_charrefs=True)
         self.base = base
-        self.eventos = []          # ("a", href, texto) | ("p", valor) | ("x", texto)
+        # ("a", href, texto, precios_dentro, textos_dentro, indice_inicio) | ("p", valor) | ("x", texto)
+        self.eventos = []
+        self.siguiente = {1: None, 2: None}   # 1 = rel=next (fiable), 2 = enlace «siguiente»
         self._a = None
         self._tachado = 0
         self._oculto = 0
         self._pila = []
         self._skip = 0
+
+    def _candidato_siguiente(self, nivel, href):
+        h = urljoin(self.base, href or "")
+        if href and not href.startswith(("#", "javascript")) and h != self.base and not self.siguiente[nivel]:
+            self.siguiente[nivel] = h
 
     def handle_starttag(self, tag, attrs):
         a = dict(attrs)
@@ -59,8 +70,13 @@ class _Parser(HTMLParser):
             self._pila.append((tag, marca, oculto))
             self._tachado += marca
             self._oculto += oculto
+        if tag == "link" and "next" in (a.get("rel") or "").lower().split():
+            self._candidato_siguiente(1, a.get("href"))
         if tag == "a" and a.get("href"):
-            self._a = {"href": urljoin(self.base, a["href"]), "txt": [], "title": a.get("title", "")}
+            etiquetas = " ".join(a.get(k, "") or "" for k in ("class", "aria-label", "title"))
+            self._a = {"href": urljoin(self.base, a["href"]), "raw": a["href"], "txt": [], "title": a.get("title", ""), "p": [], "x": [],
+                       "ini": len(self.eventos), "rel_next": "next" in (a.get("rel") or "").lower().split(),
+                       "clase_next": bool(re.search(r"\bnext\b|siguiente", etiquetas, re.I))}
         if tag == "img" and self._a is not None and a.get("alt"):
             self._a["txt"].append(a["alt"])
         if tag == "meta" and a.get("itemprop") == "price" and a.get("content"):
@@ -80,12 +96,18 @@ class _Parser(HTMLParser):
             if t == tag:
                 break
         if tag == "a" and self._a is not None:
-            txt = " ".join(self._a["txt"]).strip() or self._a["title"]
-            titulo = " ".join(self._a["title"].split())
+            a = self._a
+            txt = " ".join(a["txt"]).strip() or a["title"]
+            titulo = " ".join(a["title"].split())
             corto = txt.rstrip(".… ").lower()
             if txt.endswith(("...", "…")) and len(titulo) > len(corto) and titulo.lower().startswith(corto):
                 txt = titulo   # la web recorta el texto del enlace, pero el title está completo
-            self.eventos.append(("a", self._a["href"], " ".join(txt.split())))
+            txt = " ".join(txt.split())
+            if a["rel_next"]:
+                self._candidato_siguiente(1, a["raw"])
+            elif a["clase_next"] or normaliza(txt).strip() in {normaliza(s).strip() for s in SIGUIENTE_TEXTO} or txt.strip() in SIGUIENTE_TEXTO:
+                self._candidato_siguiente(2, a["raw"])
+            self.eventos.append(("a", a["href"], txt, a["p"], a["x"], a["ini"]))
             self._a = None
 
     def handle_data(self, data):
@@ -97,44 +119,140 @@ class _Parser(HTMLParser):
         if not d:
             return
         if not self._tachado:
-            for m in PRECIO.finditer(d):
-                v = a_numero(m.group(1))
-                if v:
-                    self.eventos.append(("p", v))
-            for m in PRECIO_ANTES.finditer(d):
-                v = a_numero(m.group(1))
-                if v:
-                    self.eventos.append(("p", v))
+            for rx in (PRECIO, PRECIO_ANTES):
+                for m in rx.finditer(d):
+                    v = a_numero(m.group(1))
+                    if v:
+                        self.eventos.append(("p", v))
+                        if self._a is not None:
+                            self._a["p"].append(v)
+        if self._a is not None:
+            self._a["x"].append(d)
         self.eventos.append(("x", d))
 
 
-def extrae(html, base, consulta, ventana=40):
-    """Devuelve [{titulo, url, precio, agotado}] de los enlaces que contienen
-    todas las palabras de la consulta."""
+def analiza(html, base, consulta, ventana=40, con_estado=False):
+    """Devuelve (productos, url_de_la_página_siguiente|None).
+    Producto: {titulo, url, precio, agotado, preventa, estado}."""
     palabras = normaliza(consulta).split()
     p = _Parser(base)
     p.feed(html)
     ev = p.eventos
+    encajan = [i for i, e in enumerate(ev) if e[0] == "a" and len(e[2]) >= 4 and all(w in normaliza(e[2]) for w in palabras)]
     out, vistos = [], set()
-    for i, e in enumerate(ev):
-        if e[0] != "a" or len(e[2]) < 4:
-            continue
-        titulo = e[2]
-        if not all(w in normaliza(titulo) for w in palabras):
-            continue
-        precio, agotado = None, False
-        for j in range(i + 1, min(i + 1 + ventana, len(ev))):
+    for k, i in enumerate(encajan):
+        e = ev[i]
+        limite = ev[encajan[k + 1]][5] if k + 1 < len(encajan) else len(ev)   # el siguiente producto empieza ahí
+        titulo, textos, precio = e[2], list(e[4]), (e[3][0] if e[3] else None)
+        pv = re.search(r"(\d+(?:[.,]\d{1,2})?)\s*€\s*,\s*\d+(?:[.,]\d{1,2})?\s*€\s*$", titulo) if "Estado:" in titulo else None
+        if pv:                                   # Vinted: «..., Estado: Muy bueno, 1.00 €, 1.75 €» (artículo y con protección)
+            precio = a_numero(pv.group(1))
+        for j in range(i + 1, min(i + 1 + ventana, max(limite, i + 1))):
             f = ev[j]
-            if f[0] == "a" and all(w in normaliza(f[2]) for w in palabras) and f[1] != e[1]:
-                break
             if f[0] == "p" and precio is None:
                 precio = f[1]
-            if f[0] == "x" and (AGOTADO.search(f[1]) or RESERVA.fullmatch(f[1].strip())):
-                agotado = True
+            elif f[0] == "x":
+                textos.append(f[1])
         if precio is None or e[1] in vistos:
             continue
         vistos.add(e[1])
         if titulo.endswith(("...", "…")) and len(titulo_desde_url(e[1])) > len(titulo):
             titulo = titulo_desde_url(e[1])
-        out.append({"titulo": titulo, "url": e[1], "precio": precio, "agotado": agotado})
-    return out
+        detalle = re.search(r"Estado:\s*([^,]+)", titulo)         # Vinted: «Título, Marca: X, Estado: Muy bueno, 1.00 €»
+        titulo = re.split(r",\s*(?:Marca|Estado|Tama[ñn]o):", titulo)[0].strip()
+        preventa = bool(PREVENTA.search(titulo) or any(PREVENTA.search(t) for t in textos))
+        agotado = any(AGOTADO.search(t) for t in textos) or (not preventa and any(RESERVA.fullmatch(t.strip()) for t in textos))
+        estado = ""
+        if con_estado and detalle:
+            estado = detalle.group(1).strip().lower()
+        elif con_estado:
+            for t in textos:
+                m = len(t) <= 45 and ESTADO.search(t)
+                if m:
+                    estado = m.group(1).lower()
+                    break
+        out.append({"titulo": titulo, "url": e[1], "precio": precio, "agotado": agotado, "preventa": preventa, "estado": estado})
+    return out, (p.siguiente[1] or p.siguiente[2])
+
+
+def extrae(html, base, consulta, ventana=40, con_estado=False):
+    return analiza(html, base, consulta, ventana, con_estado)[0]
+
+
+# ---- páginas de un solo producto (búsqueda abierta) -------------------------------------------------
+
+_LD = re.compile(r'<script[^>]+type=["\']application/ld\+json["\'][^>]*>(.*?)</script>', re.S | re.I)
+_META = re.compile(r"<meta\s+[^>]*>", re.I)
+
+
+def _nodos(obj):
+    if isinstance(obj, list):
+        for o in obj:
+            yield from _nodos(o)
+    elif isinstance(obj, dict):
+        yield obj
+        for v in obj.values():
+            if isinstance(v, (dict, list)):
+                yield from _nodos(v)
+
+
+def _meta(html):
+    d = {}
+    for m in _META.finditer(html):
+        tag = m.group(0)
+        k = re.search(r'(?:property|name|itemprop)=["\']([^"\']+)', tag, re.I)
+        v = re.search(r'content=["\']([^"\']*)', tag, re.I)
+        if k and v:
+            d.setdefault(k.group(1).lower(), v.group(1))
+    return d
+
+
+def datos_producto(html, url=""):
+    """Lee un producto de una página individual: JSON-LD (schema.org), Open Graph o microdatos.
+    Devuelve {titulo, precio, moneda, agotado, preventa, url} o None."""
+    for bloque in _LD.findall(html):
+        try:
+            datos = json.loads(bloque.strip())
+        except ValueError:
+            continue
+        for n in _nodos(datos):
+            tipo = n.get("@type")
+            tipos = tipo if isinstance(tipo, list) else [tipo]
+            if "Product" not in tipos or "offers" not in n:
+                continue
+            for o in _nodos(n["offers"]):
+                precio = a_numero(o.get("price") if o.get("price") not in (None, "") else o.get("lowPrice", ""))
+                if precio:
+                    disp = str(o.get("availability", "")).lower()
+                    return {"titulo": str(n.get("name", "")).strip(), "precio": precio, "moneda": o.get("priceCurrency", "EUR"),
+                            "agotado": any(s in disp for s in ("outofstock", "soldout", "discontinued")),
+                            "preventa": any(s in disp for s in ("preorder", "presale")), "url": n.get("url") or url}
+    m = _meta(html)
+    for clave in ("product:price:amount", "og:price:amount", "price"):
+        precio = a_numero(m.get(clave, "")) if m.get(clave) else None
+        if precio:
+            disp = (m.get("product:availability") or m.get("og:availability") or "").lower()
+            return {"titulo": (m.get("og:title") or "").strip(), "precio": precio,
+                    "moneda": m.get("product:price:currency") or m.get("og:price:currency") or "EUR",
+                    "agotado": "out of stock" in disp or "oos" in disp, "preventa": "preorder" in disp, "url": url}
+    return None
+
+
+# ---- gastos de envío --------------------------------------------------------------------------------
+
+_GRATIS = re.compile(r"(?:env[ií]os?|portes|gastos de env[ií]o)(?:\s+[\w\-]+){0,3}?\s+(?:gratis|gratuitos?)[^.\d€]{0,45}?"
+                     r"(?:a partir de|desde|superior(?:es)? a|m[aá]s de|por compras? de|en pedidos? (?:de|superiores a))\s*(\d+(?:[.,]\d{1,2})?)\s*(?:€|eur)", re.I)
+_GRATIS2 = re.compile(r"(?:a partir de|desde|superior(?:es)? a|m[aá]s de)\s*(\d+(?:[.,]\d{1,2})?)\s*(?:€|eur)[^.\d€]{0,25}?(?:env[ií]o|portes)\s+gratis", re.I)
+_COSTE = re.compile(r"(?:gastos de env[ií]o|env[ií]o est[aá]ndar|portes)[^.\d€]{0,30}?(\d+(?:[.,]\d{1,2})?)\s*(?:€|eur)", re.I)
+
+
+def detecta_envio(html):
+    """Busca en una página (la portada) el envío gratis desde X € y/o el coste del envío.
+    Devuelve {'gratis_desde': float|None, 'coste': float|None}; es solo una pista y hay que revisarla."""
+    p = _Parser("")
+    p.feed(html)
+    texto = " ".join(e[1] for e in p.eventos if e[0] == "x")
+    g = _GRATIS.search(texto) or _GRATIS2.search(texto)
+    c = _COSTE.search(texto)
+    coste = a_numero(c.group(1)) if c else None
+    return {"gratis_desde": a_numero(g.group(1)) if g else None, "coste": coste if coste and 0 < coste < 40 else None}

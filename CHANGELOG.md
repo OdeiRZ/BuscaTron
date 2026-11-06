@@ -3,6 +3,29 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.6.0] - 2026-11-06
+
+### Añadido
+- **Arranque con Windows** (Ajustes o `--arranque on|off|estado`): acceso directo en la carpeta Inicio del usuario, sin permisos de administrador. Inicia BuscaTron sin ventana (`pythonw`) y con **icono en la bandeja** (ctypes, sin dependencias) con menú para abrirlo, ver u ocultar los mensajes y cerrarlo. Sin ventana, los mensajes van a `buscatron.log`. Solo se puede cambiar desde el propio equipo. Icono `.ico` propio.
+- **Segunda mano** (opción «Incluir segunda mano»): Vinted y Milanuncios se consultan y muestran el **estado** del artículo; Wallapop y eBay, que devuelven un 403 a cualquier acceso automático, van como «solo enlace». Se pueden añadir otras webs marcándolas como segunda mano.
+- **Búsqueda abierta** (opción «Buscar también en otras webs»): encuentra tiendas fuera de tu lista con Bing (y DuckDuckGo de respaldo), lee el precio de fichas de producto (schema.org / Open Graph) y de listados, filtra por región (España, UE, cualquier país), descarta las tiendas ya conocidas, las que bloquean bots y las que no son tiendas, y ofrece añadir las webs nuevas a la lista con un toque.
+- **Varias páginas por tienda** (1 a 6, por defecto 3, configurable en Ajustes y en cada búsqueda): sigue los enlaces `rel="next"` o «Siguiente» mientras aporten productos nuevos. En las pruebas, 3 páginas aportaron 16 productos más.
+- **Preventas** como categoría propia (distinta de «agotado»), con la opción «Incluir preventas». Se reconocen por «Preventa», «Lanzamiento aproximado», «Próximamente»…
+- **Gastos de envío por tienda** (envío y «gratis desde»), con un botón «Detectar» que lo busca en la portada, y la opción «Sumar el envío al precio» para ordenar por el total.
+- **Historial de precios en gráfica** (📈 en resultados y avisos): mínimo, media, máximo y precio actual, con gráfica SVG que respeta el modo claro y oscuro. Etiqueta «Mínimo histórico» cuando un artículo está a su precio más bajo.
+- Los **seguimientos** admiten las mismas opciones (preventas, envío, segunda mano, otras webs, región y páginas).
+- El extractor lee el **precio dentro del enlace** de la tarjeta (necesario para tiendas cuyo enlace envuelve todo el producto), el estado de segunda mano, las páginas siguientes, los datos estructurados de producto y las frases de envío gratis.
+- 19 pruebas nuevas (57 en total).
+
+### Cambiado
+- La web se reorganiza: opciones nuevas en «Más fuentes y opciones» (se recuerdan entre búsquedas), tarjetas de resultado con el botón de historial, filas de tienda con envío y ajuste de «Búsqueda» y «Arranque con Windows».
+- `BuscaTron.bat` arranca con icono en la bandeja y vuelve a mostrar la ventana si hay un error.
+
+### Corregido
+- Borrar un seguimiento dejaba sus avisos huérfanos en la lista; ahora se borran con él (el historial de precios se conserva).
+- Vinted: se lee el precio del artículo del título de la tarjeta («…, 1.00 €, 1.75 €») y se limpian la marca y el estado del título.
+- Un producto sin precio ya no se queda con el precio del producto siguiente.
+
 ## [0.5.1] - 2026-11-06
 
 ### Añadido

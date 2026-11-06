@@ -27,7 +27,7 @@ class Base(unittest.TestCase):
         self.n.stop()
 
     def busca(self, precio, **kw):
-        def falsa(consulta, incluir, excluir, sin_ag, tiendas, pmin, pmax, seg_id, castellano=True):
+        def falsa(consulta, incluir, excluir, sin_ag, tiendas, pmin, pmax, seg_id, castellano=True, **opciones):
             x = item(precio, **kw)
             with bd.conecta() as c:  # el motor real guarda cada resultado en el historial
                 c.execute("INSERT INTO precios(ts,consulta,tienda,titulo,url,precio,agotado,seg_id) VALUES(?,?,?,?,?,?,?,?)",
@@ -85,6 +85,14 @@ class Avisos(Base):
         self.busca(30)
         self.revisa_con([], {"t.es": {"encontrados": 0, "error": None}})
         self.assertEqual(len(self.busca(30)["avisos"]), 1)
+
+    def test_borrar_un_seguimiento_se_lleva_sus_avisos(self):
+        self.sid = seguimiento.guarda({"consulta": "marvel", "objetivo": "40"})
+        otro = seguimiento.guarda({"consulta": "otro", "objetivo": "40"})
+        self.busca(30)
+        seguimiento.borra(self.sid)
+        self.assertEqual(seguimiento.avisos(), [])
+        self.assertEqual([s["id"] for s in seguimiento.lista()], [otro])
 
     def test_vaciar_avisos(self):
         self.sid = seguimiento.guarda({"consulta": "marvel", "objetivo": "40"})

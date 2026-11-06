@@ -9,9 +9,9 @@ import time
 import webbrowser
 from hashlib import sha256
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 
-from . import ajustes, motor, notifica, programador, seguimiento, tiendas as cfg
+from . import ajustes, arranque, extract, fetch, motor, notifica, programador, seguimiento, tiendas as cfg
 
 TAILSCALE = ipaddress.ip_network("100.64.0.0/10")
 MAX_FALLOS, VENTANA_FALLOS = 5, 300      # intentos de PIN fallidos por IP y ventana (segundos)
@@ -139,10 +139,13 @@ class Handler(BaseHTTPRequestHandler):
             if self.path.startswith("/api/"):
                 return self._json({"error": "pin"}, 401)
             return self._enviar(LOGIN.encode(), "text/html; charset=utf-8")
+        url = urlparse(self.path)
         rutas = {"/api/tiendas": cfg.carga, "/api/seguimientos": seguimiento.lista, "/api/avisos": seguimiento.avisos,
-                 "/api/ajustes": ajustes.publico, "/api/red": self._red}
-        if self.path in rutas:
-            return self._json(rutas[self.path]())
+                 "/api/ajustes": ajustes.publico, "/api/red": self._red,
+                 "/api/arranque": lambda: {"disponible": arranque.disponible(), "activo": arranque.activo()},
+                 "/api/historial": lambda: motor.historial_de(parse_qs(url.query).get("url", [""])[0])}
+        if url.path in rutas:
+            return self._json(rutas[url.path]())
         self._enviar(_pagina().encode(), "text/html; charset=utf-8")
 
     def do_POST(self):
@@ -183,8 +186,12 @@ class Handler(BaseHTTPRequestHandler):
             res, inf = motor.buscar(c.get("q", "").strip(), c.get("incluir", ""), c.get("excluir", ""),
                                     bool(c.get("sin_agotados", True)), c.get("tiendas"),
                                     _num(c.get("pmin", "")), _num(c.get("pmax", "")),
-                                    castellano=bool(c.get("castellano", True)))
-            return {"resultados": res[: int(c.get("top") or 50)], "total": len(res), "informe": inf}
+                                    castellano=bool(c.get("castellano", True)), preventas=bool(c.get("preventas")),
+                                    con_envio=bool(c.get("con_envio")), segunda_mano=bool(c.get("segunda_mano")),
+                                    abierta=bool(c.get("abierta")), region=c.get("region") if c.get("region") in ("es", "ue", "mundo") else "es",
+                                    paginas=int(_num(c.get("paginas", "")) or 0) or None)
+            return {"resultados": res[: int(c.get("top") or 50)], "total": len(res), "informe": inf,
+                    "webs": sorted({x["tienda"] for x in res if x.get("origen") == "web"})}
         if ruta == "/api/tiendas":
             return self._tiendas(c)
         if ruta == "/api/seguimientos":
@@ -200,6 +207,19 @@ class Handler(BaseHTTPRequestHandler):
             if c.get("accion") == "vaciar":
                 seguimiento.vacia_avisos()
             return seguimiento.avisos()
+        if ruta == "/api/arranque":           # solo desde este equipo: cambia el inicio de Windows del usuario
+            if not es_local(self.client_address[0]):
+                raise ValueError("el arranque con Windows solo se cambia desde el propio equipo")
+            try:
+                arranque.activa() if c.get("activar") else arranque.desactiva()
+            except RuntimeError as e:
+                raise ValueError(str(e))
+            return {"disponible": arranque.disponible(), "activo": arranque.activo()}
+        if ruta == "/api/envio_detectar":     # pista a partir de la portada de la tienda; el usuario la revisa y guarda
+            st, h = fetch.get("https://" + c["host"] + "/")
+            if st != 200:
+                raise ValueError(f"la portada no responde (HTTP {st}); introduce el envío a mano")
+            return extract.detecta_envio(h)
         if ruta == "/api/ajustes":
             pin = c.get("pin")
             if pin not in (None, "", "********") and len(pin) < 4:
@@ -228,6 +248,8 @@ class Handler(BaseHTTPRequestHandler):
             if plantilla:
                 t["plantilla"] = plantilla
                 t["manual"] = bool(c.get("manual"))
+            if c.get("tipo") == "segunda_mano":
+                t["tipo"] = "segunda_mano"
         if c.get("editar"):  # nombre, dirección y modo «solo enlace» de una tienda existente
             t = next((t for t in lista if t["host"] == c["editar"]), None)
             if t is None:
@@ -245,6 +267,9 @@ class Handler(BaseHTTPRequestHandler):
                     t["plantilla"] = plantilla
             if "manual" in c:
                 t["manual"] = bool(c["manual"])
+            for campo in ("envio", "envio_gratis"):      # gastos de envío de la tienda (vacío = no se sabe)
+                if campo in c:
+                    t[campo] = _num(c[campo]) if str(c[campo]).strip() else None
         if c.get("borrar"):
             lista = [t for t in lista if t["host"] != c["borrar"]]
         if "activas" in c:
@@ -263,7 +288,7 @@ class Servidor(ThreadingHTTPServer):
     daemon_threads = True
 
 
-def sirve(puerto=8790, host="0.0.0.0", abrir=False):
+def sirve(puerto=8790, host="0.0.0.0", abrir=False, bandeja=False):
     try:
         servidor = Servidor((host, puerto), Handler)
     except OSError as e:
@@ -276,6 +301,9 @@ def sirve(puerto=8790, host="0.0.0.0", abrir=False):
     if host not in ("127.0.0.1", "localhost"):
         for d in direcciones_red():
             print(f"  Desde el móvil ({d['tipo']}): http://{d['ip']}:{puerto}")
+    if bandeja:
+        from . import bandeja as icono
+        print("Bandeja de Windows:", "icono activo" if icono.inicia(puerto) else "no disponible (la ventana sigue visible)")
     if abrir:
         threading.Timer(0.8, webbrowser.open, args=(local,)).start()
     try:
