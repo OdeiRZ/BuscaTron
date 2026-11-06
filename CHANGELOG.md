@@ -3,6 +3,18 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.9.0] - 2026-11-07
+
+### Añadido
+- **Selector «Idioma de los juegos»** en la búsqueda y en cada seguimiento, con tres modos: *Solo castellano* (oculta lo que dice expresamente otro idioma; es el de siempre), *Castellano estricto* (solo lo que está o parece en castellano) y *Cualquier idioma*. Sustituye a la casilla «Solo castellano», que era fácil de pasar por alto y casi no tenía efecto visible: de 649 títulos reales, 575 no decían su idioma.
+- **Etiqueta de idioma en cada producto**: «Castellano», «Parece castellano», «Inglés», «Parece inglés», «Otro idioma». Se deduce por el título: expresiones explícitas, términos españoles frente a ingleses y, para los que no dicen nada, el idioma mayoritario de esa tienda (no se aplica a tiendas mixtas como Amazon).
+- **Comprobación del idioma en la ficha del producto antes de avisar** (seguimientos): se lee el campo «Idioma» de la ficha, también en las filas de detalles de Amazon con sus marcas Unicode invisibles, y no se avisa si no es castellano. Se guarda 30 días en una tabla propia (`idiomas`). Si la ficha no lo dice o no se puede leer, se avisa con «idioma no verificado» en el motivo.
+- 19 pruebas nuevas (114 en total), y una prueba de la página sin navegador, con un DOM simulado.
+
+### Corregido
+- **Avisos de Amazon en otro idioma**: Amazon traduce los títulos de sus anuncios, y «Extensión Marvel Champions: Deadpool» era la edición francesa. El título no puede delatarlo, así que ahora se mira la ficha. El aviso erróneo se ocultó de la lista.
+- La preposición «de» y «héroes» cuentan como palabras españolas, para que «…the card game deadpool pack de héroes» (castellano con marca en inglés) no se tome por inglés.
+
 ## [0.8.5] - 2026-11-06
 
 ### Corregido

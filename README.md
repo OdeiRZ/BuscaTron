@@ -6,7 +6,7 @@ Buscador y vigilante de precios **local** para tiendas online españolas. Pensad
 - **Datos en vivo**: no usa cachés ni comparadores intermedios, así que el precio es el que ves en la tienda.
 - **Tus datos se quedan en tu equipo**: lista de tiendas, historial y tokens se guardan en archivos locales que no se suben al repositorio.
 
-> Estado: **versión funcional** (v0.8.5). Consulta el [CHANGELOG](CHANGELOG.md).
+> Estado: **versión funcional** (v0.9.0). Consulta el [CHANGELOG](CHANGELOG.md).
 
 ## Inicio rápido
 
@@ -31,7 +31,7 @@ La web está pensada para móvil (probada a 360 px) y escritorio. Arranca con el
 - Busca un producto en todas las tiendas activas y ve los **N más baratos**, con precio, tienda, enlace y etiquetas (preventa, segunda mano y su estado, mínimo histórico…).
 - Filtros: palabras que debe contener o excluir, precio mínimo y máximo, y **páginas leídas por tienda** (1 a 6).
 - **Ocultar agotados** (activado por defecto). Reconoce «agotado», «sin stock», «en reposición» y «reserva», y descarta los productos que la tienda no puede enviar ya.
-- **Solo castellano** (activado por defecto): descarta los productos que indican otro idioma (inglés, francés, alemán…, o frases típicas inglesas como «Players», «Playing Time» o «Ages 14+») salvo que mencionen también el castellano. Desmárcalo para ver todos los idiomas.
+- **Idioma de los juegos** (selector con tres modos y una etiqueta de idioma en cada producto; ver [Idioma de los juegos](#idioma-de-los-juegos)): por defecto *Solo castellano*.
 - En **«Más fuentes y opciones»** (se recuerdan entre búsquedas):
   - **Incluir preventas**: por defecto se ocultan, porque no se pueden recibir todavía. Se distinguen de los agotados («Lanzamiento aproximado: 26/3/2027», «Preventa»).
   - **Sumar el envío al precio**: ordena por el precio total (ver [Gastos de envío](#gastos-de-envío)).
@@ -46,6 +46,7 @@ La web está pensada para móvil (probada a 360 px) y escritorio. Arranca con el
 Guarda una búsqueda y deja que BuscaTron la revise sola cada X horas mientras esté abierto (con el [arranque con Windows](#arranque-con-windows-y-bandeja), siempre).
 - **Aviso por precio objetivo** («menos de 39 €»), por **bajada respecto a la media histórica** del artículo («un 15 % menos de lo habitual»), o por ambos.
 - Cada seguimiento lleva las mismas opciones que la búsqueda: preventas, envío, segunda mano, otras webs y páginas por tienda.
+- **Comprueba el idioma en la ficha del producto** antes de avisar (ver [Idioma de los juegos](#idioma-de-los-juegos)): un juego en francés no te avisa aunque su título esté en español.
 - No repite avisos: solo vuelve a avisar si el precio baja más, o pasados 30 días.
 - **Revisión automática**: cada seguimiento se revisa solo cada X horas (por defecto 12) mientras BuscaTron esté en marcha, y la tarjeta muestra cuándo toca la próxima. Si el equipo estaba apagado, la revisión pendiente se lanza al encender, en menos de un minuto. Cada revisión actualiza los precios y el historial.
 - Revisar ahora, pausar, editar y borrar (al borrar un seguimiento se borran también sus avisos; el historial de precios se conserva).
@@ -61,6 +62,25 @@ Cada revisión **retira los avisos que ya no cumplen tu búsqueda** (porque se a
 - **Telegram** y **correo (SMTP)** para recibir los avisos, con botón de prueba.
 - **Acceso desde el móvil** y PIN opcional.
 - **Navegador**: usar tu Chrome para tiendas que cargan con JavaScript.
+
+## Idioma de los juegos
+
+Los títulos de las tiendas casi nunca dicen el idioma (en una muestra real, el 88 % no lo decía), así que BuscaTron lo deduce y te enseña **qué sabe de cada producto** con una etiqueta:
+
+| Etiqueta | Significa |
+|---|---|
+| **Castellano** (verde) | el título lo dice: «Castellano», «Español» |
+| **Parece castellano** (verde) | se deduce: artículos y términos españoles («Pack de héroes», «La Tiranía del Cráneo Rojo»), o la mayoría de lo que vende esa tienda está en castellano |
+| **Inglés** / **Otro idioma** (rojo) | el título lo dice: «Inglés», «Français», o frases inglesas como «Players», «Playing Time», «Ages 14+» |
+| **Parece inglés** (rojo) | se deduce por palabras inglesas sin ninguna española («Hero Pack … Card Game») |
+| *(sin etiqueta)* | no hay pistas |
+
+El selector **«Idioma de los juegos»** (en la búsqueda y en cada seguimiento) tiene tres modos:
+- **Solo castellano** (por defecto): oculta solo lo que **dice expresamente** otro idioma. Lo dudoso se muestra, con su etiqueta.
+- **Castellano estricto**: deja solo lo que **está o parece** en castellano. Es más seguro, pero también oculta los títulos sin pistas.
+- **Cualquier idioma**: no filtra.
+
+**La ficha manda en los avisos.** Algunas tiendas, sobre todo Amazon, traducen los títulos de sus anuncios: «Extensión Marvel Champions: Deadpool» puede ser la edición francesa. Por eso, antes de enviar un aviso de un seguimiento, BuscaTron abre la **ficha del producto** y lee su campo «Idioma» («Idioma: Francés»): si no es castellano, no avisa. Si la ficha no dice el idioma o no se puede leer, avisa igualmente pero el motivo lo indica («idioma no verificado»). El resultado se recuerda 30 días, así que cada ficha se consulta una vez. Con «Cualquier idioma» no se consulta ninguna ficha.
 
 ## Importar a mano
 
@@ -224,7 +244,7 @@ permitir_acceso_movil.bat     abre el cortafuegos para tu red local (pide admini
 python -m unittest discover -s tests
 ```
 
-94 pruebas, sin red. Cubren las reglas de aviso (objetivo, media histórica, no repetir, reaviso, limpieza de obsoletos), el extractor (precios tachados, texto oculto, títulos recortados, preventas, estados de segunda mano, páginas siguientes, datos de producto, envío), el motor (paginación, filtros, total con envío, mínimo histórico, historial), la búsqueda abierta, el filtro de IP y el PIN, la importación a mano y las búsquedas guardadas.
+114 pruebas, sin red. Cubren las reglas de aviso (objetivo, media histórica, no repetir, reaviso, limpieza de obsoletos), el extractor (precios tachados, texto oculto, títulos recortados, preventas, estados de segunda mano, páginas siguientes, datos de producto, envío), el motor (paginación, filtros, total con envío, mínimo histórico, historial), la búsqueda abierta, el filtro de IP y el PIN, la importación a mano y las búsquedas guardadas.
 
 ## Limitaciones conocidas
 
