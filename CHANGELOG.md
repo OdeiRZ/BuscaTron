@@ -3,6 +3,16 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.8.1] - 2026-11-06
+
+### Corregido
+- **Direcciones de producto inestables**: las de Amazon llevaban códigos de seguimiento (`ref=sr_1_40?dib=…&qid=…`) que cambian en cada búsqueda, así que BuscaTron veía el mismo producto como uno distinto cada vez: no acumulaba su historial ni su «Mínimo histórico» y los avisos por Telegram se **repetían en cada revisión**. Ahora cada producto tiene una dirección canónica: en Amazon, `https://www.amazon.es/dp/ASIN`; en el resto se quitan solo los parámetros de seguimiento (`utm_*`, `srsltid`, `gclid`, `fbclid`, `ref`, `referrer`, `qid`…) y el segmento `/ref=…`, sin tocar los que identifican el producto. En una prueba real, dos búsquedas seguidas en Amazon dieron las mismas 28 direcciones, de 49 caracteres como máximo, y los mensajes de Telegram dejan de llevar direcciones de varios cientos de caracteres.
+- 3 pruebas nuevas (86 en total).
+
+### Notas
+- **Avisos por Telegram verificados** de punta a punta: mensaje de prueba y aviso real (seguimiento temporal con precio objetivo, 18 avisos nuevos, mensaje con los 10 primeros), ambos enviados sin error. El seguimiento temporal se borró después.
+- La importación a mano se ha probado con texto real de Ferretería Ibérica: 47 productos leídos correctamente.
+
 ## [0.8.0] - 2026-11-06
 
 ### Añadido

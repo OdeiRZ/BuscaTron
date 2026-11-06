@@ -4,7 +4,7 @@ import json
 import re
 import unicodedata
 from html.parser import HTMLParser
-from urllib.parse import urljoin, urlparse
+from urllib.parse import parse_qsl, urlencode, urljoin, urlparse, urlunparse
 
 PRECIO = re.compile(r"(\d{1,3}(?:\.\d{3})*(?:,\d{1,2})|\d+(?:\.\d{1,2})?)\s*(?:€|eur)", re.I)
 PRECIO_ANTES = re.compile(r"(?:€|eur)\s*(\d{1,3}(?:\.\d{3})*(?:,\d{1,2})|\d+(?:[.,]\d{1,2})?)", re.I)
@@ -36,6 +36,22 @@ SIGUIENTE_NORM = {n for n in (normaliza_simple(t) for t in SIGUIENTE_TEXTO) if n
 def normaliza(texto):
     t = unicodedata.normalize("NFKD", texto.lower())
     return re.sub(r"[^a-z0-9 ]+", " ", "".join(c for c in t if not unicodedata.combining(c)))
+
+
+SEGUIMIENTO = re.compile(r"^(utm_.*|srsltid|gclid|fbclid|msclkid|igshid|mc_[a-z]+|ref|ref_|referrer|dib|dib_tag|qid|sr|crid|sprefix|keywords|pd_rd_.*|pf_rd_.*|content-id|psc|th|spLa|smid)$", re.I)
+ASIN = re.compile(r"/(?:dp|gp/product|gp/aw/d)/([A-Z0-9]{10})(?:[/?]|$)")
+
+
+def limpia_url(url):
+    """Dirección canónica de un producto: sin códigos de seguimiento que cambian en cada visita. Así un mismo producto es
+    siempre la misma dirección (historial, mínimo histórico y avisos sin repetir). Amazon: /dp/ASIN."""
+    u = urlparse(url)
+    if u.netloc.startswith(("www.amazon.", "amazon.")):
+        m = ASIN.search(u.path)
+        if m:
+            return f"{u.scheme}://{u.netloc}/dp/{m.group(1)}"
+    q = [(k, v) for k, v in parse_qsl(u.query, keep_blank_values=True) if not SEGUIMIENTO.match(k)]
+    return urlunparse((u.scheme, u.netloc, re.sub(r"/ref=[^/?#]*", "", u.path), u.params, urlencode(q), u.fragment))
 
 
 def titulo_desde_url(url):
@@ -188,9 +204,10 @@ def analiza(html, base, consulta, ventana=40, con_estado=False):
                 precio = f[1]
             elif f[0] == "x":
                 textos.append(f[1])
-        if precio is None or e[1] in vistos:
+        url = limpia_url(e[1])
+        if precio is None or url in vistos:
             continue
-        vistos.add(e[1])
+        vistos.add(url)
         if titulo.endswith(("...", "…")) and len(titulo_desde_url(e[1])) > len(titulo):
             titulo = titulo_desde_url(e[1])
         detalle = re.search(r"Estado:\s*([^,]+)", titulo)         # Vinted: «Título, Marca: X, Estado: Muy bueno, 1.00 €»
@@ -206,7 +223,7 @@ def analiza(html, base, consulta, ventana=40, con_estado=False):
                 if m:
                     estado = m.group(1).lower()
                     break
-        out.append({"titulo": titulo, "url": e[1], "precio": precio, "agotado": agotado, "preventa": preventa, "estado": estado})
+        out.append({"titulo": titulo, "url": url, "precio": precio, "agotado": agotado, "preventa": preventa, "estado": estado})
     return out, p.elegir_siguiente()
 
 

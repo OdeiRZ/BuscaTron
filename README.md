@@ -6,7 +6,7 @@ Buscador y vigilante de precios **local** para tiendas online españolas. Pensad
 - **Datos en vivo**: no usa cachés ni comparadores intermedios, así que el precio es el que ves en la tienda.
 - **Tus datos se quedan en tu equipo**: lista de tiendas, historial y tokens se guardan en archivos locales que no se suben al repositorio.
 
-> Estado: **versión funcional** (v0.8.0). Consulta el [CHANGELOG](CHANGELOG.md).
+> Estado: **versión funcional** (v0.8.1). Consulta el [CHANGELOG](CHANGELOG.md).
 
 ## Inicio rápido
 
@@ -72,7 +72,7 @@ Para las tiendas que no se pueden consultar solas (por ejemplo **Ferretería Ib�
 Los productos y precios se mezclan **al instante** con el resto de la lista (y con el historial, las gráficas y los avisos de los seguimientos), con la etiqueta «Importado hace X h». Se recuerdan **72 horas** y se guardan también en la búsqueda reciente, así que no hace falta repetirlo al volver.
 
 - Acepta el texto de la página o su código HTML (en ese caso conserva los enlaces de cada producto). **No hace ninguna petición a la tienda.**
-- Se leen los productos cuyo título contiene tu búsqueda y que llevan un precio justo después; si hay dos precios seguidos (el anterior y el actual) se toma el menor. Las cabeceras («Resultados de búsqueda…»), los productos sin relación y los precios de lo que viene detrás no se cuentan. Reconoce «agotado» y «preventa» igual que en las demás tiendas.
+- Se leen los productos cuyo título contiene tu búsqueda y que llevan un precio justo después; si hay dos precios seguidos (el anterior y el actual) se toma el menor. Las cabeceras («Resultados de búsqueda…»), los productos sin relación y los precios de lo que viene detrás no se cuentan. Reconoce «agotado» y «preventa» igual que en las demás tiendas. Probado con el texto real de Ferretería Ibérica: 47 productos leídos con sus precios.
 - Es una lectura de texto, no de la estructura de la página: si una tienda presenta los precios de una forma muy distinta (por ejemplo, el precio antes del título), puede fallar. En ese caso BuscaTron te dice que no encontró productos.
 
 ## Segunda mano
@@ -148,7 +148,7 @@ Seguridad:
 ## Cómo encuentra los productos
 
 1. **Descubre el buscador** de cada tienda leyendo el formulario de su portada. Si no lo encuentra, prueba plantillas habituales (PrestaShop, Magento, Shopify, WooCommerce) y recuerda la que funciona. Algunas tiendas llevan su URL de búsqueda conocida en el código.
-2. **Descarga los resultados** y se queda con los enlaces cuyo texto contiene todas las palabras de la búsqueda, junto al primer precio vigente (dentro de la tarjeta del producto o justo después). Ignora los precios tachados y el texto oculto de la página, y detecta «agotado» y «preventa». Si la tienda recorta el título, lo reconstruye a partir del atributo `title` o de la dirección del producto.
+2. **Descarga los resultados** y se queda con los enlaces cuyo texto contiene todas las palabras de la búsqueda, junto al primer precio vigente (dentro de la tarjeta del producto o justo después). Ignora los precios tachados y el texto oculto de la página, y detecta «agotado» y «preventa». Si la tienda recorta el título, lo reconstruye a partir del atributo `title` o de la dirección del producto. Las direcciones se guardan **sin códigos de seguimiento** (en Amazon, `amazon.es/dp/ASIN`; en el resto, sin `utm_*`, `ref`, `srsltid`…), de modo que un mismo producto es siempre la misma dirección: así acumula historial, «Mínimo histórico» y no repite avisos.
 3. **Sigue las páginas siguientes** (enlace `rel="next"` o «Siguiente») hasta el número de páginas elegido, mientras aporten productos nuevos.
 4. **Si el método rápido no encuentra nada** y el navegador está activado, vuelve a intentarlo renderizando la página con tu Chrome (con Playwright). Si funciona, recuerda que esa tienda lo necesita.
 5. **Ordena por precio** (o por precio total) y guarda cada resultado en `buscatron.db` (SQLite). Ese historial alimenta la regla de «bajada respecto a la media», la etiqueta «Mínimo histórico» y las gráficas.
@@ -222,7 +222,7 @@ permitir_acceso_movil.bat     abre el cortafuegos para tu red local (pide admini
 python -m unittest discover -s tests
 ```
 
-83 pruebas, sin red. Cubren las reglas de aviso (objetivo, media histórica, no repetir, reaviso, limpieza de obsoletos), el extractor (precios tachados, texto oculto, títulos recortados, preventas, estados de segunda mano, páginas siguientes, datos de producto, envío), el motor (paginación, filtros, total con envío, mínimo histórico, historial), la búsqueda abierta, el filtro de IP y el PIN, la importación a mano y las búsquedas guardadas.
+86 pruebas, sin red. Cubren las reglas de aviso (objetivo, media histórica, no repetir, reaviso, limpieza de obsoletos), el extractor (precios tachados, texto oculto, títulos recortados, preventas, estados de segunda mano, páginas siguientes, datos de producto, envío), el motor (paginación, filtros, total con envío, mínimo histórico, historial), la búsqueda abierta, el filtro de IP y el PIN, la importación a mano y las búsquedas guardadas.
 
 ## Limitaciones conocidas
 

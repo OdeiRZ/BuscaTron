@@ -60,6 +60,26 @@ class Tarjetas(unittest.TestCase):
         self.assertEqual([(x["url"].split("/")[-1], x["precio"]) for x in r], [("b", 20.0)])
 
 
+class DireccionesCanonicas(unittest.TestCase):
+    def test_amazon_se_reduce_a_dp_asin(self):
+        a = "https://www.amazon.es/Fantasy-Flight-Games-Marvel/dp/B07Z7B4MXR/ref=sr_1_43?dib=eyJ2IjoiMSJ9.XYZ&dib_tag=se&keywords=marvel+champions&qid=1793994570&sr=8-43"
+        b = "https://www.amazon.es/otro-titulo/dp/B07Z7B4MXR?qid=999&sr=8-1&psc=1"
+        self.assertEqual(extract.limpia_url(a), "https://www.amazon.es/dp/B07Z7B4MXR")
+        self.assertEqual(extract.limpia_url(a), extract.limpia_url(b))
+
+    def test_otras_webs_pierden_solo_el_seguimiento(self):
+        self.assertEqual(extract.limpia_url("https://t.es/p?id_product=5&utm_source=x&srsltid=abc&color=rojo"), "https://t.es/p?id_product=5&color=rojo")
+        self.assertEqual(extract.limpia_url("https://v.es/items/12-juego?referrer=catalog"), "https://v.es/items/12-juego")
+        self.assertEqual(extract.limpia_url("https://t.es/juego.html"), "https://t.es/juego.html")
+        self.assertEqual(extract.limpia_url("https://f.es/#1/fullscreen/m=and&q=x"), "https://f.es/#1/fullscreen/m=and&q=x")   # el fragmento no se toca
+
+    def test_el_mismo_producto_con_dos_direcciones_cuenta_una_vez(self):
+        h = ('<a href="https://www.amazon.es/a/dp/B07Z7B4MXR/ref=sr_1_1?qid=1">Marvel Champions Pack</a><b>20 €</b>'
+             '<a href="https://www.amazon.es/b/dp/B07Z7B4MXR/ref=sr_1_2?qid=2">Marvel Champions Pack</a>')
+        r = extract.extrae(h, "https://www.amazon.es/s", "marvel champions")
+        self.assertEqual([x["url"] for x in r], ["https://www.amazon.es/dp/B07Z7B4MXR"])
+
+
 class Tachados(unittest.TestCase):
     def test_clases_por_palabras_completas(self):
         for cls in ("price-old", "oldPrice", "a-text-strike", "regular-price", "was_price", "Compare-at"):
