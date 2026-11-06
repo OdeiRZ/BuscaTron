@@ -8,14 +8,29 @@ from urllib.parse import urljoin, urlparse
 
 PRECIO = re.compile(r"(\d{1,3}(?:\.\d{3})*(?:,\d{1,2})|\d+(?:\.\d{1,2})?)\s*(?:€|eur)", re.I)
 PRECIO_ANTES = re.compile(r"(?:€|eur)\s*(\d{1,3}(?:\.\d{3})*(?:,\d{1,2})|\d+(?:[.,]\d{1,2})?)", re.I)
-TACHADO = re.compile(r"old|regular|before|compare|tachad|was-|strike|antes|original|msrp", re.I)
+TACHADO_PARTES = {"old", "regular", "before", "compare", "was", "strike", "strikethrough", "through", "tachado", "tachada", "antes",
+                  "original", "msrp"}
+
+
+def es_tachado(attrs):
+    """¿Es un precio tachado (el anterior)? Se comparan palabras completas de la clase («a-text-bold» no es «old»),
+    además de style=line-through y el atributo data-a-strike de Amazon."""
+    cls = re.sub(r"([a-z])([A-Z])", r"\1 \2", attrs.get("class", "") or "")
+    return (bool({p.lower() for p in re.findall(r"[A-Za-z]+", cls)} & TACHADO_PARTES)
+            or attrs.get("data-a-strike") == "true" or "line-through" in (attrs.get("style", "") or ""))
 OCULTO = re.compile(r"display\s*:\s*none|visibility\s*:\s*hidden", re.I)
 VACIAS = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "source", "track", "wbr"}
 RESERVA = re.compile(r"reserva|en reposici[oó]n", re.I)
 AGOTADO = re.compile(r"agotad|en reposici[oó]n|vuelva a estar disponible|sin existencias|no hay existencias|sin stock|no disponible|out of stock|sold.?out|fuera de stock", re.I)
 PREVENTA = re.compile(r"pre-?venta|pre-?order|lanzamiento aproximado|pr[oó]ximamente|pr[oó]xima aparici[oó]n|fecha (?:de salida|prevista)|disponible a partir", re.I)
 ESTADO = re.compile(r"\b(precintado|sin abrir|sin estrenar|como nuevo|seminuevo|reacondicionado|nuevo|muy bueno|buen estado|bueno|aceptable|usado|segunda mano|para piezas|ha sido utilizado)\b", re.I)
+def normaliza_simple(t):
+    return re.sub(r"[^a-z0-9 ]+", " ", t.lower()).strip()
+
+
+PAGINA = re.compile(r"(?:[?&/](?:page|p|pagina|pag|pg|pageno|pagenumber|start|offset|from|desde)[=/-]?\d+)|/page/\d+|/pagina-?\d+", re.I)
 SIGUIENTE_TEXTO = {"siguiente", "next", ">", "»", "›", "pagina siguiente", "siguiente »", "siguiente >", "next »", "next >", "→"}
+SIGUIENTE_NORM = {n for n in (normaliza_simple(t) for t in SIGUIENTE_TEXTO) if n}
 
 
 def normaliza(texto):
@@ -48,23 +63,41 @@ class _Parser(HTMLParser):
         self.base = base
         # ("a", href, texto, precios_dentro, textos_dentro, indice_inicio) | ("p", valor) | ("x", texto)
         self.eventos = []
-        self.siguiente = {1: None, 2: None}   # 1 = rel=next (fiable), 2 = enlace «siguiente»
+        self.siguiente = {1: None}            # rel="next": el más fiable
+        self._sig_texto, self._sig_clase = [], []   # enlaces «Siguiente» por su texto / por su clase CSS
         self._a = None
         self._tachado = 0
         self._oculto = 0
         self._pila = []
         self._skip = 0
 
-    def _candidato_siguiente(self, nivel, href):
+    def _candidato_siguiente(self, nivel, href, palabra=False):
         h = urljoin(self.base, href or "")
-        if href and not href.startswith(("#", "javascript")) and h != self.base and not self.siguiente[nivel]:
-            self.siguiente[nivel] = h
+        if not href or href.startswith(("#", "javascript")) or h == self.base:
+            return
+        if nivel == 1:
+            self.siguiente[1] = self.siguiente[1] or h
+        else:
+            if nivel == 2:
+                self._sig_texto.append((h, palabra))
+            else:
+                self._sig_clase.append(h)
+
+    def elegir_siguiente(self):
+        """rel=next; si no, un enlace con texto «Siguiente»; si no, uno por clase CSS que tenga pinta de paginación
+        (así no se confunde con los botones de un carrusel de productos)."""
+        if self.siguiente[1]:
+            return self.siguiente[1]
+        for h in [h for h, _ in self._sig_texto] + self._sig_clase:      # con dirección de paginación
+            if PAGINA.search(h):
+                return h
+        return next((h for h, palabra in self._sig_texto if palabra), None)   # último recurso: la palabra «Siguiente», no un símbolo
 
     def handle_starttag(self, tag, attrs):
         a = dict(attrs)
         if tag in ("script", "style", "noscript"):
             self._skip += 1
-        marca = bool(tag in ("del", "s", "strike") or TACHADO.search(a.get("class", "") or ""))
+        marca = bool(tag in ("del", "s", "strike") or es_tachado(a))
         oculto = bool("hidden" in a or OCULTO.search(a.get("style", "") or ""))
         if tag not in VACIAS:
             self._pila.append((tag, marca, oculto))
@@ -105,8 +138,10 @@ class _Parser(HTMLParser):
             txt = " ".join(txt.split())
             if a["rel_next"]:
                 self._candidato_siguiente(1, a["raw"])
-            elif a["clase_next"] or normaliza(txt).strip() in {normaliza(s).strip() for s in SIGUIENTE_TEXTO} or txt.strip() in SIGUIENTE_TEXTO:
-                self._candidato_siguiente(2, a["raw"])
+            elif txt.strip() in SIGUIENTE_TEXTO or (normaliza(txt).strip() and normaliza(txt).strip() in SIGUIENTE_NORM):
+                self._candidato_siguiente(2, a["raw"], palabra=bool(normaliza(txt).strip()))
+            elif a["clase_next"]:
+                self._candidato_siguiente(3, a["raw"])
             self.eventos.append(("a", a["href"], txt, a["p"], a["x"], a["ini"]))
             self._a = None
 
@@ -172,7 +207,7 @@ def analiza(html, base, consulta, ventana=40, con_estado=False):
                     estado = m.group(1).lower()
                     break
         out.append({"titulo": titulo, "url": e[1], "precio": precio, "agotado": agotado, "preventa": preventa, "estado": estado})
-    return out, (p.siguiente[1] or p.siguiente[2])
+    return out, p.elegir_siguiente()
 
 
 def extrae(html, base, consulta, ventana=40, con_estado=False):

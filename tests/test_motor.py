@@ -113,6 +113,27 @@ class Buscar(unittest.TestCase):
         self.assertFalse(a["Juego B"]["minimo"])              # sin historial no hay mínimo
 
 
+class VentanaSoloSiHaceFalta(unittest.TestCase):
+    def test_solo_se_abre_la_ventana_para_la_tienda_que_pide_comprobacion(self):
+        d = tempfile.mkdtemp()
+        llamadas = []
+
+        def tienda(t, consulta, nav=None, paginas=1):
+            llamadas.append((t["host"], nav and nav["visible"]))
+            if t["host"] == "pide.es" and not nav["visible"]:
+                return t["host"], [], motor.DESAFIO
+            return t["host"], [{"titulo": "Juego " + t["host"], "url": "https://x/" + t["host"], "precio": 10.0, "agotado": False,
+                                "preventa": False, "estado": ""}], None
+        lista = [{"host": "a.es", "activa": True}, {"host": "pide.es", "activa": True}, {"host": "b.es", "activa": True}]
+        with mock.patch.object(bd, "RUTA", os.path.join(d, "t.db")), mock.patch.object(ajustes, "RUTA", os.path.join(d, "c.json")),                 mock.patch.object(tiendas, "carga", lambda: lista), mock.patch.object(tiendas, "guarda", lambda l: None),                 mock.patch.object(motor, "_tienda", tienda), mock.patch.object(motor.navegador, "disponible", lambda: True):
+            ajustes.guarda({"usar_navegador": True, "navegador_visible": True, "segunda_mano_sembrada": True, "amazon_automatico": True})
+            res, inf = motor.buscar("juego")
+        self.assertEqual(sorted(h for h, v in llamadas if v is False), ["a.es", "b.es", "pide.es"])   # todo en segundo plano primero
+        self.assertEqual([h for h, v in llamadas if v is True], ["pide.es"])                          # ventana solo para la que la pide
+        self.assertEqual(len(res), 3)
+        self.assertIsNone(inf["pide.es"]["error"])
+
+
 class Historial(unittest.TestCase):
     def test_un_punto_por_revision_con_el_precio_mas_bajo(self):
         d = tempfile.mkdtemp()

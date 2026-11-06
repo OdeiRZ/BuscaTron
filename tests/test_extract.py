@@ -60,6 +60,25 @@ class Tarjetas(unittest.TestCase):
         self.assertEqual([(x["url"].split("/")[-1], x["precio"]) for x in r], [("b", 20.0)])
 
 
+class Tachados(unittest.TestCase):
+    def test_clases_por_palabras_completas(self):
+        for cls in ("price-old", "oldPrice", "a-text-strike", "regular-price", "was_price", "Compare-at"):
+            self.assertTrue(extract.es_tachado({"class": cls}), cls)
+        for cls in ("a-text-bold", "price", "gold-member", "folded", "a-price a-text-normal", "holder"):
+            self.assertFalse(extract.es_tachado({"class": cls}), cls)
+
+    def test_atributos_de_amazon_y_line_through(self):
+        self.assertTrue(extract.es_tachado({"class": "a-price", "data-a-strike": "true"}))
+        self.assertTrue(extract.es_tachado({"style": "text-decoration: line-through"}))
+
+    def test_precio_amazon_en_negrita_no_se_pierde(self):
+        h = ('<div><a href="/Marvel-Champions-Avispa/dp/B08ZDGGXFL"><span>Marvel Champions Avispa pack</span></a>'
+             '<span class="a-price a-text-price" data-a-strike="true"><span class="a-offscreen">29,99€</span></span>'
+             '<span class="a-price a-text-bold"><span class="a-offscreen">24,95€</span></span></div>')
+        r = extract.extrae(h, "https://www.amazon.es/s", "marvel champions")
+        self.assertEqual([x["precio"] for x in r], [24.95])
+
+
 class Vinted(unittest.TestCase):
     def test_titulo_estado_y_precio_salen_del_title(self):
         h = ('<a href="/items/1-a" title="Sleeves Marvel Champions, Marca: Marvel, Estado: Muy bueno, 2.50 €, 3.25 €"></a>'
@@ -86,6 +105,13 @@ class Paginas(unittest.TestCase):
     def test_enlace_siguiente_por_texto_o_clase(self):
         for h in ('<a href="?page=2">Siguiente</a>', '<a href="?page=2">»</a>', '<a class="pagination-next" href="?page=2">2</a>'):
             self.assertEqual(extract.analiza(h, "https://t.es/b", "x")[1], "https://t.es/b?page=2", h)
+
+    def test_un_boton_de_carrusel_no_es_la_paginacion(self):
+        h = ('<a class="a-carousel-goto-nextpage" href="/dp/B000PRODUCTO">›</a>'
+             '<a class="s-pagination-next" href="/s?k=x&page=2&ref=sr_pg_1">Siguiente</a>')
+        self.assertEqual(extract.analiza(h, "https://www.amazon.es/s?k=x", "x")[1], "https://www.amazon.es/s?k=x&page=2&ref=sr_pg_1")
+        solo_carrusel = '<a class="carousel-next" href="/dp/B000PRODUCTO">›</a>'
+        self.assertIsNone(extract.analiza(solo_carrusel, "https://www.amazon.es/s?k=x", "x")[1])
 
     def test_sin_pagina_siguiente(self):
         self.assertIsNone(extract.analiza('<a href="#">Siguiente</a><a href="javascript:void(0)">next</a>', "https://t.es/", "x")[1])

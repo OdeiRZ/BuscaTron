@@ -6,7 +6,7 @@ Buscador y vigilante de precios **local** para tiendas online españolas. Pensad
 - **Datos en vivo**: no usa cachés ni comparadores intermedios, así que el precio es el que ves en la tienda.
 - **Tus datos se quedan en tu equipo**: lista de tiendas, historial y tokens se guardan en archivos locales que no se suben al repositorio.
 
-> Estado: **versión funcional** (v0.6.1). Consulta el [CHANGELOG](CHANGELOG.md).
+> Estado: **versión funcional** (v0.7.0). Consulta el [CHANGELOG](CHANGELOG.md).
 
 ## Inicio rápido
 
@@ -39,7 +39,7 @@ La web está pensada para móvil (probada a 360 px) y escritorio. Arranca con el
   - **Buscar también en otras webs** (ver [Búsqueda abierta](#búsqueda-abierta)), con región España, Unión Europea o cualquier país.
 - **Historial** (📈 en cada resultado): gráfica del precio de ese artículo con mínimo, media, máximo y precio actual. La etiqueta «Mínimo histórico» salta cuando está al precio más bajo que se le ha visto, con al menos tres datos previos.
 - Tiendas: actívalas o desactívalas con un toque, añade otras con el dominio (`ejemplo.es`) y, en «Gestionar tiendas», **edita su nombre, su dirección o URL de búsqueda, el envío y el modo «solo enlace»** cuando quieras. Si el buscador de una web no se detecta, pega una URL de búsqueda con `{q}` donde va el producto: `https://ejemplo.es/buscar?q={q}`. Cambiar la dirección a otro dominio hace que se vuelva a descubrir su buscador.
-- **Solo enlace**: marca así las tiendas que bloquean el acceso automático (por ejemplo Amazon). No se consultan, pero cada búsqueda te ofrece su enlace ya preparado para abrirlo tú.
+- **Solo enlace**: marca así las tiendas que bloquean el acceso automático (por ejemplo Wallapop). No se consultan, pero cada búsqueda te ofrece su enlace ya preparado para abrirlo tú.
 
 ### 👁️ Seguimiento
 Guarda una búsqueda y deja que BuscaTron la revise sola cada X horas mientras esté abierto (con el [arranque con Windows](#arranque-con-windows-y-bandeja), siempre).
@@ -147,7 +147,7 @@ pip install playwright
 
 No se descarga ningún navegador: usa el que ya tienes, con un perfil propio (`navegador_perfil/`).
 
-**BuscaTron no intenta saltarse protecciones antibot.** Si una tienda pide una comprobación humana, te lo dice. Con «Mostrar la ventana» activado en Ajustes, puedes resolverla tú una vez y la sesión queda guardada. Las tiendas que bloquean todo acceso automático se ofrecen como «solo enlace».
+Todas las consultas con navegador se hacen **en segundo plano**, sin ventanas. **BuscaTron no intenta saltarse protecciones antibot.** Si una tienda pide una comprobación humana, te lo dice; con «Mostrar la ventana» activado en Ajustes, solo para esa tienda se abre una ventana para que la resuelvas tú, y la sesión queda guardada. Las tiendas que bloquean todo acceso automático se ofrecen como «solo enlace».
 
 ## Tiendas probadas
 
@@ -155,9 +155,9 @@ Resultado de la prueba el 6/11/2026 (las webs cambian, así que puede variar):
 
 | Estado | Tiendas |
 |---|---|
-| ✅ Funcionan (15) | Juegos de la Mesa Redonda, Zacatrus, Dungeon Marvels, Jugamos Una, Jugamos Otra, El Taller del Modelista, Mathom, Tablerum, Outlet Games, Ludus Belli, Bandua, Goblin Trader, Gameria, Masqueoca, Turol Games (esta con navegador) |
+| ✅ Funcionan (16) | Juegos de la Mesa Redonda, Zacatrus, Dungeon Marvels, Jugamos Una, Jugamos Otra, El Taller del Modelista, Mathom, Tablerum, Outlet Games, Ludus Belli, Bandua, Goblin Trader, Gameria, Masqueoca, Turol Games y **Amazon** (estas dos con navegador) |
 | ➖ Responden, sin el producto probado (2) | Tiendas MGI, Outlet-PC |
-| 🔗 Solo enlace (2) | Amazon, Ferretería Ibérica Madrid |
+| 🔗 Solo enlace (1) | Ferretería Ibérica Madrid |
 | 🛒 Segunda mano | Vinted y Milanuncios funcionan; Wallapop y eBay, solo enlace |
 
 ## Archivos locales
@@ -205,14 +205,14 @@ permitir_acceso_movil.bat     abre el cortafuegos para tu red local (pide admini
 python -m unittest discover -s tests
 ```
 
-57 pruebas, sin red. Cubren las reglas de aviso (objetivo, media histórica, no repetir, reaviso, limpieza de obsoletos), el extractor (precios tachados, texto oculto, títulos recortados, preventas, estados de segunda mano, páginas siguientes, datos de producto, envío), el motor (paginación, filtros, total con envío, mínimo histórico, historial), la búsqueda abierta, el filtro de IP y el PIN.
+64 pruebas, sin red. Cubren las reglas de aviso (objetivo, media histórica, no repetir, reaviso, limpieza de obsoletos), el extractor (precios tachados, texto oculto, títulos recortados, preventas, estados de segunda mano, páginas siguientes, datos de producto, envío), el motor (paginación, filtros, total con envío, mínimo histórico, historial), la búsqueda abierta, el filtro de IP y el PIN.
 
 ## Limitaciones conocidas
 
 - Las revisiones programadas solo se ejecutan **mientras BuscaTron esté abierto**: activa el arranque con Windows para que lo esté siempre.
 - No reconoce «el mismo producto» entre tiendas: filtra por palabras. Usa «Excluir» para descartar accesorios, packs o ediciones que no te interesan.
 - Las tiendas cambian su web de vez en cuando y su lector puede dejar de funcionar. La web indica qué tiendas no han respondido.
-- Amazon, Ferretería Ibérica, Wallapop y eBay bloquean cualquier acceso automático: solo se ofrece su enlace.
+- Ferretería Ibérica, Wallapop y eBay bloquean cualquier acceso automático: solo se ofrece su enlace. Amazon solo responde a un navegador real, así que necesita el [navegador opcional](#navegador-opcional) (Playwright y Chrome o Edge) y puede volver a pedir una comprobación humana si lo considera sospechoso.
 - La búsqueda abierta usa buscadores web gratuitos: es menos precisa, solo lee precios en euros y puede dejar de funcionar si el buscador la bloquea.
 - Los gastos de envío los pones tú (o los sugiere «Detectar», que es solo una pista); no se leen del carrito de cada tienda.
 - Las preventas se reconocen por el texto de la tienda («Preventa», «Lanzamiento aproximado»…); una tienda que no lo diga puede colarse como disponible.

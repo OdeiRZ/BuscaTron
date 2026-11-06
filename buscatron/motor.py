@@ -5,6 +5,7 @@ import time
 
 from . import ajustes, bd, fetch, extract, descubre, navegador, tiendas as cfg
 
+DESAFIO = "pide comprobación humana (captcha): activa «Mostrar la ventana» en Ajustes y resuélvela una vez"
 MIN_HISTORIAL = 3     # observaciones previas necesarias para hablar de «mínimo histórico»
 
 
@@ -80,7 +81,7 @@ def _tienda(t, consulta, nav=None, paginas=1):
             t["plantilla"] = None
         return h, [], err or "sin resultados"
     except navegador.Desafio:
-        return h, [], "pide comprobación humana (captcha): activa «navegador visible» en Ajustes y resuélvela una vez"
+        return h, [], DESAFIO
     except Exception as e:
         return h, [], f"error: {str(e)[:70]}"
 
@@ -145,7 +146,7 @@ def buscar(consulta, incluir="", excluir="", ocultar_agotados=True, hosts=None, 
     por_host = {t["host"]: t for t in lista}
     inc = extract.normaliza(incluir).split()
     exc = extract.normaliza(excluir).split()
-    nav = {"visible": bool(aj["navegador_visible"])} if aj["usar_navegador"] and navegador.disponible() else None
+    nav = {"visible": False} if aj["usar_navegador"] and navegador.disponible() else None   # siempre en segundo plano
 
     def pasa(x):
         n = extract.normaliza(x["titulo"])
@@ -157,14 +158,21 @@ def buscar(consulta, incluir="", excluir="", ocultar_agotados=True, hosts=None, 
 
     res, informe = [], {}
     with cf.ThreadPoolExecutor(6) as ex:
-        for host, items, err in ex.map(lambda t: _tienda(t, consulta, nav, paginas), activas):
-            kept = 0
-            for x in items:
-                if pasa(x):
-                    x["tienda"], x["origen"] = host, por_host[host].get("tipo", "tienda")
-                    res.append(x)
-                    kept += 1
-            informe[host] = {"encontrados": kept, "error": err if not kept else None}
+        resultados = list(ex.map(lambda t: _tienda(t, consulta, nav, paginas), activas))
+    if nav and aj["navegador_visible"]:
+        # Solo las tiendas que piden comprobar que eres humano se reintentan con ventana, de una en una,
+        # para que el usuario pueda resolverlo; el resto se consulta sin que salga nada en pantalla.
+        for i, (host, items, err) in enumerate(resultados):
+            if err == DESAFIO:
+                resultados[i] = _tienda(por_host[host], consulta, {"visible": True}, paginas)
+    for host, items, err in resultados:
+        kept = 0
+        for x in items:
+            if pasa(x):
+                x["tienda"], x["origen"] = host, por_host[host].get("tipo", "tienda")
+                res.append(x)
+                kept += 1
+        informe[host] = {"encontrados": kept, "error": err if not kept else None}
     for t in manuales:
         informe[t["host"]] = {"encontrados": 0, "error": None, "manual": cfg.url_busqueda(t["plantilla"], consulta)}
     if abierta:

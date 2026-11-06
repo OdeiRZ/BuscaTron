@@ -25,12 +25,12 @@ outlet-pc.es www.goblintrader.es""".split()
 CONOCIDAS = {
     "www.masqueoca.com": "https://www.masqueoca.com/tienda/buscardo.asp?txtbusqueda={q}&dondebusco=1&vertodo=1&stockneg=1",
     "www.turolgames.com": "https://www.turolgames.com/es/buscar?controller=search&search_query={q}",  # necesita navegador (pantalla de carga con JS)
+    "www.amazon.es": "https://www.amazon.es/s?k={q}&s=price-asc-rank",                                 # solo responde a un navegador real
 }
 
 
 # Tiendas que bloquean cualquier acceso automático: no se consultan, solo se ofrece el enlace de búsqueda.
 MANUALES = {
-    "www.amazon.es": "https://www.amazon.es/s?k={q}&s=price-asc-rank",
     "ferreteriaibermadrid.es": "https://ferreteriaibermadrid.es/#3273/fullscreen/m=and&q={q}",
 }
 
@@ -65,6 +65,12 @@ def carga():
                               "tipo": "segunda_mano", **({"manual": True} if d.get("manual") else {})})
         guarda(lista)
         ajustes.guarda({"segunda_mano_sembrada": True})
+    if not ajustes.carga()["amazon_automatico"]:     # antes iba como «solo enlace»; con un Chrome real sí responde
+        for t in lista:
+            if t["host"] == "www.amazon.es":
+                t["manual"], t["plantilla"], t["js"] = False, CONOCIDAS["www.amazon.es"], True
+        guarda(lista)
+        ajustes.guarda({"amazon_automatico": True})
     for t in lista:
         t.setdefault("tipo", "tienda")
         if not t.get("plantilla") and t["host"] in CONOCIDAS:

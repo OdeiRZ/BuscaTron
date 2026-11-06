@@ -3,6 +3,20 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.7.0] - 2026-11-06
+
+### Añadido
+- **Amazon.es se consulta automáticamente** (antes solo enlace). Con un Chrome real, y sin ninguna comprobación humana ni ventana, devuelve los resultados: 56 productos en una prueba con 3 páginas, con precios, agotados y paginación. Se migra tu entrada una sola vez; si Amazon volviera a pedir una comprobación, se indica como en cualquier otra tienda.
+
+### Corregido
+- **Precios tachados detectados por error**: se buscaba `old` dentro del nombre de las clases CSS y `a-text-bold` (que Amazon pone en todos sus precios) contiene «b**old**». Ahora se comparan palabras completas, y se reconocen también `style="text-decoration: line-through"` y el atributo `data-a-strike` de Amazon.
+- **Página siguiente**: los enlaces sin texto (una imagen) coincidían con «Siguiente», porque al quitar los símbolos del texto quedaba una cadena vacía, y los botones de un carrusel se confundían con la paginación. Ahora se prefieren las direcciones con pinta de paginación (`page=2`, `/pagina-2`, `start=20`…) y, como último recurso, los enlaces con la palabra «Siguiente».
+- **Ventanas del navegador**: con «Mostrar la ventana» activado, cada búsqueda que usaba el navegador abría una ventana visible, y cerrarla a mano rompía las demás consultas. Ahora todo se hace en segundo plano y solo las tiendas que piden comprobación humana se reintentan, de una en una, con ventana.
+
+### Cambiado
+- La opción de Ajustes pasa a llamarse «Abrir una ventana solo si una tienda pide comprobar que eres humano».
+- 7 pruebas nuevas (64 en total).
+
 ## [0.6.1] - 2026-11-06
 
 ### Corregido
