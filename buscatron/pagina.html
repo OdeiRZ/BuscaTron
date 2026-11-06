@@ -72,8 +72,9 @@ summary .n{font-weight:500;color:var(--mut);font-size:13px}
 .res{display:flex;align-items:stretch;border:1px solid var(--bd);border-radius:12px;background:var(--card);margin-bottom:8px;color:inherit;box-shadow:var(--sh);overflow:hidden}
 .res .cuerpo{display:flex;gap:12px;align-items:flex-start;padding:12px;flex:1;min-width:0;text-decoration:none;color:inherit}
 .res .cuerpo:active{background:var(--ac2)}
-.res .graf{flex:0 0 auto;min-height:0;width:46px;padding:0;border-radius:0;background:transparent;color:var(--mut);border-left:1px solid var(--bd);font-size:18px}
-.res .graf:active{background:var(--ac2)}
+.res .graf,.res .quita{flex:0 0 auto;min-height:0;width:46px;padding:0;border-radius:0;background:transparent;color:var(--mut);border-left:1px solid var(--bd);font-size:18px}
+.res .graf:active,.res .quita:active{background:var(--ac2)}
+.res .quita{color:var(--ko);font-size:16px}
 .res.best{border-color:var(--ok);background:linear-gradient(0deg,var(--card),var(--card)) padding-box}
 .pr small{display:block;font-size:11px;font-weight:600;color:var(--mut);margin-top:1px}
 .pr{flex:0 0 auto;min-width:74px;font-size:18px;font-weight:800;color:var(--ac);text-align:right;white-space:nowrap}
@@ -546,9 +547,10 @@ async function cargaAvisos(){const l=await api('avisos');try{localStorage.setIte
   $('av-lista').innerHTML=l.length?`<div class="cuenta" style="display:flex;justify-content:space-between;align-items:center">${l.length} aviso${l.length>1?'s':''}
     <button type="button" class="peli mini" id="av-vaciar">Vaciar avisos</button></div>`+l.map((a,i)=>`<div class="res"><a class="cuerpo" href="${esc(a.url)}" target="_blank" rel="noopener"><div class="pr">${euro(a.precio)}</div>
     <div class="info"><div class="t">${esc(a.titulo)}</div><div class="meta"><span class="tag">${esc(nombreT(a.tienda))}</span><span class="tag ok">${esc(a.motivo)}</span></div>
-    <div class="mut" style="margin-top:4px">${fecha(a.ts)}</div></div></a><button type="button" class="graf" data-i="${i}" title="Historial de precios" aria-label="Ver historial de precios">📈</button></div>`).join('')
+    <div class="mut" style="margin-top:4px">${fecha(a.ts)}</div></div></a><button type="button" class="graf" data-i="${i}" title="Historial de precios" aria-label="Ver historial de precios">📈</button><button type="button" class="quita" data-id="${a.id}" title="Quitar este aviso" aria-label="Quitar este aviso">✕</button></div>`).join('')
     :'<div class="card vacio-msg"><span class="em">🔔</span>Todavía no hay avisos.<br>Cuando un producto vigilado baje de precio, saldrá aquí.</div>';
   document.querySelectorAll('#av-lista .graf').forEach(g=>g.onclick=()=>{const a=l[+g.dataset.i];abreHist(a.url,a.titulo,a.tienda);});
+  document.querySelectorAll('#av-lista .quita').forEach(g=>g.onclick=async()=>{await api('avisos',{accion:'borrar',id:+g.dataset.id});cargaAvisos();aviso('Aviso quitado');});
   if($('av-vaciar'))$('av-vaciar').onclick=async()=>{if(confirm('¿Borrar todos los avisos? Los productos que sigan cumpliendo tu búsqueda volverán a avisar en la próxima revisión.')){await api('avisos',{accion:'vaciar'});cargaAvisos();aviso('Avisos vaciados');}};}
 async function cargaNavAv(){try{const l=await api('avisos');const v=Number(localStorage.getItem('bt-vistos')||0);
   const n=l.filter(a=>a.id>v).length;$('nav-av').textContent=n?String(n):'';}catch(e){}}

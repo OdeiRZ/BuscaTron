@@ -3,6 +3,15 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.8.2] - 2026-11-06
+
+### Añadido
+- **Quitar un aviso individual**: cada tarjeta de la pestaña Avisos tiene una **✕**. El aviso se *oculta* en vez de borrarse, porque BuscaTron usa esa lista para no repetir avisos: si se borrara, el producto volvería a avisar por Telegram en la siguiente revisión. Así solo vuelve a avisar si baja más de precio (o pasan 30 días). «Vaciar avisos» sigue borrándolos todos (y entonces sí pueden repetirse).
+- 3 pruebas nuevas (89 en total).
+
+### Mejorado
+- **«Solo castellano»** reconoce también títulos claramente ingleses que no dicen «inglés», muy comunes en Amazon: «Players», «Playing Time», «Minutes» y «Ages 14». Si el título menciona el castellano, sigue ganando este.
+
 ## [0.8.1] - 2026-11-06
 
 ### Corregido

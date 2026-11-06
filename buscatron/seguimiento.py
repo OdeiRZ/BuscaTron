@@ -81,7 +81,14 @@ def borra(seg_id):
 
 def avisos(limite=100):
     with bd.conecta() as c:
-        return [dict(r) for r in c.execute("SELECT * FROM avisos ORDER BY ts DESC LIMIT ?", (limite,))]
+        return [dict(r) for r in c.execute("SELECT * FROM avisos WHERE oculto=0 ORDER BY ts DESC LIMIT ?", (limite,))]
+
+
+def borra_aviso(aviso_id):
+    """Quita un aviso de la lista. Se oculta en vez de borrarse: BuscaTron recuerda que ya avisó de ese producto,
+    así que no vuelve a avisar por Telegram salvo que baje más de precio (o pasen 30 días)."""
+    with bd.conecta() as c:
+        c.execute("UPDATE avisos SET oculto=1 WHERE id=?", (aviso_id,))
 
 
 def vacia_avisos():

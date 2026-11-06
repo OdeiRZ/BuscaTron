@@ -14,6 +14,13 @@ class Idioma(unittest.TestCase):
         for t in ("Marvel Champions: Civil War Expansion (Inglés)", "Hero pack ingles", "Jeu en Français", "Edición English"):
             self.assertTrue(motor.en_otro_idioma(t), t)
 
+    def test_detecta_titulos_en_ingles_aunque_no_lo_digan(self):          # títulos de Amazon
+        for t in ("Fantasy Flight Games, Marvel Champions: Hero Pack: Ms. Marvel, Card Game, 1 to 4 Players, Ages 14+, 40 to 70 Minutes Playing Time",
+                  "Asmodee Juego 2 Players", "Game Ages 8 and up"):
+            self.assertTrue(motor.en_otro_idioma(t), t)
+        self.assertFalse(motor.en_otro_idioma("Marvel Champions Hero Pack (Castellano) para 1-4 jugadores, 40-70 minutos"))   # castellano gana
+        self.assertFalse(motor.en_otro_idioma("Marvel Champions: Pack de Héroe Hulk"))
+
     def test_castellano_o_sin_marca_no_se_filtra(self):
         for t in ("Marvel Champions: Civil War (Castellano)", "Marvel Champions: Vision",
                   "Pack de héroe (Inglés / Castellano)", "Marvel Champions: Edición en español"):

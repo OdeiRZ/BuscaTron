@@ -94,6 +94,26 @@ class Avisos(Base):
         self.assertEqual(seguimiento.avisos(), [])
         self.assertEqual([s["id"] for s in seguimiento.lista()], [otro])
 
+    def test_quitar_un_aviso_lo_oculta_sin_provocar_un_aviso_repetido(self):
+        self.sid = seguimiento.guarda({"consulta": "marvel", "objetivo": "40", "canales": "telegram"})
+        self.busca(30)
+        aviso = seguimiento.avisos()[0]
+        seguimiento.borra_aviso(aviso["id"])
+        self.assertEqual(seguimiento.avisos(), [])                 # ya no sale en la lista
+        self.assertEqual(len(self.enviados), 1)
+        self.assertEqual(self.busca(30)["avisos"], [])             # mismo precio: no se vuelve a avisar
+        self.assertEqual(len(self.enviados), 1)
+        self.assertEqual(len(self.busca(25)["avisos"]), 1)         # si baja más, avisa otra vez
+        self.assertEqual([x["precio"] for x in seguimiento.avisos()], [25])
+
+    def test_quitar_solo_afecta_al_aviso_elegido(self):
+        self.sid = seguimiento.guarda({"consulta": "marvel", "objetivo": "40"})
+        with mock.patch("buscatron.motor.buscar", lambda *a, **k: ([item(30, url="https://t.es/a"), item(31, url="https://t.es/b")], {"t.es": {"encontrados": 2, "error": None}})):
+            seguimiento.revisa(self.sid)
+        a, b = seguimiento.avisos()
+        seguimiento.borra_aviso(a["id"])
+        self.assertEqual([x["id"] for x in seguimiento.avisos()], [b["id"]])
+
     def test_vaciar_avisos(self):
         self.sid = seguimiento.guarda({"consulta": "marvel", "objetivo": "40"})
         self.busca(30)

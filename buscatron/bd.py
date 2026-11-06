@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS importados(
     host TEXT, ts REAL, consulta TEXT, titulo TEXT, url TEXT, precio REAL, agotado INTEGER DEFAULT 0, preventa INTEGER DEFAULT 0);
 CREATE INDEX IF NOT EXISTS ix_importados ON importados(host, ts);
 CREATE TABLE IF NOT EXISTS avisos(
-    id INTEGER PRIMARY KEY AUTOINCREMENT, ts REAL, seg_id INTEGER, titulo TEXT, tienda TEXT, url TEXT, precio REAL, motivo TEXT);
+    id INTEGER PRIMARY KEY AUTOINCREMENT, ts REAL, seg_id INTEGER, titulo TEXT, tienda TEXT, url TEXT, precio REAL, motivo TEXT, oculto INTEGER DEFAULT 0);
 """
 
 
@@ -34,7 +34,7 @@ def conecta(ruta=None):
     except sqlite3.OperationalError:
         pass
     for tabla, columna in (("seguimientos", "castellano INTEGER DEFAULT 1"), ("seguimientos", "opciones TEXT DEFAULT '{}'"),
-                           ("precios", "preventa INTEGER DEFAULT 0")):   # bases creadas por versiones anteriores
+                           ("precios", "preventa INTEGER DEFAULT 0"), ("avisos", "oculto INTEGER DEFAULT 0")):   # bases creadas por versiones anteriores
         try:
             c.execute(f"ALTER TABLE {tabla} ADD COLUMN {columna}")
         except sqlite3.OperationalError:

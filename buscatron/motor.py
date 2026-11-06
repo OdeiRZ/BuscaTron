@@ -86,7 +86,7 @@ def _tienda(t, consulta, nav=None, paginas=1):
         return h, [], f"error: {str(e)[:70]}"
 
 
-OTROS_IDIOMAS = re.compile(r"\b(ingles|inglesa|english|frances|francesa|francais|aleman|alemana|deutsch|italiano|italiana|portugues|portuguesa|polaco|polaca|neerlandes|ruso|rusa)\b")
+OTROS_IDIOMAS = re.compile(r"\b(ingles|inglesa|english|frances|francesa|francais|aleman|alemana|deutsch|italiano|italiana|portugues|portuguesa|polaco|polaca|neerlandes|ruso|rusa|players|playing time|minutes)\b|\bages \d+")
 ES = re.compile(r"\b(castellano|espanol|espanola)\b")
 
 

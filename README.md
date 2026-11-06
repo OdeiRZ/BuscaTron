@@ -6,7 +6,7 @@ Buscador y vigilante de precios **local** para tiendas online españolas. Pensad
 - **Datos en vivo**: no usa cachés ni comparadores intermedios, así que el precio es el que ves en la tienda.
 - **Tus datos se quedan en tu equipo**: lista de tiendas, historial y tokens se guardan en archivos locales que no se suben al repositorio.
 
-> Estado: **versión funcional** (v0.8.1). Consulta el [CHANGELOG](CHANGELOG.md).
+> Estado: **versión funcional** (v0.8.2). Consulta el [CHANGELOG](CHANGELOG.md).
 
 ## Inicio rápido
 
@@ -31,7 +31,7 @@ La web está pensada para móvil (probada a 360 px) y escritorio. Arranca con el
 - Busca un producto en todas las tiendas activas y ve los **N más baratos**, con precio, tienda, enlace y etiquetas (preventa, segunda mano y su estado, mínimo histórico…).
 - Filtros: palabras que debe contener o excluir, precio mínimo y máximo, y **páginas leídas por tienda** (1 a 6).
 - **Ocultar agotados** (activado por defecto). Reconoce «agotado», «sin stock», «en reposición» y «reserva», y descarta los productos que la tienda no puede enviar ya.
-- **Solo castellano** (activado por defecto): descarta los productos que indican otro idioma (inglés, francés, alemán…) salvo que mencionen también el castellano. Desmárcalo para ver todos los idiomas.
+- **Solo castellano** (activado por defecto): descarta los productos que indican otro idioma (inglés, francés, alemán…, o frases típicas inglesas como «Players», «Playing Time» o «Ages 14+») salvo que mencionen también el castellano. Desmárcalo para ver todos los idiomas.
 - En **«Más fuentes y opciones»** (se recuerdan entre búsquedas):
   - **Incluir preventas**: por defecto se ocultan, porque no se pueden recibir todavía. Se distinguen de los agotados («Lanzamiento aproximado: 26/3/2027», «Preventa»).
   - **Sumar el envío al precio**: ordena por el precio total (ver [Gastos de envío](#gastos-de-envío)).
@@ -52,7 +52,7 @@ Guarda una búsqueda y deja que BuscaTron la revise sola cada X horas mientras e
 ### 🔔 Avisos
 Lista de todo lo que ha saltado, con el motivo, la tienda, el enlace y el historial (📈). Un contador rojo en la pestaña indica los nuevos.
 
-Cada revisión **retira los avisos que ya no cumplen tu búsqueda** (porque se agotó, es una preventa, está en otro idioma o salió de tu rango de precio), siempre que la tienda haya respondido: si una web falla, no se borra nada. Si un producto vuelve a estar disponible a un precio que cumple, avisa de nuevo. Con «Vaciar avisos» puedes limpiar la lista a mano.
+Cada revisión **retira los avisos que ya no cumplen tu búsqueda** (porque se agotó, es una preventa, está en otro idioma o salió de tu rango de precio), siempre que la tienda haya respondido: si una web falla, no se borra nada. Si un producto vuelve a estar disponible a un precio que cumple, avisa de nuevo. Con «Vaciar avisos» puedes limpiar la lista a mano, o quitar uno solo con la **✕** de su tarjeta: se oculta de la lista pero BuscaTron recuerda que ya te avisó, así que no vuelve a avisar de ese producto salvo que baje más de precio (o pasen 30 días).
 
 ### ⚙️ Ajustes
 - **Búsqueda**: páginas que se leen por tienda por defecto.
@@ -222,7 +222,7 @@ permitir_acceso_movil.bat     abre el cortafuegos para tu red local (pide admini
 python -m unittest discover -s tests
 ```
 
-86 pruebas, sin red. Cubren las reglas de aviso (objetivo, media histórica, no repetir, reaviso, limpieza de obsoletos), el extractor (precios tachados, texto oculto, títulos recortados, preventas, estados de segunda mano, páginas siguientes, datos de producto, envío), el motor (paginación, filtros, total con envío, mínimo histórico, historial), la búsqueda abierta, el filtro de IP y el PIN, la importación a mano y las búsquedas guardadas.
+89 pruebas, sin red. Cubren las reglas de aviso (objetivo, media histórica, no repetir, reaviso, limpieza de obsoletos), el extractor (precios tachados, texto oculto, títulos recortados, preventas, estados de segunda mano, páginas siguientes, datos de producto, envío), el motor (paginación, filtros, total con envío, mínimo histórico, historial), la búsqueda abierta, el filtro de IP y el PIN, la importación a mano y las búsquedas guardadas.
 
 ## Limitaciones conocidas
 

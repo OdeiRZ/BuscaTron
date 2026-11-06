@@ -223,6 +223,8 @@ class Handler(BaseHTTPRequestHandler):
         if ruta == "/api/avisos":
             if c.get("accion") == "vaciar":
                 seguimiento.vacia_avisos()
+            elif c.get("accion") == "borrar":
+                seguimiento.borra_aviso(int(c["id"]))
             return seguimiento.avisos()
         if ruta == "/api/arranque":           # solo desde este equipo: cambia el inicio de Windows del usuario
             if not es_local(self.client_address[0]):
