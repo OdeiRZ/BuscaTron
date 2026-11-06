@@ -1,0 +1,375 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#4f46e5">
+<title>BuscaTron · Comparador de precios</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%234f46e5'/%3E%3Cstop offset='1' stop-color='%237c3aed'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='url(%23g)'/%3E%3Cpath d='M15 33 33 15h17v17L32 50z' fill='%23fff'/%3E%3Ccircle cx='41' cy='24' r='4' fill='%234f46e5'/%3E%3C/svg%3E">
+<script>try{var t=localStorage.getItem('bt-tema');document.documentElement.dataset.theme=(t==='dark'||t==='light')?t:(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light')}catch(e){}</script>
+<style>
+:root{color-scheme:light;--bg:#f3f4f8;--card:#fff;--tx:#1a1d26;--mut:#6b7280;--bd:#e5e7ee;--ac:#4f46e5;--ac2:#eef0ff;--ok:#15803d;--ok2:#e6f6ec;--ko:#b42318;--ko2:#fdeceb;--sh:0 1px 2px rgba(20,24,40,.06),0 4px 14px rgba(20,24,40,.05)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;--bg:#0f1117;--card:#181b24;--tx:#e8eaf0;--mut:#9aa1b2;--bd:#2a2f3c;--ac:#8b93ff;--ac2:#232748;--ok:#4ade80;--ok2:#12301f;--ko:#f87171;--ko2:#3a1a1a;--sh:none}}
+:root[data-theme="dark"]{color-scheme:dark;--bg:#0f1117;--card:#181b24;--tx:#e8eaf0;--mut:#9aa1b2;--bd:#2a2f3c;--ac:#8b93ff;--ac2:#232748;--ok:#4ade80;--ok2:#12301f;--ko:#f87171;--ko2:#3a1a1a;--sh:none}
+.tema{margin-left:auto;flex:0 0 auto;width:44px;min-height:44px;padding:0;border-radius:50%;background:rgba(255,255,255,.18);font-size:20px;line-height:1}
+header.top button.tema:active{background:rgba(255,255,255,.3)}
+body,.card,.res,nav.tabs{transition:background-color .2s,color .2s,border-color .2s}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header.top{background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:calc(12px + env(safe-area-inset-top)) 16px 14px}
+.cab{max-width:760px;margin:0 auto;display:flex;align-items:center;gap:10px}
+.logo{font-size:28px;line-height:1}
+header h1{margin:0;font-size:20px;letter-spacing:.2px}
+header p{margin:0;font-size:12px;opacity:.85}
+main{max-width:760px;margin:0 auto;padding:14px 12px calc(92px + env(safe-area-inset-bottom))}
+h2{font-size:16px;margin:0 0 4px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:14px;margin-bottom:12px;box-shadow:var(--sh)}
+label{display:block;font-size:12px;font-weight:600;color:var(--mut);margin:0 0 4px}
+input[type=text],input[type=number],input[type=password],input[type=search]{width:100%;min-height:44px;padding:9px 12px;border:1px solid var(--bd);border-radius:10px;background:var(--bg);color:var(--tx);font:inherit;font-size:16px}
+input:focus{outline:2px solid var(--ac);outline-offset:1px;border-color:transparent}
+.grid{display:grid;grid-template-columns:1fr;gap:10px;margin-top:10px}
+@media(min-width:520px){.grid{grid-template-columns:1fr 1fr}.grid .full{grid-column:1/-1}}
+button{min-height:44px;padding:0 18px;border:0;border-radius:10px;background:var(--ac);color:#fff;font:inherit;font-weight:600;cursor:pointer}
+button:active{transform:scale(.98)}
+button.sec{background:var(--ac2);color:var(--ac)}
+button.peli{background:var(--ko2);color:var(--ko)}
+button.mini{min-height:36px;padding:0 12px;font-size:13px}
+button:disabled{opacity:.55;cursor:wait}
+.buscador{display:flex;gap:8px}
+.buscador input{flex:1;min-width:0}
+.buscador button{flex:0 0 auto}
+@media(max-width:380px){.buscador button{padding:0 14px}}
+.acciones{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.acciones button{flex:1 1 140px}
+details{margin-top:10px}
+details>summary{cursor:pointer;list-style:none;display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:40px;font-weight:600;font-size:14px}
+details>summary::-webkit-details-marker{display:none}
+details>summary::after{content:"▾";color:var(--mut);transition:transform .15s}
+details[open]>summary::after{transform:rotate(180deg)}
+summary .n{font-weight:500;color:var(--mut);font-size:13px}
+.sw{display:flex;align-items:center;gap:10px;min-height:44px;margin-top:6px;font-size:14px;font-weight:500;color:var(--tx);cursor:pointer}
+.sw input{width:20px;height:20px;accent-color:var(--ac);flex:0 0 auto}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}
+.chip{min-height:38px;padding:0 14px;border-radius:999px;background:transparent;color:var(--mut);border:1.5px solid var(--bd);font-weight:500;font-size:14px}
+.chip.on{background:var(--ac2);color:var(--ac);border-color:var(--ac);font-weight:600}
+.trow{display:grid;grid-template-columns:1fr auto;gap:6px 8px;align-items:center;padding:10px 0;border-top:1px solid var(--bd)}
+.trow input[type=text]{min-height:40px;font-size:15px;grid-column:1}
+.trow .sw{grid-column:1;margin:0;min-height:36px;font-size:13px;color:var(--mut)}
+.trow button{grid-row:1/4;grid-column:2;align-self:start}
+.ayuda{font-size:12.5px;color:var(--mut);margin-top:6px}
+/* resultados */
+.res{display:flex;gap:12px;align-items:flex-start;padding:12px;border:1px solid var(--bd);border-radius:12px;background:var(--card);margin-bottom:8px;text-decoration:none;color:inherit;box-shadow:var(--sh)}
+.res:active{background:var(--ac2)}
+.res.best{border-color:var(--ok);background:linear-gradient(0deg,var(--card),var(--card)) padding-box}
+.pr{flex:0 0 auto;min-width:74px;font-size:18px;font-weight:800;color:var(--ac);text-align:right;white-space:nowrap}
+.res.best .pr{color:var(--ok)}
+.info{min-width:0;flex:1}
+.info .t{font-weight:600;overflow-wrap:anywhere;line-height:1.3}
+.meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.tag{font-size:11.5px;font-weight:600;padding:2px 8px;border-radius:999px;background:var(--ac2);color:var(--ac)}
+.tag.ok{background:var(--ok2);color:var(--ok)}
+.tag.ko{background:var(--ko2);color:var(--ko)}
+.manuales{display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 8px}
+.manuales a{display:inline-flex;align-items:center;min-height:42px;padding:0 14px;border-radius:999px;background:var(--ac2);color:var(--ac);font-weight:600;font-size:14px;text-decoration:none}
+.cuenta{font-size:13px;color:var(--mut);margin:2px 2px 10px}
+.vacio-msg{text-align:center;padding:26px 12px;color:var(--mut)}
+.vacio-msg .em{font-size:38px;display:block;margin-bottom:6px}
+.carga{display:flex;align-items:center;gap:12px;color:var(--mut)}
+.spin{width:22px;height:22px;border:3px solid var(--bd);border-top-color:var(--ac);border-radius:50%;animation:g .8s linear infinite;flex:0 0 auto}
+@keyframes g{to{transform:rotate(360deg)}}
+.err{color:var(--ko);font-size:13px}
+.ok{color:var(--ok);font-size:13px}
+.mut{color:var(--mut);font-size:13px}
+.seg h2{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.seg .l{font-size:13px;color:var(--mut);margin-top:3px}
+a{color:var(--ac)}
+/* navegación */
+nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:10;display:flex;background:var(--card);border-top:1px solid var(--bd);padding:4px 6px calc(4px + env(safe-area-inset-bottom))}
+nav.tabs button{flex:1;display:flex;flex-direction:column;align-items:center;gap:1px;min-height:54px;padding:4px 2px;background:transparent;color:var(--mut);border-radius:12px;font-size:11px;font-weight:600}
+nav.tabs button .ic{font-size:21px;line-height:1.1;position:relative}
+nav.tabs button.on{color:var(--ac);background:var(--ac2)}
+.pt{position:absolute;top:-2px;right:-9px;min-width:16px;height:16px;padding:0 4px;border-radius:8px;background:var(--ko);color:#fff;font-size:10px;line-height:16px;text-align:center}
+.pt:empty{display:none}
+@media(min-width:800px){
+  nav.tabs{position:static;max-width:760px;margin:12px auto 0;border:1px solid var(--bd);border-radius:14px;box-shadow:var(--sh)}
+  nav.tabs button{flex-direction:row;justify-content:center;gap:8px;font-size:14px;min-height:46px}
+  main{padding-top:12px;padding-bottom:40px}
+}
+.oculto{display:none!important}
+#toast{position:fixed;left:50%;bottom:calc(76px + env(safe-area-inset-bottom));transform:translateX(-50%);max-width:92vw;background:#111827;color:#fff;padding:10px 16px;border-radius:12px;font-size:14px;z-index:20;opacity:0;pointer-events:none;transition:opacity .2s}
+#toast.v{opacity:1}
+</style>
+</head>
+<body>
+<header class="top"><div class="cab"><span class="logo">🏷️</span><div><h1>BuscaTron</h1><p>Compara precios en tus tiendas</p></div>
+  <button type="button" class="tema" id="tema" aria-label="Cambiar de tema"></button></div></header>
+
+<nav class="tabs" id="nav">
+  <button data-t="buscar" class="on"><span class="ic">🔎</span>Buscar</button>
+  <button data-t="seguir"><span class="ic">👁️</span>Seguimiento</button>
+  <button data-t="avisos"><span class="ic">🔔<span class="pt" id="nav-av"></span></span>Avisos</button>
+  <button data-t="ajustes"><span class="ic">⚙️</span>Ajustes</button>
+</nav>
+
+<main>
+<section id="t-buscar">
+  <form id="f" class="card">
+    <label for="q">¿Qué quieres comprar?</label>
+    <div class="buscador">
+      <input type="search" id="q" placeholder="Ej.: marvel champions" required autofocus enterkeyhint="search">
+      <button id="go">Buscar</button>
+    </div>
+    <label class="sw"><input type="checkbox" id="sinag" checked> Ocultar agotados</label>
+    <label class="sw"><input type="checkbox" id="soloes" checked> Solo castellano</label>
+
+    <details>
+      <summary>Filtros <span class="n" id="n-filtros"></span></summary>
+      <div class="grid">
+        <div><label for="incluir">Debe contener</label><input type="text" id="incluir" placeholder="expansión campaña" autocapitalize="none"></div>
+        <div><label for="excluir">Excluir palabras</label><input type="text" id="excluir" placeholder="sleeves tapete pack" autocapitalize="none"></div>
+        <div><label for="pmin">Precio mínimo (€)</label><input type="number" id="pmin" inputmode="decimal" step="0.01" min="0"></div>
+        <div><label for="pmax">Precio máximo (€)</label><input type="number" id="pmax" inputmode="decimal" step="0.01" min="0"></div>
+        <div><label for="top">Mostrar los N más baratos</label><input type="number" id="top" inputmode="numeric" value="10" min="1" max="200"></div>
+      </div>
+    </details>
+
+    <details>
+      <summary>Tiendas <span class="n" id="n-tiendas"></span></summary>
+      <div class="chips" id="chips"></div>
+      <details>
+        <summary>Gestionar tiendas</summary>
+        <div id="gestion"></div>
+        <div class="grid">
+          <div><label for="t-nombre">Nombre (opcional)</label><input type="text" id="t-nombre" placeholder="Mi tienda favorita"></div>
+          <div><label for="t-url">Dirección o URL de búsqueda</label><input type="text" id="t-url" placeholder="tienda.es" autocapitalize="none" inputmode="url"></div>
+          <div class="full"><label class="sw"><input type="checkbox" id="t-manual"> Solo mostrar el enlace (no consultarla automáticamente)</label></div>
+          <div class="full"><button type="button" class="sec" id="add">＋ Añadir tienda</button></div>
+        </div>
+        <p class="ayuda">Basta el dominio (<b>tienda.es</b>). Si su buscador no se detecta, pega una URL de búsqueda poniendo <b>{q}</b> donde va el producto: <b>https://tienda.es/buscar?q={q}</b></p>
+      </details>
+    </details>
+  </form>
+  <div id="out"></div>
+</section>
+
+<section id="t-seguir" class="oculto">
+  <details class="card" id="sf-det" style="margin-top:0">
+    <summary id="sf-tit">＋ Nuevo seguimiento</summary>
+    <form id="sf">
+      <input type="hidden" id="s-id">
+      <div class="grid">
+        <div><label for="s-nombre">Nombre</label><input type="text" id="s-nombre" placeholder="Campañas Marvel Champions"></div>
+        <div><label for="s-consulta">Búsqueda</label><input type="text" id="s-consulta" required></div>
+        <div><label for="s-incluir">Debe contener</label><input type="text" id="s-incluir" autocapitalize="none"></div>
+        <div><label for="s-excluir">Excluir palabras</label><input type="text" id="s-excluir" autocapitalize="none"></div>
+        <div><label for="s-pmin">Precio mínimo (€)</label><input type="number" id="s-pmin" inputmode="decimal" step="0.01" min="0"></div>
+        <div><label for="s-pmax">Precio máximo (€)</label><input type="number" id="s-pmax" inputmode="decimal" step="0.01" min="0"></div>
+        <div><label for="s-objetivo">Avisar si cuesta menos de (€)</label><input type="number" id="s-objetivo" inputmode="decimal" step="0.01" min="0"></div>
+        <div><label for="s-hist">… o si baja un % de su media</label><input type="number" id="s-hist" inputmode="numeric" min="0" max="90" placeholder="15"></div>
+        <div><label for="s-horas">Revisar cada (horas)</label><input type="number" id="s-horas" inputmode="decimal" step="0.25" min="0.25" value="12"></div>
+      </div>
+      <label class="sw"><input type="checkbox" id="s-sinag" checked> Ignorar agotados</label>
+      <label class="sw"><input type="checkbox" id="s-es" checked> Solo productos en castellano</label>
+      <label class="sw"><input type="checkbox" id="c-telegram"> Avisarme por Telegram</label>
+      <label class="sw"><input type="checkbox" id="c-correo"> Avisarme por correo</label>
+      <p class="ayuda">Los avisos siempre salen también en la pestaña Avisos. Si rellenas precio y %, avisa con cualquiera de los dos.</p>
+      <div class="acciones"><button>Guardar</button><button type="button" class="sec" id="s-cancel">Limpiar</button></div>
+    </form>
+  </details>
+  <div id="seg-lista"></div>
+</section>
+
+<section id="t-avisos" class="oculto"><div id="av-lista"></div></section>
+
+<section id="t-ajustes" class="oculto">
+  <div class="card">
+    <h2>✈️ Telegram</h2>
+    <p class="ayuda" style="margin-top:0">Crea un bot con @BotFather, pega su token, escríbele cualquier mensaje y pulsa «Detectar chat».</p>
+    <div class="grid">
+      <div><label for="a-token">Token del bot</label><input type="password" id="a-token" autocomplete="off"></div>
+      <div><label for="a-chat">Chat ID</label><input type="text" id="a-chat" inputmode="numeric"></div>
+    </div>
+    <div class="acciones"><button type="button" class="sec" id="a-det">Detectar chat</button><button type="button" class="sec" id="a-prueba-tg">Enviar prueba</button></div>
+  </div>
+  <div class="card">
+    <h2>✉️ Correo (SMTP)</h2>
+    <div class="grid">
+      <div><label for="a-srv">Servidor</label><input type="text" id="a-srv" placeholder="smtp.gmail.com" autocapitalize="none"></div>
+      <div><label for="a-pto">Puerto</label><input type="number" id="a-pto" inputmode="numeric" value="587"></div>
+      <div><label for="a-usr">Usuario</label><input type="text" id="a-usr" autocapitalize="none"></div>
+      <div><label for="a-clv">Contraseña (de aplicación)</label><input type="password" id="a-clv" autocomplete="off"></div>
+      <div class="full"><label for="a-dst">Enviar los avisos a</label><input type="text" id="a-dst" inputmode="email" autocapitalize="none"></div>
+    </div>
+    <div class="acciones"><button type="button" class="sec" id="a-prueba-co">Enviar prueba</button></div>
+  </div>
+  <div class="card">
+    <h2>📱 Acceso desde el móvil</h2>
+    <p class="ayuda" style="margin-top:0" id="red-info"></p>
+    <div class="manuales" id="red-urls"></div>
+    <div class="grid"><div class="full"><label for="a-pin">PIN de acceso (opcional, mínimo 4 caracteres)</label>
+      <input type="password" id="a-pin" autocomplete="new-password" inputmode="numeric" placeholder="Sin PIN"></div></div>
+    <p class="ayuda" id="red-pin"></p>
+  </div>
+  <div class="card">
+    <h2>🌐 Navegador</h2>
+    <p class="ayuda" style="margin-top:0" id="a-nav-info">Usa tu Chrome para las tiendas que cargan los resultados con JavaScript. Solo entra en juego si el método rápido no encuentra nada.</p>
+    <label class="sw"><input type="checkbox" id="a-nav"> Usar mi Chrome cuando haga falta</label>
+    <label class="sw"><input type="checkbox" id="a-navvis"> Mostrar la ventana (para resolver tú un «no soy un robot»)</label>
+    <p class="ayuda">BuscaTron no intenta saltarse esas comprobaciones: si una tienda las pide, te lo indica.</p>
+  </div>
+  <button id="a-guardar" style="width:100%">Guardar ajustes</button>
+  <p id="a-msg" class="mut" style="text-align:center;margin-top:8px"></p>
+</section>
+</main>
+<div id="toast"></div>
+
+<script>
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const euro=n=>Number(n).toFixed(2).replace('.',',')+' €';
+const fecha=t=>t?new Date(t*1000).toLocaleString('es-ES',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'nunca';
+const api=async(ruta,cuerpo)=>{const r=await fetch('/api/'+ruta,cuerpo===undefined?{}:{method:'POST',body:JSON.stringify(cuerpo)});return r.json();};
+let tiendas=[],segs=[],tt;
+function aviso(t){const e=$('toast');e.textContent=t;e.classList.add('v');clearTimeout(tt);tt=setTimeout(()=>e.classList.remove('v'),2600);}
+const nombreT=h=>{const t=tiendas.find(x=>x.host===h);return (t&&t.nombre)||h.replace(/^www\./,'');};
+
+/* tema claro / oscuro */
+const temaActual=()=>document.documentElement.dataset.theme==='dark'?'dark':'light';
+function pintaTema(){const o=temaActual()==='dark',b=$('tema');b.textContent=o?'☀️':'🌙';
+  b.title=b.ariaLabel=o?'Cambiar a modo claro':'Cambiar a modo oscuro';
+  document.querySelector('meta[name=theme-color]').content=o?'#1f2140':'#4f46e5';}
+$('tema').onclick=()=>{const n=temaActual()==='dark'?'light':'dark';document.documentElement.dataset.theme=n;
+  try{localStorage.setItem('bt-tema',n)}catch(e){}pintaTema();};
+pintaTema();
+
+/* pestañas */
+function ir(t){document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));
+  ['buscar','seguir','avisos','ajustes'].forEach(x=>$('t-'+x).classList.toggle('oculto',x!==t));
+  if(t==='seguir')cargaSeg(); if(t==='avisos')cargaAvisos(); if(t==='ajustes')cargaAjustes();
+  scrollTo(0,0);try{localStorage.setItem('bt-tab',t)}catch(e){}}
+document.querySelectorAll('#nav button').forEach(b=>b.onclick=()=>ir(b.dataset.t));
+
+/* tiendas */
+function pintaT(){
+  const act=tiendas.filter(t=>t.activa).length;
+  $('n-tiendas').textContent=`${act} de ${tiendas.length} activas`;
+  $('chips').innerHTML=tiendas.map(t=>`<button type="button" class="chip ${t.activa?'on':''}" data-h="${esc(t.host)}">${esc(nombreT(t.host))}</button>`).join('');
+  document.querySelectorAll('#chips .chip').forEach(c=>c.onclick=()=>{const t=tiendas.find(x=>x.host===c.dataset.h);t.activa=!t.activa;guardaActivas();});
+  $('gestion').innerHTML=tiendas.map(t=>`<div class="trow" data-h="${esc(t.host)}">
+    <input type="text" class="tn" value="${esc(t.nombre||'')}" placeholder="Nombre (${esc(t.host.replace(/^www\./,''))})" aria-label="Nombre">
+    <input type="text" class="tu" value="${esc(t.plantilla||t.host)}" aria-label="Dirección o URL de búsqueda" autocapitalize="none" inputmode="url" spellcheck="false">
+    <label class="sw"><input type="checkbox" class="tm" ${t.manual?'checked':''}> Solo enlace (no consultar)</label>
+    <button type="button" class="peli mini" data-del="${esc(t.host)}" aria-label="Quitar">🗑</button></div>`).join('');
+  document.querySelectorAll('#gestion .trow').forEach(f=>{const guarda=async()=>{
+    const r=await api('tiendas',{editar:f.dataset.h,nombre:f.querySelector('.tn').value,url:f.querySelector('.tu').value,manual:f.querySelector('.tm').checked});
+    if(r.error){aviso(r.error);pintaT();return;} tiendas=r;pintaT();aviso('Tienda guardada');};
+    f.querySelectorAll('input').forEach(i=>i.onchange=guarda);});
+  document.querySelectorAll('#gestion [data-del]').forEach(b=>b.onclick=async()=>{if(confirm('¿Quitar '+nombreT(b.dataset.del)+' de la lista?')){tiendas=await api('tiendas',{borrar:b.dataset.del});pintaT();}});
+}
+async function cargaT(){tiendas=await api('tiendas');pintaT();}
+async function guardaActivas(){const act=tiendas.filter(t=>t.activa).map(t=>t.host);tiendas=await api('tiendas',{activas:act});pintaT();}
+$('add').onclick=async()=>{const u=$('t-url').value.trim();if(!u){$('t-url').focus();return;}
+  const r=await api('tiendas',{anadir:u,nombre:$('t-nombre').value,manual:$('t-manual').checked});
+  if(r.error){aviso(r.error);return;} tiendas=r;pintaT();$('t-url').value='';$('t-nombre').value='';$('t-manual').checked=false;aviso('Tienda añadida');};
+
+/* buscar */
+function filtrosN(){const n=['incluir','excluir','pmin','pmax'].filter(i=>$(i).value.trim()).length;$('n-filtros').textContent=n?`${n} activo${n>1?'s':''}`:'';}
+['incluir','excluir','pmin','pmax'].forEach(i=>$(i).oninput=filtrosN);
+$('f').onsubmit=async e=>{e.preventDefault();const b=$('go');b.disabled=true;b.textContent='Buscando…';
+  $('out').innerHTML='<div class="card carga"><div class="spin"></div><div>Consultando las tiendas…<br><span class="mut">Suele tardar entre 10 y 40 segundos.</span></div></div>';
+  const act=tiendas.filter(t=>t.activa).map(t=>t.host);
+  const body={q:$('q').value,incluir:$('incluir').value,excluir:$('excluir').value,pmin:$('pmin').value,pmax:$('pmax').value,
+    top:$('top').value,sin_agotados:$('sinag').checked,castellano:$('soloes').checked,tiendas:act};
+  try{const r=await api('buscar',body);
+    if(r.error){$('out').innerHTML=`<div class="card err">${esc(r.error)}</div>`;return;}
+    const lista=r.resultados.map((x,i)=>`<a class="res ${i===0?'best':''}" href="${esc(x.url)}" target="_blank" rel="noopener">
+      <div class="pr">${euro(x.precio)}</div>
+      <div class="info"><div class="t">${esc(x.titulo)}</div>
+      <div class="meta"><span class="tag">${esc(nombreT(x.tienda))}</span>${i===0?'<span class="tag ok">Más barato</span>':''}${x.agotado?'<span class="tag ko">Agotado</span>':''}</div></div></a>`).join('');
+    const manuales=Object.entries(r.informe).filter(([h,i])=>i.manual);
+    const fallos=Object.entries(r.informe).filter(([h,i])=>i.error).map(([h,i])=>`<div class="err" style="margin-top:6px"><b>${esc(nombreT(h))}</b>: ${esc(i.error)}</div>`);
+    $('out').innerHTML=(r.resultados.length?`<div class="cuenta">Mostrando ${r.resultados.length} de ${r.total}, del más barato al más caro</div>${lista}
+      <div class="acciones"><button type="button" class="sec" id="vigilar">👁️ Vigilar esta búsqueda</button></div>`
+      :`<div class="card vacio-msg"><span class="em">🤷</span>Sin resultados con esos filtros.<br>Prueba a quitar alguna palabra o ampliar el precio.</div>`)+
+      (manuales.length?`<div class="card"><h2>🔗 Para revisar a mano</h2><p class="ayuda" style="margin-top:0">Estas tiendas no se pueden consultar automáticamente. Ábrelas con tu búsqueda:</p><div class="manuales">${manuales.map(([h,i])=>`<a href="${esc(i.manual)}" target="_blank" rel="noopener">${esc(nombreT(h))} ↗</a>`).join('')}</div></div>`:'')+
+      (fallos.length?`<details class="card"><summary>Tiendas sin resultados <span class="n">${fallos.length}</span></summary>${fallos.join('')}</details>`:'');
+    if($('vigilar'))$('vigilar').onclick=vigilar;
+  }catch(err){$('out').innerHTML=`<div class="card err">Error: ${esc(err)}</div>`;}
+  finally{b.disabled=false;b.textContent='Buscar';}};
+function vigilar(){limpiaSeg();$('s-consulta').value=$('q').value;$('s-nombre').value=$('q').value;$('s-incluir').value=$('incluir').value;
+  $('s-excluir').value=$('excluir').value;$('s-pmin').value=$('pmin').value;$('s-pmax').value=$('pmax').value;
+  $('s-sinag').checked=$('sinag').checked;$('s-es').checked=$('soloes').checked;ir('seguir');$('sf-det').open=true;}
+
+/* seguimiento */
+function limpiaSeg(){$('sf').reset();$('s-id').value='';$('sf-tit').textContent='＋ Nuevo seguimiento';}
+$('s-cancel').onclick=limpiaSeg;
+$('sf').onsubmit=async e=>{e.preventDefault();
+  const canales=['app',$('c-telegram').checked&&'telegram',$('c-correo').checked&&'correo'].filter(Boolean).join(',');
+  const r=await api('seguimientos',{accion:'guardar',id:$('s-id').value||undefined,nombre:$('s-nombre').value,consulta:$('s-consulta').value,
+    incluir:$('s-incluir').value,excluir:$('s-excluir').value,pmin:$('s-pmin').value,pmax:$('s-pmax').value,objetivo:$('s-objetivo').value,
+    bajo_historico:$('s-hist').value,cada_horas:$('s-horas').value,sin_agotados:$('s-sinag').checked,castellano:$('s-es').checked,canales});
+  if(r.error){aviso(r.error);return;} limpiaSeg();$('sf-det').open=false;pintaSeg(r);aviso('Seguimiento guardado');};
+async function cargaSeg(){pintaSeg(await api('seguimientos'));}
+function pintaSeg(l){segs=l;$('seg-lista').innerHTML=l.length?l.map(s=>{
+  const reglas=[s.objetivo!=null&&`menos de ${euro(s.objetivo)}`,s.bajo_historico&&`−${s.bajo_historico} % de su media`].filter(Boolean).join(' o ')||'sin regla (solo guarda el historial)';
+  const canales=s.canales.split(',').map(c=>({app:'app',telegram:'Telegram',correo:'correo'}[c]||c)).join(', ');
+  return `<div class="card seg"><h2>${esc(s.nombre)} ${s.activo?'':'<span class="tag">En pausa</span>'}</h2>
+  <div class="l">🔎 «${esc(s.consulta)}»${s.incluir?` · contiene ${esc(s.incluir)}`:''}${s.excluir?` · sin ${esc(s.excluir)}`:''}${s.pmin!=null?` · desde ${euro(s.pmin)}`:''}${s.pmax!=null?` · hasta ${euro(s.pmax)}`:''}</div>
+  <div class="l">🎯 Avisa si baja a ${reglas}</div>
+  <div class="l">⏱️ Cada ${s.cada_horas} h · 📬 ${esc(canales)}</div>
+  <div class="l">Última revisión: ${fecha(s.ultima)}${s.estado?' — '+esc(s.estado):''}</div>
+  <div class="acciones"><button class="mini" onclick="revisa(${s.id},this)">Revisar ahora</button>
+  <button class="sec mini" onclick="editaSeg(${s.id})">Editar</button>
+  <button class="sec mini" onclick="pausa(${s.id})">${s.activo?'Pausar':'Reanudar'}</button>
+  <button class="peli mini" onclick="borraSeg(${s.id})">Borrar</button></div></div>`}).join('')
+  :'<div class="card vacio-msg"><span class="em">👁️</span>Aún no vigilas nada.<br>Haz una búsqueda y pulsa «Vigilar esta búsqueda», o crea uno con el formulario de arriba.</div>';}
+function editaSeg(id){const s=segs.find(x=>x.id===id);$('sf-tit').textContent='✏️ Editar seguimiento';$('s-id').value=s.id;
+  $('s-nombre').value=s.nombre;$('s-consulta').value=s.consulta;$('s-incluir').value=s.incluir;$('s-excluir').value=s.excluir;
+  $('s-pmin').value=s.pmin??'';$('s-pmax').value=s.pmax??'';$('s-objetivo').value=s.objetivo??'';$('s-hist').value=s.bajo_historico||'';
+  $('s-horas').value=s.cada_horas;$('s-sinag').checked=!!s.sin_agotados;$('s-es').checked=!!s.castellano;
+  $('c-telegram').checked=s.canales.includes('telegram');$('c-correo').checked=s.canales.includes('correo');$('sf-det').open=true;scrollTo(0,0);}
+async function pausa(id){const s=segs.find(x=>x.id===id);pintaSeg(await api('seguimientos',{accion:'guardar',...s,activo:!s.activo,sin_agotados:!!s.sin_agotados}));}
+async function borraSeg(id){if(confirm('¿Borrar este seguimiento?'))pintaSeg(await api('seguimientos',{accion:'borrar',id}));}
+async function revisa(id,b){b.disabled=true;b.textContent='Revisando…';await api('seguimientos',{accion:'revisar',id});
+  let n=0;const t=setInterval(async()=>{const l=await api('seguimientos');const s=l.find(x=>x.id===id);
+    if(++n>60||(s&&Date.now()/1000-s.ultima<20)){clearInterval(t);pintaSeg(l);cargaNavAv();aviso('Revisión terminada');}},3000);}
+
+/* avisos */
+async function cargaAvisos(){const l=await api('avisos');try{localStorage.setItem('bt-vistos',String(l.length?l[0].id:0))}catch(e){}
+  $('nav-av').textContent='';
+  $('av-lista').innerHTML=l.length?l.map(a=>`<a class="res" href="${esc(a.url)}" target="_blank" rel="noopener"><div class="pr">${euro(a.precio)}</div>
+    <div class="info"><div class="t">${esc(a.titulo)}</div><div class="meta"><span class="tag">${esc(nombreT(a.tienda))}</span><span class="tag ok">${esc(a.motivo)}</span></div>
+    <div class="mut" style="margin-top:4px">${fecha(a.ts)}</div></div></a>`).join('')
+    :'<div class="card vacio-msg"><span class="em">🔔</span>Todavía no hay avisos.<br>Cuando un producto vigilado baje de precio, saldrá aquí.</div>';}
+async function cargaNavAv(){try{const l=await api('avisos');const v=Number(localStorage.getItem('bt-vistos')||0);
+  const n=l.filter(a=>a.id>v).length;$('nav-av').textContent=n?String(n):'';}catch(e){}}
+
+/* ajustes */
+async function cargaAjustes(){const a=await api('ajustes');$('a-token').value=a.telegram_token;$('a-chat').value=a.telegram_chat;
+  $('a-srv').value=a.smtp_servidor;$('a-pto').value=a.smtp_puerto;$('a-usr').value=a.smtp_usuario;$('a-clv').value=a.smtp_clave;$('a-dst').value=a.correo_destino;
+  $('a-nav').checked=!!a.usar_navegador;$('a-navvis').checked=!!a.navegador_visible;$('a-nav').disabled=!a.navegador_disponible;
+  if(!a.navegador_disponible)$('a-nav-info').textContent='No disponible: instala Playwright (pip install playwright) y ten Chrome o Edge instalado.';
+  $('a-pin').value=a.pin;cargaRed();}
+async function cargaRed(){const r=await api('red');if(r.error)return;
+  $('red-urls').innerHTML=r.direcciones.map(d=>`<a href="http://${esc(d.ip)}:${r.puerto}" target="_blank" rel="noopener">${esc(d.ip)}:${r.puerto} · ${esc(d.tipo)}</a>`).join('');
+  $('red-info').textContent=r.escucha_red
+    ?'En el móvil, conectado a la misma Wi-Fi, abre la dirección de «red local» (suele empezar por 192.168). Si no carga, ejecuta una vez permitir_acceso_movil.bat como administrador.'
+    :'BuscaTron está abierto solo para este equipo. Ábrelo con BuscaTron.bat (o sin --host 127.0.0.1) para usarlo desde el móvil.';
+  $('red-pin').textContent=r.pin?'El móvil pedirá el PIN una vez (se recuerda 30 días). Este equipo no lo necesita.':'Sin PIN, cualquier dispositivo de tu red local podría usar BuscaTron. Se recomienda ponerlo.';}
+const ajustesForm=()=>({telegram_token:$('a-token').value,telegram_chat:$('a-chat').value,smtp_servidor:$('a-srv').value,
+  smtp_puerto:Number($('a-pto').value)||587,smtp_usuario:$('a-usr').value,smtp_clave:$('a-clv').value,correo_destino:$('a-dst').value,
+  usar_navegador:$('a-nav').checked,navegador_visible:$('a-navvis').checked,pin:$('a-pin').value});
+const msg=(t,ok)=>{$('a-msg').className=ok?'ok':'err';$('a-msg').textContent=t;};
+$('a-guardar').onclick=async()=>{await api('ajustes',ajustesForm());msg('Ajustes guardados.',true);aviso('Ajustes guardados');};
+$('a-det').onclick=async()=>{const r=await api('detectar_chat',{telegram_token:$('a-token').value});
+  if(r.error)return msg(r.error,false);$('a-chat').value=r.telegram_chat;msg('Chat detectado y guardado.',true);};
+async function prueba(canal){await api('ajustes',ajustesForm());const r=await api('prueba_aviso',{canales:[canal]});
+  const e=r.error||r[canal];msg(e?e:'Enviado. Revisa el canal.',!e);}
+$('a-prueba-tg').onclick=()=>prueba('telegram');$('a-prueba-co').onclick=()=>prueba('correo');
+
+cargaT();cargaNavAv();
+try{const t=localStorage.getItem('bt-tab');if(t&&t!=='buscar')ir(t);}catch(e){}
+</script>
+</body>
+</html>

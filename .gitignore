@@ -218,3 +218,9 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# BuscaTron: datos locales
+buscatron.db
+tiendas.json
+config.json
+navegador_perfil/
