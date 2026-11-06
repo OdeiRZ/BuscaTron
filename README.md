@@ -6,7 +6,7 @@ Buscador y vigilante de precios **local** para tiendas online españolas. Pensad
 - **Datos en vivo**: no usa cachés ni buscadores intermedios, así que el precio es el que ves en la tienda.
 - **Tus datos se quedan en tu equipo**: lista de tiendas, historial y tokens se guardan en archivos locales que no se suben al repositorio.
 
-> Estado: **prototipo funcional** (v0.4.0). Consulta el [CHANGELOG](CHANGELOG.md).
+> Estado: **prototipo funcional** (v0.4.1). Consulta el [CHANGELOG](CHANGELOG.md).
 
 ## Inicio rápido
 
@@ -23,7 +23,7 @@ Opciones: `--puerto N` (por defecto 8790) y `--host 0.0.0.0` para abrirlo desde 
 
 ## Qué puedes hacer
 
-La web está pensada para móvil (probada a 360 px) y escritorio, con modo oscuro automático.
+La web está pensada para móvil (probada a 360 px) y escritorio. Arranca con el tema claro u oscuro de tu sistema y tiene un botón (🌙 / ☀️) en la cabecera para alternarlo; recuerda tu elección.
 
 ### 🔎 Buscar
 - Busca un producto en todas las tiendas activas y ve los **N más baratos**, con precio, tienda y enlace.
