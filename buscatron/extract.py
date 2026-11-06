@@ -3,7 +3,7 @@ y el primer precio vigente que aparece después, antes del siguiente enlace."""
 import re
 import unicodedata
 from html.parser import HTMLParser
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlparse
 
 PRECIO = re.compile(r"(\d{1,3}(?:\.\d{3})*(?:,\d{1,2})|\d+(?:\.\d{1,2})?)\s*(?:€|eur)", re.I)
 PRECIO_ANTES = re.compile(r"(?:€|eur)\s*(\d{1,3}(?:\.\d{3})*(?:,\d{1,2})|\d+(?:[.,]\d{1,2})?)", re.I)
@@ -16,6 +16,15 @@ AGOTADO = re.compile(r"agotad|sin stock|no disponible|out of stock|sold.?out|fue
 def normaliza(texto):
     t = unicodedata.normalize("NFKD", texto.lower())
     return re.sub(r"[^a-z0-9 ]+", " ", "".join(c for c in t if not unicodedata.combining(c)))
+
+
+def titulo_desde_url(url):
+    """Título legible a partir del último tramo de la dirección (respaldo si la web recorta el título)."""
+    seg = urlparse(url).path.rstrip("/").split("/")[-1]
+    seg = re.sub(r"\.html?$", "", seg)
+    seg = re.sub(r"^\d+-|-\d+$", "", seg)
+    t = seg.replace("-", " ").strip()
+    return t[:1].upper() + t[1:]
 
 
 def a_numero(s):
@@ -71,6 +80,10 @@ class _Parser(HTMLParser):
                 break
         if tag == "a" and self._a is not None:
             txt = " ".join(self._a["txt"]).strip() or self._a["title"]
+            titulo = " ".join(self._a["title"].split())
+            corto = txt.rstrip(".… ").lower()
+            if txt.endswith(("...", "…")) and len(titulo) > len(corto) and titulo.lower().startswith(corto):
+                txt = titulo   # la web recorta el texto del enlace, pero el title está completo
             self.eventos.append(("a", self._a["href"], " ".join(txt.split())))
             self._a = None
 
@@ -120,5 +133,7 @@ def extrae(html, base, consulta, ventana=40):
         if precio is None or e[1] in vistos:
             continue
         vistos.add(e[1])
+        if titulo.endswith(("...", "…")) and len(titulo_desde_url(e[1])) > len(titulo):
+            titulo = titulo_desde_url(e[1])
         out.append({"titulo": titulo, "url": e[1], "precio": precio, "agotado": agotado})
     return out

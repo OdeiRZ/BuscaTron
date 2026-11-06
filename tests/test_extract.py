@@ -24,6 +24,16 @@ class Extrae(unittest.TestCase):
         self.assertTrue(r["b"]["agotado"])                   # el visible sí
         self.assertEqual(r["b"]["precio"], 12.0)             # etiquetas sin cierre no descuadran
 
+    def test_titulo_recortado_usa_title(self):
+        h = '<a href="/x" title="Marvel Champions: La Tiranía del Cráneo Rojo">Marvel Champions:...</a><b>45,00 €</b>'
+        r = extract.extrae(h, "https://t.es/", "marvel champions")
+        self.assertEqual(r[0]["titulo"], "Marvel Champions: La Tiranía del Cráneo Rojo")
+
+    def test_titulo_recortado_sin_title_usa_la_url(self):
+        h = '<a href="/marvel-champions-shadowland-pack-de-escenarios-castellano-99438.html">Marvel Champions:...</a><b>25,95 €</b>'
+        r = extract.extrae(h, "https://t.es/", "marvel champions")
+        self.assertEqual(r[0]["titulo"], "Marvel champions shadowland pack de escenarios castellano")
+
 
 if __name__ == "__main__":
     unittest.main()

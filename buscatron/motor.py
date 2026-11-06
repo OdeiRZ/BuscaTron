@@ -63,10 +63,12 @@ def _tienda(t, consulta, nav=None):
         return h, [], f"error: {str(e)[:70]}"
 
 
-def buscar(consulta, incluir="", excluir="", ocultar_agotados=False, hosts=None, pmin=None, pmax=None, seg_id=None):
+def buscar(consulta, incluir="", excluir="", ocultar_agotados=True, hosts=None, pmin=None, pmax=None, seg_id=None):
     """Devuelve (resultados ordenados por precio, informe por tienda)."""
     lista = cfg.carga()
     activas = [t for t in lista if (t["host"] in hosts if hosts is not None else t.get("activa", True))]
+    manuales = [t for t in activas if t.get("manual") and t.get("plantilla")]
+    activas = [t for t in activas if t not in manuales]
     inc = extract.normaliza(incluir).split()
     exc = extract.normaliza(excluir).split()
     res, informe = [], {}
@@ -86,6 +88,8 @@ def buscar(consulta, incluir="", excluir="", ocultar_agotados=False, hosts=None,
                     res.append(x)
                     kept += 1
             informe[host] = {"encontrados": kept, "error": err if not kept else None}
+    for t in manuales:
+        informe[t["host"]] = {"encontrados": 0, "error": None, "manual": t["plantilla"].replace("{q}", quote_plus(consulta))}
     cfg.guarda(lista)  # persiste las plantillas descubiertas
     res.sort(key=lambda x: (x["agotado"], x["precio"]))
     ts = time.time()

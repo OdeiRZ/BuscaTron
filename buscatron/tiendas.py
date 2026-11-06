@@ -27,6 +27,13 @@ CONOCIDAS = {
 }
 
 
+# Tiendas que bloquean cualquier acceso automático: no se consultan, solo se ofrece el enlace de búsqueda.
+MANUALES = {
+    "www.amazon.es": "https://www.amazon.es/s?k={q}&s=price-asc-rank",
+    "ferreteriaibermadrid.es": "https://ferreteriaibermadrid.es/#3273/fullscreen/m=and&q={q}",
+}
+
+
 def carga():
     if os.path.exists(RUTA):
         with open(RUTA, encoding="utf-8") as f:
@@ -36,6 +43,8 @@ def carga():
     for t in lista:
         if not t.get("plantilla") and t["host"] in CONOCIDAS:
             t["plantilla"] = CONOCIDAS[t["host"]]
+        if t["host"] in MANUALES and "manual" not in t:
+            t["manual"], t["plantilla"] = True, MANUALES[t["host"]]
     return lista
 
 

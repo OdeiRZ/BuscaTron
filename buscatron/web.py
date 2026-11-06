@@ -3,6 +3,7 @@ import json
 import os
 import threading
 import webbrowser
+from urllib.parse import urlparse
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 
 from . import ajustes, motor, notifica, programador, seguimiento, tiendas as cfg
@@ -49,15 +50,36 @@ class Handler(BaseHTTPRequestHandler):
     def _post(self, ruta, c):
         if ruta == "/api/buscar":
             res, inf = motor.buscar(c.get("q", "").strip(), c.get("incluir", ""), c.get("excluir", ""),
-                                    bool(c.get("sin_agotados")), c.get("tiendas"),
+                                    bool(c.get("sin_agotados", True)), c.get("tiendas"),
                                     _num(c.get("pmin", "")), _num(c.get("pmax", "")))
             return {"resultados": res[: int(c.get("top") or 50)], "total": len(res), "informe": inf}
         if ruta == "/api/tiendas":
             lista = cfg.carga()
             if c.get("anadir"):
-                host = c["anadir"].replace("https://", "").replace("http://", "").strip("/ ")
-                if host and all(t["host"] != host for t in lista):
-                    lista.append({"host": host, "activa": True, "plantilla": None})
+                entrada = c["anadir"].strip()
+                plantilla = None
+                if "{q}" in entrada:  # URL de búsqueda con {q} donde va el producto
+                    plantilla = entrada if entrada.startswith("http") else "https://" + entrada
+                    host = urlparse(plantilla).netloc
+                else:
+                    host = entrada.replace("https://", "").replace("http://", "").split("/")[0].strip()
+                if not host or "." not in host:
+                    raise ValueError("dirección no válida")
+                t = next((t for t in lista if t["host"] == host), None)
+                if t is None:
+                    t = {"host": host, "nombre": "", "activa": True, "plantilla": None}
+                    lista.append(t)
+                if c.get("nombre", "").strip():
+                    t["nombre"] = c["nombre"].strip()
+                if plantilla:
+                    t["plantilla"] = plantilla
+                    t["manual"] = bool(c.get("manual"))
+            if c.get("renombrar"):
+                for t in lista:
+                    if t["host"] == c["renombrar"]:
+                        t["nombre"] = c.get("nombre", "").strip()
+            if c.get("borrar"):
+                lista = [t for t in lista if t["host"] != c["borrar"]]
             if "activas" in c:
                 for t in lista:
                     t["activa"] = t["host"] in c["activas"]

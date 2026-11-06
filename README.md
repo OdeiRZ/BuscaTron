@@ -13,7 +13,7 @@ python -m buscatron --abrir              # interfaz web en http://127.0.0.1:8790
 python -m buscatron "marvel champions"   # búsqueda por línea de comandos
 ```
 
-Para tiendas que cargan con JavaScript puedes activar, en Ajustes, el navegador opcional (necesita `pip install playwright` y Chrome o Edge instalados; no se descarga ningún navegador). BuscaTron no intenta saltarse comprobaciones antibot: si una tienda pide un captcha, lo indica y, con la ventana visible, lo resuelves tú una vez.
+Para tiendas que cargan con JavaScript, el navegador opcional está activado por defecto (se puede desactivar en Ajustes) (necesita `pip install playwright` y Chrome o Edge instalados; no se descarga ningún navegador). BuscaTron no intenta saltarse comprobaciones antibot: si una tienda pide un captcha, lo indica y, con la ventana visible, lo resuelves tú una vez.
 
 En la web puedes:
 
@@ -21,7 +21,8 @@ En la web puedes:
 - Filtrar por palabras que debe contener o excluir, y por precio mínimo y máximo.
 - Ocultar agotados.
 - Vigilar búsquedas (pestaña Seguimiento): precio objetivo o bajada respecto a su media, revisión cada X horas y avisos por Telegram, correo o dentro de la app.
-- Activar, desactivar y añadir tiendas (basta el dominio, por ejemplo `ejemplo.es`).
+- Activar, desactivar, renombrar y añadir tiendas: basta el dominio (`ejemplo.es`), con un nombre propio opcional. Si su buscador no se detecta, pega una URL de búsqueda con `{q}` donde va el producto (`https://ejemplo.es/buscar?q={q}`).
+- Marcar una tienda como «solo enlace»: no se consulta, pero cada búsqueda te ofrece su enlace para abrirlo tú (pensado para webs que bloquean todo acceso automático, como Amazon).
 
 ## Cómo encuentra los productos
 
