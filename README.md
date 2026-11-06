@@ -65,6 +65,13 @@ BuscaTron escucha en tu red local, así que puedes abrirlo desde el móvil conec
 3. Escribe la dirección de tu red local (suele empezar por 192.168) en el navegador del móvil. Puedes guardarla en favoritos o añadirla a la pantalla de inicio.
 4. **Recomendado:** pon un **PIN** en Ajustes → «Acceso desde el móvil». El móvil lo pedirá una vez y lo recordará 30 días. Este equipo no lo necesita.
 
+Si el móvil no carga:
+- Comprueba que usa la **Wi-Fi** y no los datos móviles, y que es la misma red que el PC.
+- Mira que la dirección sea la de «red local» (192.168…) y no la de Tailscale ni la de Hyper-V. La IP puede cambiar si el router te asigna otra; la web la muestra siempre actualizada.
+- Comprueba la regla del cortafuegos: `netsh advfirewall firewall show rule name="BuscaTron (red local)"` debe mostrarla habilitada, con `LocalPort: 8790` y `RemoteIP: LocalSubnet`. Si no existe, vuelve a ejecutar `permitir_acceso_movil.bat`.
+- Algunos routers tienen activado el **aislamiento de clientes** (AP isolation), típico de las Wi-Fi de invitados: impide que los dispositivos se vean entre sí. Hay que usar la Wi-Fi principal o desactivarlo en el router.
+- Si usas el puerto con `--puerto N`, la regla del cortafuegos sigue siendo para el 8790: ejecútala de nuevo cambiando el puerto en el `.bat`.
+
 Seguridad:
 - Solo se aceptan conexiones de **direcciones privadas** (red local, Tailscale y este equipo). Cualquier IP pública recibe un 403.
 - Con PIN, los intentos fallidos se bloquean durante 5 minutos tras 5 errores. La sesión se guarda en una cookie firmada que no puede leer JavaScript.
