@@ -3,6 +3,16 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.7.1] - 2026-11-06
+
+### Corregido
+- **Comprobaciones de Cloudflare en español**: la pantalla «Un momento… Verificación de seguridad en curso» no se reconocía como una comprobación humana y se trataba como una página de tienda sin productos. Ahora se detecta y se indica como cualquier otra.
+- **Espera a una persona**: con la ventana visible, BuscaTron volvía a cargar la página cada 5 segundos mientras esperaba, lo que reiniciaría la comprobación antes de poder resolverla. Ahora espera sin recargar y continúa en cuanto la página deja de ser una comprobación.
+
+### Notas
+- Ferretería Ibérica Madrid sigue como «solo enlace». Su buscador es el de Doofinder, que funciona con sesiones firmadas de Phoenix LiveView y no con una API consultable, y su web está detrás de una comprobación de Cloudflare que hay que resolver a mano en una ventana.
+- 3 pruebas nuevas (67 en total).
+
 ## [0.7.0] - 2026-11-06
 
 ### Añadido

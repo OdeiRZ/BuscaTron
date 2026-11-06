@@ -9,6 +9,7 @@ import os
 import queue
 import re
 import threading
+import time
 
 from . import tiendas as cfg
 
@@ -19,7 +20,7 @@ RUTAS = [r"%ProgramFiles%\Google\Chrome\Application\chrome.exe",
          r"%ProgramFiles(x86)%\Microsoft\Edge\Application\msedge.exe",
          r"%ProgramFiles%\Microsoft\Edge\Application\msedge.exe"]
 DESAFIO = re.compile(r"captcha|verify you are human|just a moment|attention required|are you a robot|"
-                     r"comprobaci[oó]n de seguridad|no eres un robot|robot check|acceso denegado|access denied", re.I)
+                     r"comprobaci[oó]n de seguridad|no eres un robot|robot check|acceso denegado|access denied|verificaci[oó]n de seguridad|cloudflare", re.I)
 
 
 class Desafio(Exception):
@@ -40,6 +41,13 @@ def disponible():
     except ImportError:
         return False
     return ejecutable() is not None
+
+
+def desafio(estado, html):
+    """¿La página es una comprobación humana (captcha, «verificación de seguridad»…) y no la tienda?"""
+    texto = re.sub(r"<script.*?</script>|<style.*?</style>", " ", html, flags=re.S | re.I)
+    return bool(estado in (202, 403, 429, 503) and (DESAFIO.search(texto) or len(texto) < 3000)
+                or DESAFIO.search(texto[:6000]) and len(texto) < 20000)
 
 
 def _contenido(pag):
@@ -67,7 +75,7 @@ class _Hilo(threading.Thread):
                 pag = ctx.pages[0] if ctx.pages else ctx.new_page()
                 self.listo.set()
                 while True:
-                    url, sal = self.cola.get()
+                    url, sal, espera = self.cola.get()
                     if url is None:
                         break
                     try:
@@ -89,6 +97,19 @@ class _Hilo(threading.Thread):
                                 contenido, estado = _contenido(pag), 200
                             else:
                                 break
+                        if espera and self.visible and desafio(estado, contenido):
+                            fin = time.time() + espera
+                            while time.time() < fin:            # sin recargar: la persona resuelve la comprobación en la ventana
+                                pag.wait_for_timeout(2000)
+                                contenido = _contenido(pag)
+                                if not desafio(200, contenido):
+                                    estado = 200
+                                    try:
+                                        pag.wait_for_load_state("networkidle", timeout=8000)
+                                    except Exception:
+                                        pass
+                                    contenido = _contenido(pag)
+                                    break
                         sal.put((estado, contenido))
                     except Exception as e:
                         sal.put(e)
@@ -106,7 +127,7 @@ def cierra():
     global _hilo
     with _cerrojo:
         if _hilo and _hilo.is_alive():
-            _hilo.cola.put((None, None))
+            _hilo.cola.put((None, None, 0))
         _hilo = None
 
 
@@ -116,7 +137,7 @@ def get(url, visible=False, timeout=120, esperar_humano=0):
     global _hilo
     with _cerrojo:
         if _hilo is not None and _hilo.is_alive() and _hilo.visible != visible:
-            _hilo.cola.put((None, None))
+            _hilo.cola.put((None, None, 0))
             _hilo.join(10)
             _hilo = None
         if _hilo is None or not _hilo.is_alive():
@@ -126,18 +147,13 @@ def get(url, visible=False, timeout=120, esperar_humano=0):
     h.listo.wait(30)
     if h.error:
         raise RuntimeError(f"no se pudo abrir el navegador: {str(h.error)[:100]}")
-    for intento in range(1 + (esperar_humano // 5 if visible else 0)):
-        sal = queue.Queue()
-        h.cola.put((url, sal))
-        r = sal.get(timeout=timeout)
-        if isinstance(r, Exception):
-            raise r
-        estado, html = r
-        texto = re.sub(r"<script.*?</script>|<style.*?</style>", " ", html, flags=re.S | re.I)
-        if estado in (202, 403, 429, 503) and (DESAFIO.search(texto) or len(texto) < 3000) or DESAFIO.search(texto[:6000]) and len(texto) < 20000:
-            if visible and intento < esperar_humano // 5:
-                threading.Event().wait(5)   # tiempo para que lo resuelvas tú en la ventana
-                continue
-            raise Desafio("la tienda pide una comprobación humana")
-        return estado, html
-    raise Desafio("la tienda pide una comprobación humana")
+    espera = esperar_humano if visible else 0
+    sal = queue.Queue()
+    h.cola.put((url, sal, espera))
+    r = sal.get(timeout=timeout + espera)
+    if isinstance(r, Exception):
+        raise r
+    estado, html = r
+    if desafio(estado, html):
+        raise Desafio("la tienda pide una comprobación humana")
+    return estado, html
