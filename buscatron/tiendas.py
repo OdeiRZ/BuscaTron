@@ -23,6 +23,7 @@ outlet-pc.es www.goblintrader.es""".split()
 # Buscadores que no se pueden descubrir desde la portada.
 CONOCIDAS = {
     "www.masqueoca.com": "https://www.masqueoca.com/tienda/buscardo.asp?txtbusqueda={q}&dondebusco=1&vertodo=1&stockneg=1",
+    "www.turolgames.com": "https://www.turolgames.com/es/buscar?controller=search&search_query={q}",  # necesita navegador (pantalla de carga con JS)
 }
 
 

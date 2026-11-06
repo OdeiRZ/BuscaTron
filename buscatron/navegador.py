@@ -42,6 +42,16 @@ def disponible():
     return ejecutable() is not None
 
 
+def _contenido(pag):
+    """pag.content() falla si justo se está recargando: se reintenta hasta que se estabiliza."""
+    for _ in range(8):
+        try:
+            return pag.content()
+        except Exception:
+            pag.wait_for_timeout(1000)
+    return pag.content()
+
+
 class _Hilo(threading.Thread):
     def __init__(self, visible):
         super().__init__(daemon=True, name="navegador")
@@ -67,7 +77,19 @@ class _Hilo(threading.Thread):
                         except Exception:
                             pass
                         pag.wait_for_timeout(1200)
-                        sal.put((resp.status if resp else 200, pag.content()))
+                        estado, contenido = (resp.status if resp else 200), _contenido(pag)
+                        # Pantallas de carga que se recargan solas (meta refresh): se espera como haría un visitante.
+                        for _ in range(5):
+                            if len(contenido) < 4000 and re.search(r"http-equiv=.?refresh", contenido, re.I):
+                                pag.wait_for_timeout(3500)
+                                try:
+                                    pag.wait_for_load_state("networkidle", timeout=8000)
+                                except Exception:
+                                    pass
+                                contenido, estado = _contenido(pag), 200
+                            else:
+                                break
+                        sal.put((estado, contenido))
                     except Exception as e:
                         sal.put(e)
                 ctx.close()

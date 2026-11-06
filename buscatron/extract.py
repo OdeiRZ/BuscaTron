@@ -8,6 +8,8 @@ from urllib.parse import urljoin
 PRECIO = re.compile(r"(\d{1,3}(?:\.\d{3})*(?:,\d{1,2})|\d+(?:\.\d{1,2})?)\s*(?:€|eur)", re.I)
 PRECIO_ANTES = re.compile(r"(?:€|eur)\s*(\d{1,3}(?:\.\d{3})*(?:,\d{1,2})|\d+(?:[.,]\d{1,2})?)", re.I)
 TACHADO = re.compile(r"old|regular|before|compare|tachad|was-|strike|antes|original|msrp", re.I)
+OCULTO = re.compile(r"display\s*:\s*none|visibility\s*:\s*hidden", re.I)
+VACIAS = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "source", "track", "wbr"}
 AGOTADO = re.compile(r"agotad|sin stock|no disponible|out of stock|sold.?out|fuera de stock", re.I)
 
 
@@ -33,6 +35,7 @@ class _Parser(HTMLParser):
         self.eventos = []          # ("a", href, texto) | ("p", valor) | ("x", texto)
         self._a = None
         self._tachado = 0
+        self._oculto = 0
         self._pila = []
         self._skip = 0
 
@@ -41,9 +44,11 @@ class _Parser(HTMLParser):
         if tag in ("script", "style", "noscript"):
             self._skip += 1
         marca = bool(tag in ("del", "s", "strike") or TACHADO.search(a.get("class", "") or ""))
-        self._pila.append((tag, marca))
-        if marca:
-            self._tachado += 1
+        oculto = bool("hidden" in a or OCULTO.search(a.get("style", "") or ""))
+        if tag not in VACIAS:
+            self._pila.append((tag, marca, oculto))
+            self._tachado += marca
+            self._oculto += oculto
         if tag == "a" and a.get("href"):
             self._a = {"href": urljoin(self.base, a["href"]), "txt": [], "title": a.get("title", "")}
         if tag == "img" and self._a is not None and a.get("alt"):
@@ -56,10 +61,12 @@ class _Parser(HTMLParser):
     def handle_endtag(self, tag):
         if tag in ("script", "style", "noscript") and self._skip:
             self._skip -= 1
+        if tag in VACIAS:
+            return
         while self._pila:
-            t, marca = self._pila.pop()
-            if marca:
-                self._tachado -= 1
+            t, marca, oculto = self._pila.pop()
+            self._tachado -= marca
+            self._oculto -= oculto
             if t == tag:
                 break
         if tag == "a" and self._a is not None:
@@ -68,7 +75,7 @@ class _Parser(HTMLParser):
             self._a = None
 
     def handle_data(self, data):
-        if self._skip:
+        if self._skip or self._oculto:
             return
         if self._a is not None:
             self._a["txt"].append(data)
