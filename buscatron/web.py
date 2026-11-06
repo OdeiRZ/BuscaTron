@@ -6,6 +6,7 @@ import os
 import socket
 import threading
 import time
+import urllib.request
 import webbrowser
 from hashlib import sha256
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
@@ -288,10 +289,23 @@ class Servidor(ThreadingHTTPServer):
     daemon_threads = True
 
 
+def _ya_hay_uno(puerto):
+    """True si en ese puerto ya responde otro BuscaTron (p. ej. el que arranca con Windows)."""
+    try:
+        with urllib.request.urlopen(f"http://127.0.0.1:{puerto}/api/arranque", timeout=2) as r:
+            return "disponible" in json.load(r)
+    except (OSError, ValueError):
+        return False
+
+
 def sirve(puerto=8790, host="0.0.0.0", abrir=False, bandeja=False):
     try:
         servidor = Servidor((host, puerto), Handler)
     except OSError as e:
+        if abrir and _ya_hay_uno(puerto):          # ya está en marcha: basta con abrir su web
+            print(f"BuscaTron ya está abierto en http://127.0.0.1:{puerto}; se abre en el navegador.")
+            webbrowser.open(f"http://127.0.0.1:{puerto}")
+            return
         raise SystemExit(f"No se pudo abrir el puerto {puerto} ({e.strerror}). "
                          f"¿Ya hay un BuscaTron abierto? Prueba otro: python -m buscatron --puerto {puerto + 1}")
     _servidor.update(host=host, puerto=puerto)

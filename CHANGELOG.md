@@ -3,6 +3,11 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.6.1] - 2026-11-06
+
+### Corregido
+- Con el arranque con Windows activado, abrir `BuscaTron.bat` (o `--abrir`) mostraba un error de «puerto ocupado» porque BuscaTron ya estaba en marcha. Ahora detecta que ese puerto lo usa otro BuscaTron y se limita a abrir su web en el navegador. Sin `--abrir`, o si el puerto lo usa otra aplicación, sigue fallando con un mensaje claro.
+
 ## [0.6.0] - 2026-11-06
 
 ### Añadido

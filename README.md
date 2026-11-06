@@ -6,7 +6,7 @@ Buscador y vigilante de precios **local** para tiendas online españolas. Pensad
 - **Datos en vivo**: no usa cachés ni comparadores intermedios, así que el precio es el que ves en la tienda.
 - **Tus datos se quedan en tu equipo**: lista de tiendas, historial y tokens se guardan en archivos locales que no se suben al repositorio.
 
-> Estado: **versión funcional** (v0.6.0). Consulta el [CHANGELOG](CHANGELOG.md).
+> Estado: **versión funcional** (v0.6.1). Consulta el [CHANGELOG](CHANGELOG.md).
 
 ## Inicio rápido
 
@@ -19,7 +19,7 @@ python -m buscatron "marvel champions"   # búsqueda por línea de comandos
 python -m buscatron --arranque on        # arrancar con Windows (off para quitarlo, estado para consultarlo)
 ```
 
-En Windows también puedes hacer doble clic en `BuscaTron.bat`: abre el navegador, deja el icono en la bandeja y, si algo falla, vuelve a mostrar la ventana con el error.
+En Windows también puedes hacer doble clic en `BuscaTron.bat`: abre el navegador, deja el icono en la bandeja y, si algo falla, vuelve a mostrar la ventana con el error. Si BuscaTron ya está en marcha (por ejemplo, porque arranca con Windows), solo abre su web.
 
 Opciones: `--puerto N` (por defecto 8790) y `--host 127.0.0.1` para que solo sea accesible desde este equipo. Por defecto escucha en la red local, para poder usarlo desde el móvil (ver [Usar desde el móvil](#usar-desde-el-móvil)).
 

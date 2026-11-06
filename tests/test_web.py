@@ -61,5 +61,20 @@ class Sesion(unittest.TestCase):
         self.assertEqual(ajustes.carga()["pin"], "1234")
 
 
+class YaAbierto(unittest.TestCase):
+    def test_si_ya_hay_uno_abre_su_web_en_vez_de_fallar(self):
+        with mock.patch.object(web, "Servidor", side_effect=OSError(98, "puerto ocupado")), mock.patch.object(web, "_ya_hay_uno", lambda p: True),                 mock.patch.object(web.webbrowser, "open") as abre:
+            web.sirve(8790, "0.0.0.0", abrir=True)
+        abre.assert_called_once_with("http://127.0.0.1:8790")
+
+    def test_si_el_puerto_lo_usa_otra_cosa_falla_con_un_mensaje(self):
+        with mock.patch.object(web, "Servidor", side_effect=OSError(98, "puerto ocupado")), mock.patch.object(web, "_ya_hay_uno", lambda p: False):
+            with self.assertRaises(SystemExit):
+                web.sirve(8790, "0.0.0.0", abrir=True)
+        with mock.patch.object(web, "Servidor", side_effect=OSError(98, "puerto ocupado")), mock.patch.object(web, "_ya_hay_uno", lambda p: True):
+            with self.assertRaises(SystemExit):                     # sin --abrir no se asume nada
+                web.sirve(8790, "0.0.0.0", abrir=False)
+
+
 if __name__ == "__main__":
     unittest.main()
