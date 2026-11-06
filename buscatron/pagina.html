@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BuscaTron</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--tx:#1b1f24;--mut:#667085;--bd:#e3e6ea;--ac:#2563eb;--ok:#15803d;--ko:#b42318}
+@media(prefers-color-scheme:dark){:root{--bg:#111418;--card:#1a1f26;--tx:#e6e9ee;--mut:#9aa4b2;--bd:#2a313b;--ac:#6ea0ff;--ok:#4ade80;--ko:#f87171}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.4 system-ui,sans-serif}
+main{max-width:980px;margin:0 auto;padding:16px}
+h1{font-size:22px;margin:4px 0 14px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:14px;margin-bottom:12px}
+label{display:block;font-size:12px;color:var(--mut);margin:0 0 3px}
+input[type=text],input[type=number]{width:100%;padding:9px 10px;border:1px solid var(--bd);border-radius:8px;background:var(--bg);color:var(--tx);font:inherit}
+.fila{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:10px}
+button{padding:10px 16px;border:0;border-radius:8px;background:var(--ac);color:#fff;font:inherit;font-weight:600;cursor:pointer}
+button.sec{background:transparent;color:var(--ac);border:1px solid var(--bd)}
+button:disabled{opacity:.6;cursor:wait}
+.tiendas{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:8px}
+.tiendas label{display:flex;gap:5px;align-items:center;font-size:13px;color:var(--tx);margin:0}
+details summary{cursor:pointer;color:var(--mut);font-size:13px}
+table{width:100%;border-collapse:collapse}
+td{padding:9px 6px;border-top:1px solid var(--bd);vertical-align:top}
+td.p{white-space:nowrap;font-weight:700;width:1%}
+td.t{color:var(--mut);font-size:12px}
+a{color:var(--ac);text-decoration:none}
+.ag{color:var(--ko);font-size:12px;font-weight:600}
+.err{color:var(--ko);font-size:13px}
+.mut{color:var(--mut);font-size:13px}
+@media(max-width:600px){td.t{display:none}}
+</style>
+</head>
+<body>
+<main>
+<h1>BuscaTron</h1>
+<form id="f" class="card">
+  <label for="q">¿Qué buscas?</label>
+  <input type="text" id="q" placeholder="Ej.: marvel champions" required autofocus>
+  <div class="fila">
+    <div><label>Debe contener (palabras)</label><input type="text" id="incluir" placeholder="expansión campaña"></div>
+    <div><label>Excluir (palabras)</label><input type="text" id="excluir" placeholder="sleeves mat pack"></div>
+    <div><label>Precio mín. €</label><input type="number" id="pmin" step="0.01" min="0"></div>
+    <div><label>Precio máx. €</label><input type="number" id="pmax" step="0.01" min="0"></div>
+    <div><label>Mostrar los N más baratos</label><input type="number" id="top" value="10" min="1" max="200"></div>
+  </div>
+  <div class="tiendas"><label><input type="checkbox" id="sinag"> Ocultar agotados</label></div>
+  <details open style="margin-top:10px"><summary>Tiendas</summary>
+    <div class="tiendas" id="tiendas"></div>
+    <div class="fila"><div><input type="text" id="nueva" placeholder="añadir tienda: ejemplo.es"></div>
+    <div><button type="button" class="sec" id="add">Añadir tienda</button></div></div>
+  </details>
+  <div style="margin-top:12px"><button id="go">Buscar</button></div>
+</form>
+<div id="out"></div>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let tiendas=[];
+function pinta(){ $('tiendas').innerHTML=tiendas.map(t=>
+  `<label><input type="checkbox" data-h="${esc(t.host)}" ${t.activa?'checked':''}> ${esc(t.host.replace(/^www\./,''))}</label>`).join('');
+  document.querySelectorAll('#tiendas input').forEach(i=>i.onchange=guarda); }
+async function carga(){ tiendas=await (await fetch('/api/tiendas')).json(); pinta(); }
+async function guarda(extra={}){
+  const activas=[...document.querySelectorAll('#tiendas input:checked')].map(i=>i.dataset.h);
+  tiendas=await (await fetch('/api/tiendas',{method:'POST',body:JSON.stringify({activas,...extra})})).json(); pinta(); }
+$('add').onclick=async()=>{ const v=$('nueva').value.trim(); if(!v)return;
+  await guarda({anadir:v}); $('nueva').value=''; };
+$('f').onsubmit=async e=>{ e.preventDefault(); const b=$('go'); b.disabled=true; b.textContent='Buscando…';
+  $('out').innerHTML='<div class="card mut">Consultando tiendas, tarda unos segundos…</div>';
+  const body={q:$('q').value,incluir:$('incluir').value,excluir:$('excluir').value,pmin:$('pmin').value,
+    pmax:$('pmax').value,top:$('top').value,sin_agotados:$('sinag').checked,
+    tiendas:[...document.querySelectorAll('#tiendas input:checked')].map(i=>i.dataset.h)};
+  try{
+    const r=await (await fetch('/api/buscar',{method:'POST',body:JSON.stringify(body)})).json();
+    if(r.error){ $('out').innerHTML=`<div class="card err">${esc(r.error)}</div>`; return; }
+    const filas=r.resultados.map(x=>`<tr><td class="p">${x.precio.toFixed(2).replace('.',',')} €</td>
+      <td><a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.titulo)}</a>${x.agotado?' <span class="ag">AGOTADO</span>':''}
+      <div class="mut">${esc(x.tienda)}</div></td></tr>`).join('');
+    const fallos=Object.entries(r.informe).filter(([h,i])=>i.error).map(([h,i])=>`<div class="err">${esc(h)}: ${esc(i.error)}</div>`).join('');
+    $('out').innerHTML=`<div class="card"><div class="mut">${r.resultados.length} de ${r.total} resultados, del más barato al más caro</div>
+      <table>${filas||'<tr><td>Sin resultados con esos filtros.</td></tr>'}</table></div>`+
+      (fallos?`<details class="card"><summary>Tiendas sin resultados (${fallos.split('<div').length-1})</summary>${fallos}</details>`:'');
+  }catch(err){ $('out').innerHTML=`<div class="card err">Error: ${esc(err)}</div>`; }
+  finally{ b.disabled=false; b.textContent='Buscar'; } };
+carga();
+</script>
+</body>
+</html>
