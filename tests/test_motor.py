@@ -120,6 +120,61 @@ class Buscar(unittest.TestCase):
         self.assertFalse(a["Juego B"]["minimo"])              # sin historial no hay mínimo
 
 
+class Cortesia(unittest.TestCase):
+    """BuscaTron no machaca las tiendas: pausas, tope de direcciones, 429 y tiendas caídas."""
+
+    def setUp(self):
+        self.p = mock.patch.object(motor.time, "sleep")
+        self.pausas = self.p.start()
+        motor._caidas.clear()
+
+    def tearDown(self):
+        self.p.stop()
+        motor._caidas.clear()
+
+    def test_prueba_pocas_direcciones_y_con_pausa_si_no_conoce_el_buscador(self):
+        pedidas = []
+        def get(u):
+            pedidas.append(u)
+            return (200, "<html><body>nada</body></html>") if u.endswith("/") else (404, "")
+        r, err = motor._intenta({"host": "t.es"}, "x", get)
+        self.assertEqual(r, [])
+        self.assertLessEqual(len(pedidas), 1 + motor.MAX_INTENTOS)                       # la portada y como mucho 4 buscadores
+        self.assertGreaterEqual(self.pausas.call_count, 1)
+
+    def test_si_la_tienda_dice_429_se_para(self):
+        pedidas = []
+        def get(u):
+            pedidas.append(u)
+            return 429, ""
+        r, err = motor._intenta({"host": "t.es", "plantilla": "https://t.es/?q={q}"}, "x", get)
+        self.assertEqual((r, len(pedidas)), ([], 1))
+        self.assertIn("429", err)
+
+    def test_pausa_entre_las_paginas_de_una_misma_tienda(self):
+        mapa = {"https://t.es/?q=marvel": '<link rel="next" href="/p2"><a href="/a">Marvel Uno</a><b>1 €</b>',
+                "https://t.es/p2": '<a href="/b">Marvel Dos</a><b>2 €</b>'}
+        motor._intenta({"host": "t.es", "plantilla": "https://t.es/?q={q}"}, "marvel", lambda u: (200, mapa[u]) if u in mapa else (404, ""), paginas=2)
+        self.pausas.assert_called_with(motor.PAUSA)
+
+    def test_una_tienda_que_no_responde_no_se_vuelve_a_llamar_enseguida(self):
+        llamadas = []
+        def tienda_rota(*a, **k):
+            llamadas.append(1)
+            raise TimeoutError("timed out")
+        with mock.patch.object(motor, "_intenta", tienda_rota):
+            h, r, err = motor._tienda({"host": "caida.es", "plantilla": "https://caida.es/?q={q}"}, "x")
+            self.assertIn("error", err)
+            h, r, err = motor._tienda({"host": "caida.es", "plantilla": "https://caida.es/?q={q}"}, "x")
+            self.assertIn("no responde", err)
+        self.assertEqual(len(llamadas), 1)                                                # la segunda vez ni se intenta
+
+    def test_los_errores_http_no_marcan_la_tienda_como_caida(self):
+        with mock.patch.object(motor, "_intenta", lambda *a, **k: ([], "HTTP 500")):
+            motor._tienda({"host": "t.es", "plantilla": "https://t.es/?q={q}"}, "x")
+        self.assertNotIn("t.es", motor._caidas)
+
+
 class VentanaSoloSiHaceFalta(unittest.TestCase):
     def test_solo_se_abre_la_ventana_para_la_tienda_que_pide_comprobacion(self):
         d = tempfile.mkdtemp()

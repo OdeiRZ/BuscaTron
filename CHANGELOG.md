@@ -3,6 +3,16 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.8.3] - 2026-11-06
+
+### Añadido
+- **Cortesía con las tiendas**: pausa de 0,6 s entre peticiones seguidas a la misma web (candidatas y páginas), tope de 4 direcciones de prueba cuando no se conoce el buscador, parada inmediata ante un «429 demasiadas peticiones» y 10 minutos sin volver a llamar a una web que no responde a la conexión (se muestra «no responde, se vuelve a intentar en N min»; así tampoco se espera 20 s en cada búsqueda). Motivo: una tienda recién añadida sin buscador conocido recibía muchas peticiones en pocos segundos, ritmo que dispara los bloqueos automáticos de IP.
+- **Bixoto** con su dirección de búsqueda ya configurada (`https://bixoto.com/es?search={q}`), sin necesidad de descubrirla.
+- 5 pruebas nuevas (94 en total).
+
+### Notas
+- En la conexión del usuario, `bixoto.com` no acepta conexiones (puertos 80 y 443 sin respuesta) mientras que con datos móviles sí, lo que apunta a un bloqueo temporal de la IP doméstica en su servidor. BuscaTron lo muestra como «no responde» y el resto de tiendas funciona con normalidad.
+
 ## [0.8.2] - 2026-11-06
 
 ### Añadido

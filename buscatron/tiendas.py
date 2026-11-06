@@ -26,6 +26,7 @@ CONOCIDAS = {
     "www.masqueoca.com": "https://www.masqueoca.com/tienda/buscardo.asp?txtbusqueda={q}&dondebusco=1&vertodo=1&stockneg=1",
     "www.turolgames.com": "https://www.turolgames.com/es/buscar?controller=search&search_query={q}",  # necesita navegador (pantalla de carga con JS)
     "www.amazon.es": "https://www.amazon.es/s?k={q}&s=price-asc-rank",                                 # solo responde a un navegador real
+    "bixoto.com": "https://bixoto.com/es?search={q}",
 }
 
 

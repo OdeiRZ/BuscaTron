@@ -6,7 +6,11 @@ import time
 from . import ajustes, bd, fetch, extract, descubre, importar, navegador, tiendas as cfg
 
 DESAFIO = "pide comprobación humana (captcha): activa «Mostrar la ventana» en Ajustes y resuélvela una vez"
-MIN_HISTORIAL = 3     # observaciones previas necesarias para hablar de «mínimo histórico»
+MIN_HISTORIAL = 3
+PAUSA = 0.6                 # segundos entre dos peticiones seguidas a la misma tienda (para no parecer un ataque)
+MAX_INTENTOS = 4            # direcciones de búsqueda que se prueban en una tienda cuyo buscador no se conoce
+REINTENTO_CAIDA = 600       # segundos sin volver a llamar a una tienda que no ha respondido a la conexión
+_caidas = {}     # observaciones previas necesarias para hablar de «mínimo histórico»
 
 
 def _candidatas(t, consulta, get):
@@ -27,8 +31,12 @@ def _intenta(t, consulta, get, paginas=1, con_estado=False):
     urls, err = _candidatas(t, consulta, get)
     if err:
         return [], err
-    for pl, url in urls:
+    for n, (pl, url) in enumerate(urls[:MAX_INTENTOS]):
+        if n:
+            time.sleep(PAUSA)
         st, html = get(url)
+        if st == 429:
+            return [], "limita las peticiones (429): vuelve a probar dentro de un rato"
         if st != 200:
             err = f"HTTP {st}"
             continue
@@ -42,6 +50,7 @@ def _intenta(t, consulta, get, paginas=1, con_estado=False):
             if not sig or sig in paginas_vistas:
                 break
             paginas_vistas.add(sig)
+            time.sleep(PAUSA)
             try:
                 st2, html2 = get(sig)
             except Exception:
@@ -63,6 +72,9 @@ def _tienda(t, consulta, nav=None, paginas=1):
     """nav: None (sin navegador) o {'visible': bool}. Orden: método rápido y, si falla, navegador."""
     h = t["host"]
     estados = t.get("tipo") == "segunda_mano"
+    caida = _caidas.get(h)
+    if caida and time.time() - caida < REINTENTO_CAIDA:     # no insistir contra una web que no responde
+        return h, [], f"no responde (se vuelve a intentar en {int((caida + REINTENTO_CAIDA - time.time()) / 60) + 1} min)"
     try:
         if not (nav and t.get("js")):
             r, err = _intenta(t, consulta, fetch.get, paginas, estados)
@@ -83,6 +95,8 @@ def _tienda(t, consulta, nav=None, paginas=1):
     except navegador.Desafio:
         return h, [], DESAFIO
     except Exception as e:
+        if isinstance(e, OSError):                           # tiempo agotado, conexión rechazada…
+            _caidas[h] = time.time()
         return h, [], f"error: {str(e)[:70]}"
 
 
