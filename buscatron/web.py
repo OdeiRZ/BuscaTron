@@ -12,7 +12,7 @@ from hashlib import sha256
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from urllib.parse import parse_qs, urlparse
 
-from . import ajustes, arranque, extract, fetch, motor, notifica, programador, seguimiento, tiendas as cfg
+from . import ajustes, arranque, busquedas, extract, fetch, importar, motor, notifica, programador, seguimiento, tiendas as cfg
 
 TAILSCALE = ipaddress.ip_network("100.64.0.0/10")
 MAX_FALLOS, VENTANA_FALLOS = 5, 300      # intentos de PIN fallidos por IP y ventana (segundos)
@@ -144,7 +144,9 @@ class Handler(BaseHTTPRequestHandler):
         rutas = {"/api/tiendas": cfg.carga, "/api/seguimientos": seguimiento.lista, "/api/avisos": seguimiento.avisos,
                  "/api/ajustes": ajustes.publico, "/api/red": self._red,
                  "/api/arranque": lambda: {"disponible": arranque.disponible(), "activo": arranque.activo()},
-                 "/api/historial": lambda: motor.historial_de(parse_qs(url.query).get("url", [""])[0])}
+                 "/api/historial": lambda: motor.historial_de(parse_qs(url.query).get("url", [""])[0]),
+                 "/api/busquedas": lambda: (busquedas.obtiene(int(parse_qs(url.query)["id"][0])) or {"error": "búsqueda no encontrada"})
+                 if "id" in parse_qs(url.query) else busquedas.lista()}
         if url.path in rutas:
             return self._json(rutas[url.path]())
         self._enviar(_pagina().encode(), "text/html; charset=utf-8")
@@ -191,8 +193,22 @@ class Handler(BaseHTTPRequestHandler):
                                     con_envio=bool(c.get("con_envio")), segunda_mano=bool(c.get("segunda_mano")),
                                     abierta=bool(c.get("abierta")), region=c.get("region") if c.get("region") in ("es", "ue", "mundo") else "es",
                                     paginas=int(_num(c.get("paginas", "")) or 0) or None)
-            return {"resultados": res[: int(c.get("top") or 50)], "total": len(res), "informe": inf,
+            resp = {"resultados": res[: int(c.get("top") or 50)], "total": len(res), "informe": inf,
                     "webs": sorted({x["tienda"] for x in res if x.get("origen") == "web"})}
+            if c.get("guardar", True) and c.get("q", "").strip():        # se recuerda para no tener que repetirla
+                resp["id"], resp["ts"] = busquedas.guarda(c, resp)
+            return resp
+        if ruta == "/api/busquedas":
+            accion = c.get("accion")
+            if accion == "borrar":
+                busquedas.borra(int(c["id"]))
+            elif accion == "vaciar":
+                busquedas.vacia()
+            elif accion == "actualizar":
+                busquedas.actualiza(int(c["id"]), c["resultados"])
+            else:
+                raise ValueError("acción no válida")
+            return busquedas.lista()
         if ruta == "/api/tiendas":
             return self._tiendas(c)
         if ruta == "/api/seguimientos":
@@ -216,6 +232,15 @@ class Handler(BaseHTTPRequestHandler):
             except RuntimeError as e:
                 raise ValueError(str(e))
             return {"disponible": arranque.disponible(), "activo": arranque.activo()}
+        if ruta == "/api/importar":           # productos pegados a mano de una tienda que no se puede consultar sola
+            t = next((t for t in cfg.carga() if t["host"] == c.get("host")), None)
+            consulta = (c.get("consulta") or "").strip()
+            if not t or not consulta:
+                raise ValueError("falta la tienda o la búsqueda")
+            base = cfg.url_busqueda(t["plantilla"], consulta) if t.get("plantilla") else "https://" + t["host"] + "/"
+            items = importar.parsea(c.get("texto", ""), consulta, base)
+            n = importar.guarda(t["host"], consulta, items, base) if items else 0
+            return {"importados": n, "ejemplos": [{"titulo": x["titulo"], "precio": x["precio"]} for x in items[:5]], "caduca_horas": importar.CADUCA_HORAS}
         if ruta == "/api/envio_detectar":     # pista a partir de la portada de la tienda; el usuario la revisa y guarda
             st, h = fetch.get("https://" + c["host"] + "/")
             if st != 200:

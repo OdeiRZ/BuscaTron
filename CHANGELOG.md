@@ -3,6 +3,19 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.8.0] - 2026-11-06
+
+### Añadido
+- **Búsquedas recientes**: cada búsqueda hecha desde la web se guarda con sus resultados, filtros e informe de tiendas (hasta 12; repetir la misma sustituye a la anterior). Al abrir BuscaTron se restaura la última al instante, con el aviso «resultados guardados hace X, no se han vuelto a consultar» y un botón **Actualizar**. Una lista plegable permite abrir cualquiera (restaura también sus filtros) y **borrarlas** una a una con la ✕ o todas a la vez. API `/api/busquedas`.
+- **Importar a mano** (📋 Pegar resultados) para las tiendas «solo enlace»: se pega el texto o el HTML de la página copiado desde tu propio navegador y BuscaTron lee los productos y precios, sin contactar con la tienda. Se mezclan al instante con la lista que ya está en pantalla (solo se consulta esa tienda, que no hace peticiones), se guardan 72 horas, entran en el historial de precios y quedan guardados dentro de la búsqueda reciente. Pensado para Ferretería Ibérica, cuya web está detrás de Cloudflare.
+- 16 pruebas nuevas (83 en total).
+
+### Corregido
+- La lectura del texto importado se llevaba el precio del producto siguiente («Camiseta Marvel 12,00 €») si venía justo detrás; ahora solo cuenta el grupo de precios pegado a cada título.
+
+### Notas
+- Ferretería Ibérica sigue sin poder consultarse automáticamente: su buscador (Doofinder) funciona con sesiones firmadas de Phoenix LiveView y su web exige una comprobación de Cloudflare que rechaza el navegador controlado por BuscaTron, también cuando la resuelve una persona. Aceptar esa comprobación exigiría ocultar la automatización, algo que BuscaTron no hace.
+
 ## [0.7.1] - 2026-11-06
 
 ### Corregido

@@ -6,7 +6,7 @@ Buscador y vigilante de precios **local** para tiendas online españolas. Pensad
 - **Datos en vivo**: no usa cachés ni comparadores intermedios, así que el precio es el que ves en la tienda.
 - **Tus datos se quedan en tu equipo**: lista de tiendas, historial y tokens se guardan en archivos locales que no se suben al repositorio.
 
-> Estado: **versión funcional** (v0.7.1). Consulta el [CHANGELOG](CHANGELOG.md).
+> Estado: **versión funcional** (v0.8.0). Consulta el [CHANGELOG](CHANGELOG.md).
 
 ## Inicio rápido
 
@@ -38,8 +38,9 @@ La web está pensada para móvil (probada a 360 px) y escritorio. Arranca con el
   - **Incluir segunda mano** (ver [Segunda mano](#segunda-mano)).
   - **Buscar también en otras webs** (ver [Búsqueda abierta](#búsqueda-abierta)), con región España, Unión Europea o cualquier país.
 - **Historial** (📈 en cada resultado): gráfica del precio de ese artículo con mínimo, media, máximo y precio actual. La etiqueta «Mínimo histórico» salta cuando está al precio más bajo que se le ha visto, con al menos tres datos previos.
+- **Búsquedas recientes** (🕘): cada búsqueda se guarda con sus resultados (hasta 12; repetir la misma sustituye a la anterior). Al abrir BuscaTron reaparece la última al instante, con el aviso «resultados guardados hace X» y un botón **Actualizar** para volver a consultarla. Tocando una de la lista se restauran también sus filtros. Cada una se borra con la ✕, o todas con «Borrar todas».
 - Tiendas: actívalas o desactívalas con un toque, añade otras con el dominio (`ejemplo.es`) y, en «Gestionar tiendas», **edita su nombre, su dirección o URL de búsqueda, el envío y el modo «solo enlace»** cuando quieras. Si el buscador de una web no se detecta, pega una URL de búsqueda con `{q}` donde va el producto: `https://ejemplo.es/buscar?q={q}`. Cambiar la dirección a otro dominio hace que se vuelva a descubrir su buscador.
-- **Solo enlace**: marca así las tiendas que bloquean el acceso automático (por ejemplo Wallapop). No se consultan, pero cada búsqueda te ofrece su enlace ya preparado para abrirlo tú.
+- **Solo enlace**: marca así las tiendas que bloquean el acceso automático (por ejemplo Wallapop). No se consultan, pero cada búsqueda te ofrece su enlace ya preparado para abrirlo tú y un botón **📋 Pegar resultados** para [importar a mano](#importar-a-mano) lo que veas en ellas.
 
 ### 👁️ Seguimiento
 Guarda una búsqueda y deja que BuscaTron la revise sola cada X horas mientras esté abierto (con el [arranque con Windows](#arranque-con-windows-y-bandeja), siempre).
@@ -59,6 +60,20 @@ Cada revisión **retira los avisos que ya no cumplen tu búsqueda** (porque se a
 - **Telegram** y **correo (SMTP)** para recibir los avisos, con botón de prueba.
 - **Acceso desde el móvil** y PIN opcional.
 - **Navegador**: usar tu Chrome para tiendas que cargan con JavaScript.
+
+## Importar a mano
+
+Para las tiendas que no se pueden consultar solas (por ejemplo **Ferretería Ibérica**, cuya web está detrás de una comprobación de Cloudflare que rechaza cualquier navegador controlado por un programa), **tú miras en tu navegador y BuscaTron lee lo que copies**:
+
+1. En los resultados, en «Para revisar a mano», abre el enlace de la tienda: ya lleva tu búsqueda puesta.
+2. En esa página selecciona todo (Ctrl+A) y copia (Ctrl+C). En el móvil: mantén pulsado, «Seleccionar todo» y «Copiar».
+3. Pulsa **📋 Pegar resultados**, pega el texto y pulsa **Importar**.
+
+Los productos y precios se mezclan **al instante** con el resto de la lista (y con el historial, las gráficas y los avisos de los seguimientos), con la etiqueta «Importado hace X h». Se recuerdan **72 horas** y se guardan también en la búsqueda reciente, así que no hace falta repetirlo al volver.
+
+- Acepta el texto de la página o su código HTML (en ese caso conserva los enlaces de cada producto). **No hace ninguna petición a la tienda.**
+- Se leen los productos cuyo título contiene tu búsqueda y que llevan un precio justo después; si hay dos precios seguidos (el anterior y el actual) se toma el menor. Las cabeceras («Resultados de búsqueda…»), los productos sin relación y los precios de lo que viene detrás no se cuentan. Reconoce «agotado» y «preventa» igual que en las demás tiendas.
+- Es una lectura de texto, no de la estructura de la página: si una tienda presenta los precios de una forma muy distinta (por ejemplo, el precio antes del título), puede fallar. En ese caso BuscaTron te dice que no encontró productos.
 
 ## Segunda mano
 
@@ -157,7 +172,7 @@ Resultado de la prueba el 6/11/2026 (las webs cambian, así que puede variar):
 |---|---|
 | ✅ Funcionan (16) | Juegos de la Mesa Redonda, Zacatrus, Dungeon Marvels, Jugamos Una, Jugamos Otra, El Taller del Modelista, Mathom, Tablerum, Outlet Games, Ludus Belli, Bandua, Goblin Trader, Gameria, Masqueoca, Turol Games y **Amazon** (estas dos con navegador) |
 | ➖ Responden, sin el producto probado (2) | Tiendas MGI, Outlet-PC |
-| 🔗 Solo enlace (1) | Ferretería Ibérica Madrid |
+| 🔗 Solo enlace (1) | Ferretería Ibérica Madrid (con [importación a mano](#importar-a-mano)) |
 | 🛒 Segunda mano | Vinted y Milanuncios funcionan; Wallapop y eBay, solo enlace |
 
 ## Archivos locales
@@ -182,6 +197,8 @@ buscatron/
   motor.py         búsqueda en paralelo, páginas, filtros, envío, historial y orden
   extract.py       extractor genérico de productos, precios, estados y páginas siguientes
   abierta.py       búsqueda abierta (Bing / DuckDuckGo) y lectura de precios de las webs halladas
+  importar.py      importación a mano de lo que se copia de una tienda (texto o HTML)
+  busquedas.py     últimas búsquedas guardadas con sus resultados
   descubre.py      descubrimiento del buscador de cada tienda
   fetch.py         descargas con la biblioteca estándar
   navegador.py     navegador opcional (Playwright + Chrome)
@@ -205,14 +222,14 @@ permitir_acceso_movil.bat     abre el cortafuegos para tu red local (pide admini
 python -m unittest discover -s tests
 ```
 
-67 pruebas, sin red. Cubren las reglas de aviso (objetivo, media histórica, no repetir, reaviso, limpieza de obsoletos), el extractor (precios tachados, texto oculto, títulos recortados, preventas, estados de segunda mano, páginas siguientes, datos de producto, envío), el motor (paginación, filtros, total con envío, mínimo histórico, historial), la búsqueda abierta, el filtro de IP y el PIN.
+83 pruebas, sin red. Cubren las reglas de aviso (objetivo, media histórica, no repetir, reaviso, limpieza de obsoletos), el extractor (precios tachados, texto oculto, títulos recortados, preventas, estados de segunda mano, páginas siguientes, datos de producto, envío), el motor (paginación, filtros, total con envío, mínimo histórico, historial), la búsqueda abierta, el filtro de IP y el PIN, la importación a mano y las búsquedas guardadas.
 
 ## Limitaciones conocidas
 
 - Las revisiones programadas solo se ejecutan **mientras BuscaTron esté abierto**: activa el arranque con Windows para que lo esté siempre.
 - No reconoce «el mismo producto» entre tiendas: filtra por palabras. Usa «Excluir» para descartar accesorios, packs o ediciones que no te interesan.
 - Las tiendas cambian su web de vez en cuando y su lector puede dejar de funcionar. La web indica qué tiendas no han respondido.
-- Ferretería Ibérica, Wallapop y eBay bloquean cualquier acceso automático: solo se ofrece su enlace. Amazon solo responde a un navegador real, así que necesita el [navegador opcional](#navegador-opcional) (Playwright y Chrome o Edge) y puede volver a pedir una comprobación humana si lo considera sospechoso.
+- Ferretería Ibérica, Wallapop y eBay bloquean cualquier acceso automático: solo se ofrece su enlace y, para ellas, la [importación a mano](#importar-a-mano). Amazon solo responde a un navegador real, así que necesita el [navegador opcional](#navegador-opcional) (Playwright y Chrome o Edge) y puede volver a pedir una comprobación humana si lo considera sospechoso.
 - La búsqueda abierta usa buscadores web gratuitos: es menos precisa, solo lee precios en euros y puede dejar de funcionar si el buscador la bloquea.
 - Los gastos de envío los pones tú (o los sugiere «Detectar», que es solo una pista); no se leen del carrito de cada tienda.
 - Las preventas se reconocen por el texto de la tienda («Preventa», «Lanzamiento aproximado»…); una tienda que no lo diga puede colarse como disponible.

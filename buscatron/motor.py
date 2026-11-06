@@ -3,7 +3,7 @@ import concurrent.futures as cf
 import re
 import time
 
-from . import ajustes, bd, fetch, extract, descubre, navegador, tiendas as cfg
+from . import ajustes, bd, fetch, extract, descubre, importar, navegador, tiendas as cfg
 
 DESAFIO = "pide comprobación humana (captcha): activa «Mostrar la ventana» en Ajustes y resuélvela una vez"
 MIN_HISTORIAL = 3     # observaciones previas necesarias para hablar de «mínimo histórico»
@@ -175,6 +175,12 @@ def buscar(consulta, incluir="", excluir="", ocultar_agotados=True, hosts=None, 
         informe[host] = {"encontrados": kept, "error": err if not kept else None}
     for t in manuales:
         informe[t["host"]] = {"encontrados": 0, "error": None, "manual": cfg.url_busqueda(t["plantilla"], consulta)}
+        previos = [x for x in importar.vigentes(t["host"], consulta) if pasa(x)]      # lo que el usuario pegó a mano
+        for x in previos:
+            x["tienda"], x["origen"] = t["host"], t.get("tipo", "tienda")
+            res.append(x)
+        if previos:
+            informe[t["host"]].update(importados=len(previos), importado_ts=max(x["importado"] for x in previos))
     if abierta:
         from . import abierta as web
         conocidos = {t["host"].replace("www.", "") for t in lista}

@@ -14,6 +14,12 @@ CREATE TABLE IF NOT EXISTS seguimientos(
     id INTEGER PRIMARY KEY AUTOINCREMENT, nombre TEXT, consulta TEXT, incluir TEXT DEFAULT '', excluir TEXT DEFAULT '',
     pmin REAL, pmax REAL, objetivo REAL, bajo_historico REAL DEFAULT 0, sin_agotados INTEGER DEFAULT 1,
     canales TEXT DEFAULT 'app', castellano INTEGER DEFAULT 1, opciones TEXT DEFAULT '{}', cada_horas REAL DEFAULT 12, activo INTEGER DEFAULT 1, ultima REAL DEFAULT 0, estado TEXT DEFAULT '');
+CREATE TABLE IF NOT EXISTS busquedas(
+    id INTEGER PRIMARY KEY AUTOINCREMENT, ts REAL, consulta TEXT, firma TEXT, params TEXT, resultados TEXT, total INTEGER, informe TEXT, webs TEXT);
+CREATE INDEX IF NOT EXISTS ix_busquedas ON busquedas(ts);
+CREATE TABLE IF NOT EXISTS importados(
+    host TEXT, ts REAL, consulta TEXT, titulo TEXT, url TEXT, precio REAL, agotado INTEGER DEFAULT 0, preventa INTEGER DEFAULT 0);
+CREATE INDEX IF NOT EXISTS ix_importados ON importados(host, ts);
 CREATE TABLE IF NOT EXISTS avisos(
     id INTEGER PRIMARY KEY AUTOINCREMENT, ts REAL, seg_id INTEGER, titulo TEXT, tienda TEXT, url TEXT, precio REAL, motivo TEXT);
 """
