@@ -9,7 +9,7 @@ Buscador de precios local para comparar tiendas online españolas (pensado para 
 Requiere Python 3.9 o superior. No hay nada que instalar.
 
 ```
-python -m buscatron                      # interfaz web en http://127.0.0.1:8790
+python -m buscatron --abrir              # interfaz web en http://127.0.0.1:8790 (o doble clic en BuscaTron.bat)
 python -m buscatron "marvel champions"   # búsqueda por línea de comandos
 ```
 

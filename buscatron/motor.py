@@ -1,21 +1,9 @@
 """Motor de búsqueda: consulta tiendas en paralelo y ordena por precio."""
 import concurrent.futures as cf
-import sqlite3
 import time
-import os
 from urllib.parse import quote_plus
 
-from . import fetch, extract, descubre, tiendas as cfg
-
-BD = os.path.join(cfg.RAIZ, "buscatron.db")
-
-
-def _bd():
-    c = sqlite3.connect(BD)
-    c.execute("""CREATE TABLE IF NOT EXISTS precios(
-        ts REAL, consulta TEXT, tienda TEXT, titulo TEXT, url TEXT, precio REAL, agotado INTEGER)""")
-    return c
-
+from . import bd, fetch, extract, descubre, tiendas as cfg
 
 def _candidatas(t, consulta):
     """URLs de búsqueda a probar, de más a menos fiable."""
@@ -53,7 +41,7 @@ def _tienda(t, consulta):
         return t["host"], [], f"error: {str(e)[:60]}"
 
 
-def buscar(consulta, incluir="", excluir="", ocultar_agotados=False, hosts=None, pmin=None, pmax=None):
+def buscar(consulta, incluir="", excluir="", ocultar_agotados=False, hosts=None, pmin=None, pmax=None, seg_id=None):
     """Devuelve (resultados ordenados por precio, informe por tienda)."""
     lista = cfg.carga()
     activas = [t for t in lista if (t["host"] in hosts if hosts is not None else t.get("activa", True))]
@@ -77,7 +65,7 @@ def buscar(consulta, incluir="", excluir="", ocultar_agotados=False, hosts=None,
     cfg.guarda(lista)  # persiste las plantillas descubiertas
     res.sort(key=lambda x: (x["agotado"], x["precio"]))
     ts = time.time()
-    with _bd() as c:
-        c.executemany("INSERT INTO precios VALUES(?,?,?,?,?,?,?)",
-                      [(ts, consulta, x["tienda"], x["titulo"], x["url"], x["precio"], int(x["agotado"])) for x in res])
+    with bd.conecta() as c:
+        c.executemany("INSERT INTO precios(ts,consulta,tienda,titulo,url,precio,agotado,seg_id) VALUES(?,?,?,?,?,?,?,?)",
+                      [(ts, consulta, x["tienda"], x["titulo"], x["url"], x["precio"], int(x["agotado"]), seg_id) for x in res])
     return res, informe

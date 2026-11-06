@@ -1,15 +1,21 @@
 """Interfaz web local (solo biblioteca estándar)."""
 import json
+import os
+import threading
+import webbrowser
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 
-from . import motor, tiendas as cfg
-
+from . import ajustes, motor, notifica, programador, seguimiento, tiendas as cfg
 
 
 def _pagina():
-    import os
     with open(os.path.join(os.path.dirname(__file__), "pagina.html"), encoding="utf-8") as f:
         return f.read()
+
+
+def _num(v):
+    v = str(v).replace(",", ".").strip()
+    return float(v) if v else None
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -22,8 +28,10 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(data)
 
     def do_GET(self):
-        if self.path == "/api/tiendas":
-            return self._json(cfg.carga())
+        rutas = {"/api/tiendas": cfg.carga, "/api/seguimientos": seguimiento.lista,
+                 "/api/avisos": seguimiento.avisos, "/api/ajustes": ajustes.publico}
+        if self.path in rutas:
+            return self._json(rutas[self.path]())
         data = _pagina().encode()
         self.send_response(200)
         self.send_header("Content-Type", "text/html; charset=utf-8")
@@ -33,33 +41,72 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         cuerpo = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0))) or b"{}")
-        if self.path == "/api/buscar":
-            num = lambda v: float(str(v).replace(",", ".")) if str(v).strip() else None
-            try:
-                res, inf = motor.buscar(
-                    cuerpo.get("q", "").strip(), cuerpo.get("incluir", ""), cuerpo.get("excluir", ""),
-                    bool(cuerpo.get("sin_agotados")), cuerpo.get("tiendas"),
-                    num(cuerpo.get("pmin", "")), num(cuerpo.get("pmax", "")))
-            except ValueError:
-                return self._json({"error": "precio no válido"}, 400)
-            return self._json({"resultados": res[: int(cuerpo.get("top") or 50)], "total": len(res), "informe": inf})
-        if self.path == "/api/tiendas":
+        try:
+            return self._json(self._post(self.path, cuerpo))
+        except (ValueError, KeyError) as e:
+            return self._json({"error": str(e) or "datos no válidos"}, 400)
+
+    def _post(self, ruta, c):
+        if ruta == "/api/buscar":
+            res, inf = motor.buscar(c.get("q", "").strip(), c.get("incluir", ""), c.get("excluir", ""),
+                                    bool(c.get("sin_agotados")), c.get("tiendas"),
+                                    _num(c.get("pmin", "")), _num(c.get("pmax", "")))
+            return {"resultados": res[: int(c.get("top") or 50)], "total": len(res), "informe": inf}
+        if ruta == "/api/tiendas":
             lista = cfg.carga()
-            if cuerpo.get("anadir"):
-                host = cuerpo["anadir"].replace("https://", "").replace("http://", "").strip("/ ")
+            if c.get("anadir"):
+                host = c["anadir"].replace("https://", "").replace("http://", "").strip("/ ")
                 if host and all(t["host"] != host for t in lista):
                     lista.append({"host": host, "activa": True, "plantilla": None})
-            if "activas" in cuerpo:
+            if "activas" in c:
                 for t in lista:
-                    t["activa"] = t["host"] in cuerpo["activas"]
+                    t["activa"] = t["host"] in c["activas"]
             cfg.guarda(lista)
-            return self._json(lista)
-        self._json({"error": "no encontrado"}, 404)
+            return lista
+        if ruta == "/api/seguimientos":
+            accion = c.get("accion", "guardar")
+            if accion == "borrar":
+                seguimiento.borra(int(c["id"]))
+            elif accion == "revisar":
+                threading.Thread(target=seguimiento.revisa, args=(int(c["id"]),), daemon=True).start()
+            else:
+                seguimiento.guarda(c)
+            return seguimiento.lista()
+        if ruta == "/api/ajustes":
+            ajustes.guarda(c)
+            return ajustes.publico()
+        if ruta == "/api/detectar_chat":
+            ajustes.guarda({k: c[k] for k in ("telegram_token",) if k in c})
+            chat = notifica.detectar_chat()
+            ajustes.guarda({"telegram_chat": chat})
+            return ajustes.publico()
+        if ruta == "/api/prueba_aviso":
+            return notifica.envia([k for k in c.get("canales", []) if k in ("telegram", "correo")],
+                                  "BuscaTron · prueba", "Si lees esto, los avisos funcionan.")
+        raise KeyError("no encontrado")
 
     def log_message(self, *a):
         pass
 
 
-def sirve(puerto=8790, host="127.0.0.1"):
-    print(f"BuscaTron en http://{host}:{puerto}")
-    ThreadingHTTPServer((host, puerto), Handler).serve_forever()
+class Servidor(ThreadingHTTPServer):
+    # En Windows SO_REUSEADDR deja que dos procesos compartan puerto sin error.
+    allow_reuse_address = os.name != "nt"
+    daemon_threads = True
+
+
+def sirve(puerto=8790, host="127.0.0.1", abrir=False):
+    try:
+        servidor = Servidor((host, puerto), Handler)
+    except OSError as e:
+        raise SystemExit(f"No se pudo abrir el puerto {puerto} ({e.strerror}). "
+                         f"¿Ya hay un BuscaTron abierto? Prueba otro: python -m buscatron --puerto {puerto + 1}")
+    programador.arranca()
+    url = f"http://{'127.0.0.1' if host in ('0.0.0.0', '') else host}:{puerto}"
+    print(f"BuscaTron en {url}  (Ctrl+C o cierra la ventana para parar)")
+    if abrir:
+        threading.Timer(0.8, webbrowser.open, args=(url,)).start()
+    try:
+        servidor.serve_forever()
+    except KeyboardInterrupt:
+        pass

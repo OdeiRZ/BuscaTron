@@ -9,32 +9,48 @@
 @media(prefers-color-scheme:dark){:root{--bg:#111418;--card:#1a1f26;--tx:#e6e9ee;--mut:#9aa4b2;--bd:#2a313b;--ac:#6ea0ff;--ok:#4ade80;--ko:#f87171}}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.4 system-ui,sans-serif}
-main{max-width:980px;margin:0 auto;padding:16px}
-h1{font-size:22px;margin:4px 0 14px}
+main{max-width:980px;margin:0 auto;padding:16px 16px 84px}
+h1{font-size:22px;margin:4px 0 10px}
+h2{font-size:16px;margin:0 0 8px}
+nav{display:flex;gap:6px;margin-bottom:12px}
+nav button{background:transparent;color:var(--mut);border:1px solid var(--bd);flex:0 0 auto}
+nav button.on{background:var(--ac);color:#fff;border-color:var(--ac)}
+@media(max-width:700px){nav{position:fixed;left:0;right:0;bottom:0;margin:0;padding:8px 12px;background:var(--card);border-top:1px solid var(--bd);z-index:5}
+ nav button{flex:1;padding:10px 4px}}
 .card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:14px;margin-bottom:12px}
 label{display:block;font-size:12px;color:var(--mut);margin:0 0 3px}
-input[type=text],input[type=number]{width:100%;padding:9px 10px;border:1px solid var(--bd);border-radius:8px;background:var(--bg);color:var(--tx);font:inherit}
+input[type=text],input[type=number],input[type=password],select{width:100%;padding:9px 10px;border:1px solid var(--bd);border-radius:8px;background:var(--bg);color:var(--tx);font:inherit}
 .fila{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:10px}
 button{padding:10px 16px;border:0;border-radius:8px;background:var(--ac);color:#fff;font:inherit;font-weight:600;cursor:pointer}
 button.sec{background:transparent;color:var(--ac);border:1px solid var(--bd)}
+button.peli{background:transparent;color:var(--ko);border:1px solid var(--bd)}
 button:disabled{opacity:.6;cursor:wait}
-.tiendas{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:8px}
-.tiendas label{display:flex;gap:5px;align-items:center;font-size:13px;color:var(--tx);margin:0}
+.acciones{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.chk{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:8px}
+.chk label{display:flex;gap:5px;align-items:center;font-size:13px;color:var(--tx);margin:0}
 details summary{cursor:pointer;color:var(--mut);font-size:13px}
 table{width:100%;border-collapse:collapse}
 td{padding:9px 6px;border-top:1px solid var(--bd);vertical-align:top}
 td.p{white-space:nowrap;font-weight:700;width:1%}
-td.t{color:var(--mut);font-size:12px}
 a{color:var(--ac);text-decoration:none}
 .ag{color:var(--ko);font-size:12px;font-weight:600}
 .err{color:var(--ko);font-size:13px}
+.ok{color:var(--ok);font-size:13px}
 .mut{color:var(--mut);font-size:13px}
-@media(max-width:600px){td.t{display:none}}
+.vacio{display:none}
 </style>
 </head>
 <body>
 <main>
 <h1>BuscaTron</h1>
+<nav id="nav">
+  <button data-t="buscar" class="on">Buscar</button>
+  <button data-t="seguir">Seguimiento</button>
+  <button data-t="avisos">Avisos <span id="nav-av"></span></button>
+  <button data-t="ajustes">Ajustes</button>
+</nav>
+
+<section id="t-buscar">
 <form id="f" class="card">
   <label for="q">¿Qué buscas?</label>
   <input type="text" id="q" placeholder="Ej.: marvel champions" required autofocus>
@@ -45,47 +61,165 @@ a{color:var(--ac);text-decoration:none}
     <div><label>Precio máx. €</label><input type="number" id="pmax" step="0.01" min="0"></div>
     <div><label>Mostrar los N más baratos</label><input type="number" id="top" value="10" min="1" max="200"></div>
   </div>
-  <div class="tiendas"><label><input type="checkbox" id="sinag"> Ocultar agotados</label></div>
+  <div class="chk"><label><input type="checkbox" id="sinag"> Ocultar agotados</label></div>
   <details open style="margin-top:10px"><summary>Tiendas</summary>
-    <div class="tiendas" id="tiendas"></div>
+    <div class="chk" id="tiendas"></div>
     <div class="fila"><div><input type="text" id="nueva" placeholder="añadir tienda: ejemplo.es"></div>
     <div><button type="button" class="sec" id="add">Añadir tienda</button></div></div>
   </details>
-  <div style="margin-top:12px"><button id="go">Buscar</button></div>
+  <div class="acciones"><button id="go">Buscar</button><button type="button" class="sec" id="vigilar">Vigilar esta búsqueda</button></div>
 </form>
 <div id="out"></div>
+</section>
+
+<section id="t-seguir" class="vacio">
+  <form id="sf" class="card">
+    <h2 id="sf-tit">Nuevo seguimiento</h2>
+    <input type="hidden" id="s-id">
+    <div class="fila">
+      <div><label>Nombre</label><input type="text" id="s-nombre" placeholder="Campañas Marvel Champions"></div>
+      <div><label>Búsqueda</label><input type="text" id="s-consulta" required></div>
+      <div><label>Debe contener</label><input type="text" id="s-incluir"></div>
+      <div><label>Excluir</label><input type="text" id="s-excluir"></div>
+      <div><label>Precio mín. €</label><input type="number" id="s-pmin" step="0.01" min="0"></div>
+      <div><label>Precio máx. €</label><input type="number" id="s-pmax" step="0.01" min="0"></div>
+      <div><label>Avisar si cuesta ≤ (€)</label><input type="number" id="s-objetivo" step="0.01" min="0"></div>
+      <div><label>… o si baja un % de su media</label><input type="number" id="s-hist" step="1" min="0" max="90" placeholder="15"></div>
+      <div><label>Revisar cada (horas)</label><input type="number" id="s-horas" step="0.25" min="0.25" value="12"></div>
+    </div>
+    <div class="chk">
+      <label><input type="checkbox" id="s-sinag" checked> Ignorar agotados</label>
+      <label><input type="checkbox" id="c-telegram"> Aviso por Telegram</label>
+      <label><input type="checkbox" id="c-correo"> Aviso por correo</label>
+    </div>
+    <div class="mut" style="margin-top:6px">Los avisos siempre aparecen también en la pestaña Avisos. Si rellenas precio y %, avisa con cualquiera de los dos.</div>
+    <div class="acciones"><button>Guardar</button><button type="button" class="sec" id="s-cancel">Limpiar</button></div>
+  </form>
+  <div id="seg-lista"></div>
+</section>
+
+<section id="t-avisos" class="vacio"><div id="av-lista"></div></section>
+
+<section id="t-ajustes" class="vacio">
+  <div class="card">
+    <h2>Telegram</h2>
+    <div class="mut">Crea un bot con @BotFather, pega aquí su token, escríbele cualquier mensaje y pulsa «Detectar chat».</div>
+    <div class="fila">
+      <div><label>Token del bot</label><input type="password" id="a-token" autocomplete="off"></div>
+      <div><label>Chat ID</label><input type="text" id="a-chat"></div>
+    </div>
+    <div class="acciones"><button type="button" class="sec" id="a-det">Detectar chat</button>
+      <button type="button" class="sec" id="a-prueba-tg">Enviar prueba</button></div>
+  </div>
+  <div class="card">
+    <h2>Correo (SMTP)</h2>
+    <div class="fila">
+      <div><label>Servidor</label><input type="text" id="a-srv" placeholder="smtp.gmail.com"></div>
+      <div><label>Puerto</label><input type="number" id="a-pto" value="587"></div>
+      <div><label>Usuario</label><input type="text" id="a-usr"></div>
+      <div><label>Contraseña (de aplicación)</label><input type="password" id="a-clv" autocomplete="off"></div>
+      <div><label>Enviar los avisos a</label><input type="text" id="a-dst"></div>
+    </div>
+    <div class="acciones"><button type="button" class="sec" id="a-prueba-co">Enviar prueba</button></div>
+  </div>
+  <div class="acciones"><button id="a-guardar">Guardar ajustes</button></div>
+  <div id="a-msg" class="mut" style="margin-top:8px"></div>
+</section>
 </main>
+
 <script>
 const $=id=>document.getElementById(id);
-const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-let tiendas=[];
-function pinta(){ $('tiendas').innerHTML=tiendas.map(t=>
-  `<label><input type="checkbox" data-h="${esc(t.host)}" ${t.activa?'checked':''}> ${esc(t.host.replace(/^www\./,''))}</label>`).join('');
-  document.querySelectorAll('#tiendas input').forEach(i=>i.onchange=guarda); }
-async function carga(){ tiendas=await (await fetch('/api/tiendas')).json(); pinta(); }
-async function guarda(extra={}){
-  const activas=[...document.querySelectorAll('#tiendas input:checked')].map(i=>i.dataset.h);
-  tiendas=await (await fetch('/api/tiendas',{method:'POST',body:JSON.stringify({activas,...extra})})).json(); pinta(); }
-$('add').onclick=async()=>{ const v=$('nueva').value.trim(); if(!v)return;
-  await guarda({anadir:v}); $('nueva').value=''; };
-$('f').onsubmit=async e=>{ e.preventDefault(); const b=$('go'); b.disabled=true; b.textContent='Buscando…';
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const euro=n=>Number(n).toFixed(2).replace('.',',')+' €';
+const fecha=t=>t?new Date(t*1000).toLocaleString('es-ES',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'nunca';
+const api=async(ruta,cuerpo)=>{const r=await fetch('/api/'+ruta,cuerpo===undefined?{}:{method:'POST',body:JSON.stringify(cuerpo)});return r.json();};
+let tiendas=[],segs=[];
+
+/* pestañas */
+function ir(t){document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));
+  ['buscar','seguir','avisos','ajustes'].forEach(x=>$('t-'+x).classList.toggle('vacio',x!==t));
+  if(t==='seguir')cargaSeg(); if(t==='avisos')cargaAvisos(); if(t==='ajustes')cargaAjustes();
+  try{localStorage.setItem('bt-tab',t)}catch(e){}}
+document.querySelectorAll('#nav button').forEach(b=>b.onclick=()=>ir(b.dataset.t));
+
+/* buscar */
+function pinta(){$('tiendas').innerHTML=tiendas.map(t=>`<label><input type="checkbox" data-h="${esc(t.host)}" ${t.activa?'checked':''}> ${esc(t.host.replace(/^www\./,''))}</label>`).join('');
+  document.querySelectorAll('#tiendas input').forEach(i=>i.onchange=()=>guardaT());}
+async function cargaT(){tiendas=await api('tiendas');pinta();}
+async function guardaT(extra={}){const activas=[...document.querySelectorAll('#tiendas input:checked')].map(i=>i.dataset.h);
+  tiendas=await api('tiendas',{activas,...extra});pinta();}
+$('add').onclick=async()=>{const v=$('nueva').value.trim();if(!v)return;await guardaT({anadir:v});$('nueva').value='';};
+$('f').onsubmit=async e=>{e.preventDefault();const b=$('go');b.disabled=true;b.textContent='Buscando…';
   $('out').innerHTML='<div class="card mut">Consultando tiendas, tarda unos segundos…</div>';
-  const body={q:$('q').value,incluir:$('incluir').value,excluir:$('excluir').value,pmin:$('pmin').value,
-    pmax:$('pmax').value,top:$('top').value,sin_agotados:$('sinag').checked,
-    tiendas:[...document.querySelectorAll('#tiendas input:checked')].map(i=>i.dataset.h)};
-  try{
-    const r=await (await fetch('/api/buscar',{method:'POST',body:JSON.stringify(body)})).json();
-    if(r.error){ $('out').innerHTML=`<div class="card err">${esc(r.error)}</div>`; return; }
-    const filas=r.resultados.map(x=>`<tr><td class="p">${x.precio.toFixed(2).replace('.',',')} €</td>
-      <td><a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.titulo)}</a>${x.agotado?' <span class="ag">AGOTADO</span>':''}
-      <div class="mut">${esc(x.tienda)}</div></td></tr>`).join('');
-    const fallos=Object.entries(r.informe).filter(([h,i])=>i.error).map(([h,i])=>`<div class="err">${esc(h)}: ${esc(i.error)}</div>`).join('');
-    $('out').innerHTML=`<div class="card"><div class="mut">${r.resultados.length} de ${r.total} resultados, del más barato al más caro</div>
-      <table>${filas||'<tr><td>Sin resultados con esos filtros.</td></tr>'}</table></div>`+
-      (fallos?`<details class="card"><summary>Tiendas sin resultados (${fallos.split('<div').length-1})</summary>${fallos}</details>`:'');
-  }catch(err){ $('out').innerHTML=`<div class="card err">Error: ${esc(err)}</div>`; }
-  finally{ b.disabled=false; b.textContent='Buscar'; } };
-carga();
+  const body={q:$('q').value,incluir:$('incluir').value,excluir:$('excluir').value,pmin:$('pmin').value,pmax:$('pmax').value,
+    top:$('top').value,sin_agotados:$('sinag').checked,tiendas:[...document.querySelectorAll('#tiendas input:checked')].map(i=>i.dataset.h)};
+  try{const r=await api('buscar',body);
+    if(r.error){$('out').innerHTML=`<div class="card err">${esc(r.error)}</div>`;return;}
+    const filas=r.resultados.map(x=>`<tr><td class="p">${euro(x.precio)}</td><td><a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.titulo)}</a>${x.agotado?' <span class="ag">AGOTADO</span>':''}<div class="mut">${esc(x.tienda)}</div></td></tr>`).join('');
+    const fallos=Object.entries(r.informe).filter(([h,i])=>i.error).map(([h,i])=>`<div class="err">${esc(h)}: ${esc(i.error)}</div>`);
+    $('out').innerHTML=`<div class="card"><div class="mut">${r.resultados.length} de ${r.total} resultados, del más barato al más caro</div><table>${filas||'<tr><td>Sin resultados con esos filtros.</td></tr>'}</table></div>`+
+      (fallos.length?`<details class="card"><summary>Tiendas sin resultados (${fallos.length})</summary>${fallos.join('')}</details>`:'');
+  }catch(err){$('out').innerHTML=`<div class="card err">Error: ${esc(err)}</div>`;}
+  finally{b.disabled=false;b.textContent='Buscar';}};
+$('vigilar').onclick=()=>{if(!$('q').value.trim()){$('q').focus();return;}
+  limpiaSeg();$('s-consulta').value=$('q').value;$('s-nombre').value=$('q').value;$('s-incluir').value=$('incluir').value;
+  $('s-excluir').value=$('excluir').value;$('s-pmin').value=$('pmin').value;$('s-pmax').value=$('pmax').value;
+  $('s-sinag').checked=$('sinag').checked;ir('seguir');};
+
+/* seguimiento */
+function limpiaSeg(){$('sf').reset();$('s-id').value='';$('sf-tit').textContent='Nuevo seguimiento';}
+$('s-cancel').onclick=limpiaSeg;
+$('sf').onsubmit=async e=>{e.preventDefault();
+  const canales=['app',$('c-telegram').checked&&'telegram',$('c-correo').checked&&'correo'].filter(Boolean).join(',');
+  const r=await api('seguimientos',{accion:'guardar',id:$('s-id').value||undefined,nombre:$('s-nombre').value,consulta:$('s-consulta').value,
+    incluir:$('s-incluir').value,excluir:$('s-excluir').value,pmin:$('s-pmin').value,pmax:$('s-pmax').value,objetivo:$('s-objetivo').value,
+    bajo_historico:$('s-hist').value,cada_horas:$('s-horas').value,sin_agotados:$('s-sinag').checked,canales});
+  if(r.error){alert(r.error);return;} limpiaSeg();pintaSeg(r);};
+async function cargaSeg(){pintaSeg(await api('seguimientos'));}
+function pintaSeg(l){segs=l;$('seg-lista').innerHTML=l.length?l.map(s=>{
+  const reglas=[s.objetivo!=null&&`≤ ${euro(s.objetivo)}`,s.bajo_historico&&`−${s.bajo_historico}% de su media`].filter(Boolean).join(' · ')||'sin regla de aviso (solo historial)';
+  return `<div class="card"><h2>${esc(s.nombre)} ${s.activo?'':'<span class="mut">(en pausa)</span>'}</h2>
+  <div class="mut">«${esc(s.consulta)}»${s.incluir?` · contiene: ${esc(s.incluir)}`:''}${s.excluir?` · excluye: ${esc(s.excluir)}`:''}${s.pmin!=null?` · desde ${euro(s.pmin)}`:''}${s.pmax!=null?` · hasta ${euro(s.pmax)}`:''}</div>
+  <div class="mut">Avisa: ${reglas} · cada ${s.cada_horas} h · por ${esc(s.canales.replace('app','app'))}</div>
+  <div class="mut">Última revisión: ${fecha(s.ultima)}${s.estado?' — '+esc(s.estado):''}</div>
+  <div class="acciones"><button class="sec" onclick="revisa(${s.id},this)">Revisar ahora</button>
+  <button class="sec" onclick="editaSeg(${s.id})">Editar</button>
+  <button class="sec" onclick="pausa(${s.id})">${s.activo?'Pausar':'Reanudar'}</button>
+  <button class="peli" onclick="borraSeg(${s.id})">Borrar</button></div></div>`}).join(''):'<div class="card mut">Aún no vigilas nada. Haz una búsqueda y pulsa «Vigilar esta búsqueda», o rellena el formulario de arriba.</div>';}
+function editaSeg(id){const s=segs.find(x=>x.id===id);$('sf-tit').textContent='Editar seguimiento';$('s-id').value=s.id;
+  $('s-nombre').value=s.nombre;$('s-consulta').value=s.consulta;$('s-incluir').value=s.incluir;$('s-excluir').value=s.excluir;
+  $('s-pmin').value=s.pmin??'';$('s-pmax').value=s.pmax??'';$('s-objetivo').value=s.objetivo??'';$('s-hist').value=s.bajo_historico||'';
+  $('s-horas').value=s.cada_horas;$('s-sinag').checked=!!s.sin_agotados;
+  $('c-telegram').checked=s.canales.includes('telegram');$('c-correo').checked=s.canales.includes('correo');scrollTo(0,0);}
+async function pausa(id){const s=segs.find(x=>x.id===id);pintaSeg(await api('seguimientos',{accion:'guardar',...s,activo:!s.activo,sin_agotados:!!s.sin_agotados}));}
+async function borraSeg(id){if(confirm('¿Borrar este seguimiento?'))pintaSeg(await api('seguimientos',{accion:'borrar',id}));}
+async function revisa(id,b){b.disabled=true;b.textContent='Revisando…';await api('seguimientos',{accion:'revisar',id});
+  let n=0;const t=setInterval(async()=>{const l=await api('seguimientos');const s=l.find(x=>x.id===id);
+    if(++n>60||(s&&Date.now()/1000-s.ultima<20)){clearInterval(t);pintaSeg(l);cargaNavAv();}},3000);}
+
+/* avisos */
+async function cargaAvisos(){const l=await api('avisos');try{localStorage.setItem('bt-vistos',String(l.length&&l[0].id))}catch(e){}
+  $('nav-av').textContent='';
+  $('av-lista').innerHTML=l.length?`<div class="card"><table>${l.map(a=>`<tr><td class="p">${euro(a.precio)}</td><td><a href="${esc(a.url)}" target="_blank" rel="noopener">${esc(a.titulo)}</a>
+   <div class="mut">${esc(a.tienda)} · ${esc(a.motivo)} · ${fecha(a.ts)}</div></td></tr>`).join('')}</table></div>`:'<div class="card mut">Todavía no hay avisos.</div>';}
+async function cargaNavAv(){try{const l=await api('avisos');const v=Number(localStorage.getItem('bt-vistos')||0);
+  const n=l.filter(a=>a.id>v).length;$('nav-av').textContent=n?`(${n})`:'';}catch(e){}}
+
+/* ajustes */
+async function cargaAjustes(){const a=await api('ajustes');$('a-token').value=a.telegram_token;$('a-chat').value=a.telegram_chat;
+  $('a-srv').value=a.smtp_servidor;$('a-pto').value=a.smtp_puerto;$('a-usr').value=a.smtp_usuario;$('a-clv').value=a.smtp_clave;$('a-dst').value=a.correo_destino;}
+const ajustesForm=()=>({telegram_token:$('a-token').value,telegram_chat:$('a-chat').value,smtp_servidor:$('a-srv').value,
+  smtp_puerto:Number($('a-pto').value)||587,smtp_usuario:$('a-usr').value,smtp_clave:$('a-clv').value,correo_destino:$('a-dst').value});
+const msg=(t,ok)=>{$('a-msg').className=ok?'ok':'err';$('a-msg').textContent=t;};
+$('a-guardar').onclick=async()=>{await api('ajustes',ajustesForm());msg('Ajustes guardados.',true);};
+$('a-det').onclick=async()=>{const r=await api('detectar_chat',{telegram_token:$('a-token').value});
+  if(r.error)return msg(r.error,false);$('a-chat').value=r.telegram_chat;msg('Chat detectado y guardado.',true);};
+async function prueba(canal){await api('ajustes',ajustesForm());const r=await api('prueba_aviso',{canales:[canal]});
+  msg(r.error||r[canal]?(r.error||r[canal]):'Enviado. Revisa el canal.',!(r.error||r[canal]));}
+$('a-prueba-tg').onclick=()=>prueba('telegram');$('a-prueba-co').onclick=()=>prueba('correo');
+
+cargaT();cargaNavAv();
+try{const t=localStorage.getItem('bt-tab');if(t)ir(t);}catch(e){}
 </script>
 </body>
 </html>
