@@ -1,12 +1,37 @@
-"""Interfaz web local (solo biblioteca estándar)."""
+"""Interfaz web (solo biblioteca estándar). Accesible desde la red local con filtro de IP y PIN opcional."""
+import hmac
+import ipaddress
 import json
 import os
+import socket
 import threading
+import time
 import webbrowser
-from urllib.parse import urlparse
+from hashlib import sha256
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
+from urllib.parse import urlparse
 
 from . import ajustes, motor, notifica, programador, seguimiento, tiendas as cfg
+
+TAILSCALE = ipaddress.ip_network("100.64.0.0/10")
+MAX_FALLOS, VENTANA_FALLOS = 5, 300      # intentos de PIN fallidos por IP y ventana (segundos)
+_fallos = {}
+_servidor = {"host": "127.0.0.1", "puerto": 8790}
+
+LOGIN = """<!doctype html><html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1"><title>BuscaTron · Acceso</title>
+<style>:root{color-scheme:light dark;--bg:#f3f4f8;--card:#fff;--tx:#1a1d26;--bd:#e5e7ee;--ac:#4f46e5}
+@media(prefers-color-scheme:dark){:root{--bg:#0f1117;--card:#181b24;--tx:#e8eaf0;--bd:#2a2f3c;--ac:#8b93ff}}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;background:var(--bg);color:var(--tx);font:16px system-ui,sans-serif;padding:16px}
+form{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:22px;width:100%;max-width:340px;text-align:center}
+h1{margin:0 0 4px;font-size:22px}p{margin:0 0 16px;color:#6b7280;font-size:14px}
+input,button{width:100%;min-height:46px;border-radius:10px;font:inherit;font-size:18px}
+input{border:1px solid var(--bd);background:var(--bg);color:var(--tx);text-align:center;letter-spacing:4px;padding:0 12px}
+button{margin-top:10px;border:0;background:var(--ac);color:#fff;font-weight:600;cursor:pointer}#e{color:#b42318;min-height:20px;margin-top:8px;font-size:14px}</style></head>
+<body><form id="f"><h1>BuscaTron</h1><p>Introduce el PIN para entrar</p>
+<input id="p" type="password" inputmode="numeric" autocomplete="current-password" autofocus aria-label="PIN"><button>Entrar</button><div id="e"></div></form>
+<script>document.getElementById('f').onsubmit=async e=>{e.preventDefault();const r=await fetch('/api/login',{method:'POST',body:JSON.stringify({pin:document.getElementById('p').value})});
+if(r.ok){location.reload();}else{const j=await r.json();document.getElementById('e').textContent=j.error||'Error';document.getElementById('p').value='';}};</script></body></html>"""
 
 
 def _pagina():
@@ -19,72 +44,149 @@ def _num(v):
     return float(v) if v else None
 
 
+def ip_permitida(ip):
+    """Solo equipos de la red local (o Tailscale): nunca direcciones públicas."""
+    try:
+        a = ipaddress.ip_address(ip.split("%")[0])
+    except ValueError:
+        return False
+    if isinstance(a, ipaddress.IPv6Address) and a.ipv4_mapped:
+        a = a.ipv4_mapped
+    return a.is_loopback or a.is_private or a in TAILSCALE
+
+
+def es_local(ip):
+    try:
+        return ipaddress.ip_address(ip.split("%")[0]).is_loopback
+    except ValueError:
+        return False
+
+
+def token_sesion(pin):
+    return hmac.new(ajustes.secreto().encode(), pin.encode(), sha256).hexdigest()
+
+
+def analiza_direccion(entrada):
+    """Devuelve (host, plantilla|None). Admite 'tienda.es' o una URL de búsqueda con {q}."""
+    entrada = entrada.strip()
+    plantilla = None
+    if "{q}" in entrada:
+        plantilla = entrada if entrada.startswith("http") else "https://" + entrada
+        host = urlparse(plantilla).netloc
+    else:
+        host = entrada.replace("https://", "").replace("http://", "").split("/")[0].strip()
+    if not host or "." not in host:
+        raise ValueError("dirección no válida")
+    return host, plantilla
+
+
+def direcciones_red():
+    """Direcciones IPv4 de este equipo, la de la Wi-Fi/LAN principal primero."""
+    ips = []
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("10.255.255.255", 1))
+        ips.append(s.getsockname()[0])
+        s.close()
+    except OSError:
+        pass
+    try:
+        ips += [r[4][0] for r in socket.getaddrinfo(socket.gethostname(), None, socket.AF_INET)]
+    except OSError:
+        pass
+    vistas = []
+    for i in ips:
+        if i not in vistas and not i.startswith(("127.", "169.254.")):
+            vistas.append(i)
+    return [{"ip": i, "tipo": "Tailscale" if ipaddress.ip_address(i) in TAILSCALE else "red local"} for i in vistas]
+
+
 class Handler(BaseHTTPRequestHandler):
-    def _json(self, obj, code=200):
-        data = json.dumps(obj, ensure_ascii=False).encode()
-        self.send_response(code)
-        self.send_header("Content-Type", "application/json; charset=utf-8")
-        self.send_header("Content-Length", str(len(data)))
+    def _enviar(self, cuerpo, tipo, codigo=200, cabeceras=None):
+        self.send_response(codigo)
+        self.send_header("Content-Type", tipo)
+        self.send_header("Content-Length", str(len(cuerpo)))
+        self.send_header("Cache-Control", "no-store")
+        for k, v in (cabeceras or {}).items():
+            self.send_header(k, v)
         self.end_headers()
-        self.wfile.write(data)
+        self.wfile.write(cuerpo)
+
+    def _json(self, obj, codigo=200, cabeceras=None):
+        self._enviar(json.dumps(obj, ensure_ascii=False).encode(), "application/json; charset=utf-8", codigo, cabeceras)
+
+    def _estado(self):
+        """'ok' | 'denegado' (IP no permitida) | 'pin' (falta iniciar sesión)."""
+        ip = self.client_address[0]
+        if not ip_permitida(ip):
+            return "denegado"
+        if es_local(ip):
+            return "ok"
+        pin = ajustes.carga()["pin"]
+        if not pin:
+            return "ok"
+        for parte in self.headers.get("Cookie", "").split(";"):
+            k, _, v = parte.strip().partition("=")
+            if k == "bt_sesion" and hmac.compare_digest(v, token_sesion(pin)):
+                return "ok"
+        return "pin"
 
     def do_GET(self):
-        rutas = {"/api/tiendas": cfg.carga, "/api/seguimientos": seguimiento.lista,
-                 "/api/avisos": seguimiento.avisos, "/api/ajustes": ajustes.publico}
+        est = self._estado()
+        if est == "denegado":
+            return self._enviar("Acceso no permitido desde esta red.".encode(), "text/plain; charset=utf-8", 403)
+        if est == "pin":
+            if self.path.startswith("/api/"):
+                return self._json({"error": "pin"}, 401)
+            return self._enviar(LOGIN.encode(), "text/html; charset=utf-8")
+        rutas = {"/api/tiendas": cfg.carga, "/api/seguimientos": seguimiento.lista, "/api/avisos": seguimiento.avisos,
+                 "/api/ajustes": ajustes.publico, "/api/red": self._red}
         if self.path in rutas:
             return self._json(rutas[self.path]())
-        data = _pagina().encode()
-        self.send_response(200)
-        self.send_header("Content-Type", "text/html; charset=utf-8")
-        self.send_header("Content-Length", str(len(data)))
-        self.end_headers()
-        self.wfile.write(data)
+        self._enviar(_pagina().encode(), "text/html; charset=utf-8")
 
     def do_POST(self):
-        cuerpo = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0))) or b"{}")
+        est = self._estado()
+        if est == "denegado":
+            return self._json({"error": "acceso no permitido"}, 403)
         try:
+            cuerpo = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0))) or b"{}")
+            if self.path == "/api/login":
+                return self._login(cuerpo)
+            if est == "pin":
+                return self._json({"error": "pin"}, 401)
             return self._json(self._post(self.path, cuerpo))
         except (ValueError, KeyError) as e:
             return self._json({"error": str(e) or "datos no válidos"}, 400)
+
+    def _red(self):
+        return {"escucha_red": _servidor["host"] not in ("127.0.0.1", "localhost"), "puerto": _servidor["puerto"],
+                "direcciones": direcciones_red(), "pin": bool(ajustes.carga()["pin"])}
+
+    def _login(self, c):
+        ip, ahora = self.client_address[0], time.time()
+        n, desde = _fallos.get(ip, (0, ahora))
+        if ahora - desde > VENTANA_FALLOS:
+            n, desde = 0, ahora
+        if n >= MAX_FALLOS:
+            return self._json({"error": "Demasiados intentos. Espera unos minutos."}, 429)
+        pin = ajustes.carga()["pin"]
+        if pin and hmac.compare_digest(str(c.get("pin", "")), pin):
+            _fallos.pop(ip, None)
+            return self._json({"ok": True}, 200, {
+                "Set-Cookie": f"bt_sesion={token_sesion(pin)}; Path=/; Max-Age=2592000; HttpOnly; SameSite=Lax"})
+        _fallos[ip] = (n + 1, desde)
+        return self._json({"error": "PIN incorrecto"}, 401)
 
     def _post(self, ruta, c):
         if ruta == "/api/buscar":
             res, inf = motor.buscar(c.get("q", "").strip(), c.get("incluir", ""), c.get("excluir", ""),
                                     bool(c.get("sin_agotados", True)), c.get("tiendas"),
-                                    _num(c.get("pmin", "")), _num(c.get("pmax", "")))
+                                    _num(c.get("pmin", "")), _num(c.get("pmax", "")),
+                                    castellano=bool(c.get("castellano", True)))
             return {"resultados": res[: int(c.get("top") or 50)], "total": len(res), "informe": inf}
         if ruta == "/api/tiendas":
-            lista = cfg.carga()
-            if c.get("anadir"):
-                entrada = c["anadir"].strip()
-                plantilla = None
-                if "{q}" in entrada:  # URL de búsqueda con {q} donde va el producto
-                    plantilla = entrada if entrada.startswith("http") else "https://" + entrada
-                    host = urlparse(plantilla).netloc
-                else:
-                    host = entrada.replace("https://", "").replace("http://", "").split("/")[0].strip()
-                if not host or "." not in host:
-                    raise ValueError("dirección no válida")
-                t = next((t for t in lista if t["host"] == host), None)
-                if t is None:
-                    t = {"host": host, "nombre": "", "activa": True, "plantilla": None}
-                    lista.append(t)
-                if c.get("nombre", "").strip():
-                    t["nombre"] = c["nombre"].strip()
-                if plantilla:
-                    t["plantilla"] = plantilla
-                    t["manual"] = bool(c.get("manual"))
-            if c.get("renombrar"):
-                for t in lista:
-                    if t["host"] == c["renombrar"]:
-                        t["nombre"] = c.get("nombre", "").strip()
-            if c.get("borrar"):
-                lista = [t for t in lista if t["host"] != c["borrar"]]
-            if "activas" in c:
-                for t in lista:
-                    t["activa"] = t["host"] in c["activas"]
-            cfg.guarda(lista)
-            return lista
+            return self._tiendas(c)
         if ruta == "/api/seguimientos":
             accion = c.get("accion", "guardar")
             if accion == "borrar":
@@ -95,17 +197,57 @@ class Handler(BaseHTTPRequestHandler):
                 seguimiento.guarda(c)
             return seguimiento.lista()
         if ruta == "/api/ajustes":
+            pin = c.get("pin")
+            if pin not in (None, "", "********") and len(pin) < 4:
+                raise ValueError("El PIN debe tener al menos 4 caracteres")
             ajustes.guarda(c)
             return ajustes.publico()
         if ruta == "/api/detectar_chat":
             ajustes.guarda({k: c[k] for k in ("telegram_token",) if k in c})
-            chat = notifica.detectar_chat()
-            ajustes.guarda({"telegram_chat": chat})
+            ajustes.guarda({"telegram_chat": notifica.detectar_chat()})
             return ajustes.publico()
         if ruta == "/api/prueba_aviso":
             return notifica.envia([k for k in c.get("canales", []) if k in ("telegram", "correo")],
                                   "BuscaTron · prueba", "Si lees esto, los avisos funcionan.")
         raise KeyError("no encontrado")
+
+    def _tiendas(self, c):
+        lista = cfg.carga()
+        if c.get("anadir"):
+            host, plantilla = analiza_direccion(c["anadir"])
+            t = next((t for t in lista if t["host"] == host), None)
+            if t is None:
+                t = {"host": host, "nombre": "", "activa": True, "plantilla": None}
+                lista.append(t)
+            if c.get("nombre", "").strip():
+                t["nombre"] = c["nombre"].strip()
+            if plantilla:
+                t["plantilla"] = plantilla
+                t["manual"] = bool(c.get("manual"))
+        if c.get("editar"):  # nombre, dirección y modo «solo enlace» de una tienda existente
+            t = next((t for t in lista if t["host"] == c["editar"]), None)
+            if t is None:
+                raise ValueError("tienda no encontrada")
+            if "nombre" in c:
+                t["nombre"] = c["nombre"].strip()
+            if c.get("url", "").strip():
+                host, plantilla = analiza_direccion(c["url"])
+                if host != t["host"]:
+                    if any(o["host"] == host for o in lista):
+                        raise ValueError("ya existe una tienda con esa dirección")
+                    t["host"], t["plantilla"] = host, None   # otra web: se vuelve a descubrir su buscador
+                    t.pop("js", None)
+                if plantilla:
+                    t["plantilla"] = plantilla
+            if "manual" in c:
+                t["manual"] = bool(c["manual"])
+        if c.get("borrar"):
+            lista = [t for t in lista if t["host"] != c["borrar"]]
+        if "activas" in c:
+            for t in lista:
+                t["activa"] = t["host"] in c["activas"]
+        cfg.guarda(lista)
+        return lista
 
     def log_message(self, *a):
         pass
@@ -117,17 +259,21 @@ class Servidor(ThreadingHTTPServer):
     daemon_threads = True
 
 
-def sirve(puerto=8790, host="127.0.0.1", abrir=False):
+def sirve(puerto=8790, host="0.0.0.0", abrir=False):
     try:
         servidor = Servidor((host, puerto), Handler)
     except OSError as e:
         raise SystemExit(f"No se pudo abrir el puerto {puerto} ({e.strerror}). "
                          f"¿Ya hay un BuscaTron abierto? Prueba otro: python -m buscatron --puerto {puerto + 1}")
+    _servidor.update(host=host, puerto=puerto)
     programador.arranca()
-    url = f"http://{'127.0.0.1' if host in ('0.0.0.0', '') else host}:{puerto}"
-    print(f"BuscaTron en {url}  (Ctrl+C o cierra la ventana para parar)")
+    local = f"http://127.0.0.1:{puerto}"
+    print(f"BuscaTron en {local}  (Ctrl+C o cierra la ventana para parar)")
+    if host not in ("127.0.0.1", "localhost"):
+        for d in direcciones_red():
+            print(f"  Desde el móvil ({d['tipo']}): http://{d['ip']}:{puerto}")
     if abrir:
-        threading.Timer(0.8, webbrowser.open, args=(url,)).start()
+        threading.Timer(0.8, webbrowser.open, args=(local,)).start()
     try:
         servidor.serve_forever()
     except KeyboardInterrupt:

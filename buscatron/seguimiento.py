@@ -6,7 +6,7 @@ import time
 from . import bd, motor, notifica
 
 CAMPOS = ("nombre", "consulta", "incluir", "excluir", "pmin", "pmax", "objetivo", "bajo_historico",
-          "sin_agotados", "canales", "cada_horas", "activo")
+          "sin_agotados", "castellano", "canales", "cada_horas", "activo")
 MIN_OBSERVACIONES = 4      # mínimo de precios previos de un artículo para fiarse de su media
 REAVISO_DIAS = 30
 _cerrojo = threading.Lock()
@@ -33,6 +33,7 @@ def guarda(d):
          "pmin": _num(d.get("pmin", "")), "pmax": _num(d.get("pmax", "")),
          "objetivo": _num(d.get("objetivo", "")), "bajo_historico": _num(d.get("bajo_historico", "")) or 0,
          "sin_agotados": 1 if d.get("sin_agotados", True) else 0,
+         "castellano": 1 if d.get("castellano", True) else 0,
          "canales": d.get("canales", "app") or "app",
          "cada_horas": max(0.25, _num(d.get("cada_horas", 12)) or 12),
          "activo": 1 if d.get("activo", True) else 0}
@@ -86,7 +87,8 @@ def revisa(seg_id, enviar=True):
         seg = dict(seg)
         ts = time.time()
         res, informe = motor.buscar(seg["consulta"], seg["incluir"], seg["excluir"], bool(seg["sin_agotados"]),
-                                    None, seg["pmin"], seg["pmax"], seg_id)
+                                    None, seg["pmin"], seg["pmax"], seg_id,
+                                    castellano=bool(seg["castellano"]))
         nuevos = []
         with bd.conecta() as c:
             for x in res:

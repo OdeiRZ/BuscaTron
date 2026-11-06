@@ -34,6 +34,13 @@ class Extrae(unittest.TestCase):
         r = extract.extrae(h, "https://t.es/", "marvel champions")
         self.assertEqual(r[0]["titulo"], "Marvel champions shadowland pack de escenarios castellano")
 
+    def test_reposicion_y_reserva_cuentan_como_no_disponible(self):
+        h = ('<a href="/a">Marvel Champions: Uno</a><b>25,95 €</b><span class="stock-tag"> Reserva </span>'
+             '<a href="/b">Marvel Champions: Dos</a><b>20,00 €</b><p>EN REPOSICIÓN. El envío se realizará cuando el artículo vuelva a estar disponible</p>'
+             '<a href="/c">Marvel Champions: Tres</a><b>30,00 €</b><span>En stock</span>')
+        r = {x["url"].split("/")[-1]: x["agotado"] for x in extract.extrae(h, "https://t.es/", "marvel champions")}
+        self.assertEqual(r, {"a": True, "b": True, "c": False})
+
 
 if __name__ == "__main__":
     unittest.main()

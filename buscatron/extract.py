@@ -10,7 +10,8 @@ PRECIO_ANTES = re.compile(r"(?:€|eur)\s*(\d{1,3}(?:\.\d{3})*(?:,\d{1,2})|\d+(?
 TACHADO = re.compile(r"old|regular|before|compare|tachad|was-|strike|antes|original|msrp", re.I)
 OCULTO = re.compile(r"display\s*:\s*none|visibility\s*:\s*hidden", re.I)
 VACIAS = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "source", "track", "wbr"}
-AGOTADO = re.compile(r"agotad|sin stock|no disponible|out of stock|sold.?out|fuera de stock", re.I)
+RESERVA = re.compile(r"reserva|en reposici[oó]n", re.I)
+AGOTADO = re.compile(r"agotad|en reposici[oó]n|vuelva a estar disponible|sin existencias|no hay existencias|sin stock|no disponible|out of stock|sold.?out|fuera de stock", re.I)
 
 
 def normaliza(texto):
@@ -128,7 +129,7 @@ def extrae(html, base, consulta, ventana=40):
                 break
             if f[0] == "p" and precio is None:
                 precio = f[1]
-            if f[0] == "x" and AGOTADO.search(f[1]):
+            if f[0] == "x" and (AGOTADO.search(f[1]) or RESERVA.fullmatch(f[1].strip())):
                 agotado = True
         if precio is None or e[1] in vistos:
             continue

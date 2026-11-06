@@ -1,5 +1,5 @@
 """Uso: python -m buscatron                    -> interfaz web en http://127.0.0.1:8790
-       python -m buscatron --host 0.0.0.0     -> accesible desde otros equipos (sin contraseña: úsalo solo en red de confianza)
+       python -m buscatron --host 127.0.0.1   -> solo accesible desde este equipo
        python -m buscatron "consulta"          -> búsqueda por línea de comandos"""
 import argparse
 
@@ -7,7 +7,7 @@ from . import motor, web
 
 ap = argparse.ArgumentParser(prog="buscatron")
 ap.add_argument("consulta", nargs="*")
-ap.add_argument("--host", default="127.0.0.1")
+ap.add_argument("--host", default="0.0.0.0", help="0.0.0.0 = accesible desde la red local; 127.0.0.1 = solo este equipo")
 ap.add_argument("--puerto", type=int, default=8790)
 ap.add_argument("--abrir", action="store_true", help="abre el navegador al arrancar")
 a = ap.parse_args()

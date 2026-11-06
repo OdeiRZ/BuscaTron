@@ -1,5 +1,6 @@
 """Motor de búsqueda: consulta tiendas en paralelo y ordena por precio."""
 import concurrent.futures as cf
+import re
 import time
 from urllib.parse import quote_plus
 
@@ -63,7 +64,17 @@ def _tienda(t, consulta, nav=None):
         return h, [], f"error: {str(e)[:70]}"
 
 
-def buscar(consulta, incluir="", excluir="", ocultar_agotados=True, hosts=None, pmin=None, pmax=None, seg_id=None):
+OTROS_IDIOMAS = re.compile(r"\b(ingles|inglesa|english|frances|francesa|francais|aleman|alemana|deutsch|italiano|italiana|portugues|portuguesa|polaco|polaca|neerlandes|ruso|rusa)\b")
+ES = re.compile(r"\b(castellano|espanol|espanola)\b")
+
+
+def en_otro_idioma(titulo):
+    """True si el título indica claramente otro idioma y no menciona el castellano."""
+    n = extract.normaliza(titulo)
+    return bool(OTROS_IDIOMAS.search(n)) and not ES.search(n)
+
+
+def buscar(consulta, incluir="", excluir="", ocultar_agotados=True, hosts=None, pmin=None, pmax=None, seg_id=None, castellano=True):
     """Devuelve (resultados ordenados por precio, informe por tienda)."""
     lista = cfg.carga()
     activas = [t for t in lista if (t["host"] in hosts if hosts is not None else t.get("activa", True))]
@@ -81,6 +92,8 @@ def buscar(consulta, incluir="", excluir="", ocultar_agotados=True, hosts=None, 
                 n = extract.normaliza(x["titulo"])
                 if all(w in n for w in inc) and not any(w in n for w in exc):
                     if ocultar_agotados and x["agotado"]:
+                        continue
+                    if castellano and en_otro_idioma(x["titulo"]):
                         continue
                     if (pmin is not None and x["precio"] < pmin) or (pmax is not None and x["precio"] > pmax):
                         continue

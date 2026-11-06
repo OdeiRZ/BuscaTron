@@ -6,7 +6,7 @@ Buscador y vigilante de precios **local** para tiendas online españolas. Pensad
 - **Datos en vivo**: no usa cachés ni buscadores intermedios, así que el precio es el que ves en la tienda.
 - **Tus datos se quedan en tu equipo**: lista de tiendas, historial y tokens se guardan en archivos locales que no se suben al repositorio.
 
-> Estado: **prototipo funcional** (v0.4.1). Consulta el [CHANGELOG](CHANGELOG.md).
+> Estado: **prototipo funcional** (v0.5.0). Consulta el [CHANGELOG](CHANGELOG.md).
 
 ## Inicio rápido
 
@@ -19,7 +19,7 @@ python -m buscatron "marvel champions"   # búsqueda por línea de comandos
 
 En Windows también puedes hacer doble clic en `BuscaTron.bat`: abre el navegador solo y, si algo falla, deja el error a la vista.
 
-Opciones: `--puerto N` (por defecto 8790) y `--host 0.0.0.0` para abrirlo desde otros equipos. La web **no tiene contraseña**, así que usa `--host` solo en una red de confianza.
+Opciones: `--puerto N` (por defecto 8790) y `--host 127.0.0.1` para que solo sea accesible desde este equipo. Por defecto escucha en la red local, para poder usarlo desde el móvil (ver [Usar desde el móvil](#usar-desde-el-móvil)).
 
 ## Qué puedes hacer
 
@@ -28,8 +28,9 @@ La web está pensada para móvil (probada a 360 px) y escritorio. Arranca con el
 ### 🔎 Buscar
 - Busca un producto en todas las tiendas activas y ve los **N más baratos**, con precio, tienda y enlace.
 - Filtros: palabras que debe contener o excluir, precio mínimo y máximo.
-- **Ocultar agotados** (activado por defecto).
-- Tiendas: actívalas o desactívalas con un toque, ponles un **nombre propio** y añade otras con el dominio (`ejemplo.es`). Si su buscador no se detecta, pega una URL de búsqueda con `{q}` donde va el producto: `https://ejemplo.es/buscar?q={q}`.
+- **Ocultar agotados** (activado por defecto). Reconoce «agotado», «sin stock», «en reposición» y «reserva», y descarta los productos que la tienda no puede enviar ya.
+- **Solo castellano** (activado por defecto): descarta los productos que indican otro idioma (inglés, francés, alemán…) salvo que mencionen también el castellano. Desmárcalo para ver todos los idiomas.
+- Tiendas: actívalas o desactívalas con un toque, añade otras con el dominio (`ejemplo.es`) y, en «Gestionar tiendas», **edita su nombre, su dirección o URL de búsqueda y el modo «solo enlace»** cuando quieras. Si el buscador de una web no se detecta, pega una URL de búsqueda con `{q}` donde va el producto: `https://ejemplo.es/buscar?q={q}`. Cambiar la dirección a otro dominio hace que se vuelva a descubrir su buscador.
 - **Solo enlace**: marca así las tiendas que bloquean el acceso automático (por ejemplo Amazon). No se consultan, pero cada búsqueda te ofrece su enlace ya preparado para abrirlo tú.
 
 ### 👁️ Seguimiento
@@ -54,6 +55,21 @@ Lista de todo lo que ha saltado, con el motivo, la tienda y el enlace. Un contad
 5. En Seguimiento, marca «Avisarme por Telegram» en cada búsqueda que quieras.
 
 > El token se guarda en texto plano en `config.json`, que está en `.gitignore`. No lo compartas ni lo subas.
+
+## Usar desde el móvil
+
+BuscaTron escucha en tu red local, así que puedes abrirlo desde el móvil conectado a la **misma Wi-Fi**:
+
+1. **Una sola vez**, haz doble clic en `permitir_acceso_movil.bat`. Pide permisos de administrador y abre el puerto 8790 del cortafuegos de Windows **solo para tu red local** (regla «BuscaTron (red local)»).
+2. Arranca BuscaTron con `BuscaTron.bat`. En la ventana verás las direcciones, por ejemplo `http://192.168.0.28:8790`. También aparecen en Ajustes → «Acceso desde el móvil».
+3. Escribe la dirección de tu red local (suele empezar por 192.168) en el navegador del móvil. Puedes guardarla en favoritos o añadirla a la pantalla de inicio.
+4. **Recomendado:** pon un **PIN** en Ajustes → «Acceso desde el móvil». El móvil lo pedirá una vez y lo recordará 30 días. Este equipo no lo necesita.
+
+Seguridad:
+- Solo se aceptan conexiones de **direcciones privadas** (red local, Tailscale y este equipo). Cualquier IP pública recibe un 403.
+- Con PIN, los intentos fallidos se bloquean durante 5 minutos tras 5 errores. La sesión se guarda en una cookie firmada que no puede leer JavaScript.
+- Sin PIN, cualquier dispositivo de tu red local puede usar BuscaTron, incluidos tus ajustes. Úsalo sin PIN solo en una red de confianza.
+- Si no quieres acceso desde otros equipos: `python -m buscatron --host 127.0.0.1`.
 
 ## Cómo encuentra los productos
 
@@ -91,7 +107,7 @@ Se crean al usar la herramienta y no se suben al repositorio:
 |---|---|
 | `tiendas.json` | tu lista de tiendas, nombres y buscadores descubiertos |
 | `buscatron.db` | historial de precios, seguimientos y avisos (SQLite) |
-| `config.json` | tokens de Telegram, ajustes de correo y del navegador |
+| `config.json` | tokens de Telegram, PIN, ajustes de correo y del navegador |
 | `navegador_perfil/` | sesión del navegador opcional |
 
 ## Estructura
@@ -113,6 +129,8 @@ buscatron/
   ajustes.py       configuración local
   bd.py            base de datos SQLite
 tests/             pruebas sin red
+BuscaTron.bat                 lanzador (Windows)
+permitir_acceso_movil.bat     abre el cortafuegos para tu red local (pide administrador)
 ```
 
 ## Pruebas

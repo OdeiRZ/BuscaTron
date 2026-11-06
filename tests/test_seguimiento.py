@@ -27,7 +27,7 @@ class Base(unittest.TestCase):
         self.n.stop()
 
     def busca(self, precio, **kw):
-        def falsa(consulta, incluir, excluir, sin_ag, tiendas, pmin, pmax, seg_id):
+        def falsa(consulta, incluir, excluir, sin_ag, tiendas, pmin, pmax, seg_id, castellano=True):
             x = item(precio, **kw)
             with bd.conecta() as c:  # el motor real guarda cada resultado en el historial
                 c.execute("INSERT INTO precios(ts,consulta,tienda,titulo,url,precio,agotado,seg_id) VALUES(?,?,?,?,?,?,?,?)",
