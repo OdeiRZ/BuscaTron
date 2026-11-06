@@ -3,6 +3,14 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.8.4] - 2026-11-07
+
+### Añadido
+- Cada seguimiento muestra su **próxima revisión automática** («en 11,6 h (07/11 11:23)» o «toca ya»), o «sin revisión automática» si está en pausa, para ver de un vistazo que los barridos están en marcha.
+
+### Notas
+- Comprobado en la instalación real que el planificador lanza solo un seguimiento vencido: a los 111 s de dejarlo a «cada 0,25 h» se ejecutó, actualizó 77 resultados y generó 4 avisos nuevos con envío por Telegram. Después se restauró el intervalo de 12 h.
+
 ## [0.8.3] - 2026-11-06
 
 ### Añadido

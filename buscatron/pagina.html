@@ -521,11 +521,15 @@ function pintaSeg(l){segs=l;$('seg-lista').innerHTML=l.length?l.map(s=>{
   ${extrasSeg(s)}
   <div class="l">⏱️ Cada ${s.cada_horas} h · 📬 ${esc(canales)}</div>
   <div class="l">Última revisión: ${fecha(s.ultima)}${s.estado?' — '+esc(s.estado):''}</div>
+  <div class="l">🔄 ${s.activo?`Revisión automática: ${proxima(s)}`:'Sin revisión automática (en pausa)'}</div>
   <div class="acciones"><button class="mini" onclick="revisa(${s.id},this)">Revisar ahora</button>
   <button class="sec mini" onclick="editaSeg(${s.id})">Editar</button>
   <button class="sec mini" onclick="pausa(${s.id})">${s.activo?'Pausar':'Reanudar'}</button>
   <button class="peli mini" onclick="borraSeg(${s.id})">Borrar</button></div></div>`}).join('')
   :'<div class="card vacio-msg"><span class="em">👁️</span>Aún no vigilas nada.<br>Haz una búsqueda y pulsa «Vigilar esta búsqueda», o crea uno con el formulario de arriba.</div>';}
+function proxima(s){const t=(s.ultima||0)+s.cada_horas*3600,ahora=Date.now()/1000;
+  if(!s.ultima||t<=ahora)return 'toca ya (se lanza sola en menos de un minuto si BuscaTron está en marcha)';
+  const h=(t-ahora)/3600;return `en ${h<1?Math.max(1,Math.round(h*60))+' min':Math.round(h*10)/10+' h'} (${fecha(t)})`;}
 function extrasSeg(s){const o=s.opciones||{};
   const e=[o.preventas&&'preventas',o.con_envio&&'con envío',o.segunda_mano&&'segunda mano',o.abierta&&`otras webs (${{es:'España',ue:'UE',mundo:'todo el mundo'}[o.region]||'España'})`,o.paginas&&`${o.paginas} páginas`].filter(Boolean);
   return e.length?`<div class="l">➕ ${esc(e.join(' · '))}</div>`:'';}
