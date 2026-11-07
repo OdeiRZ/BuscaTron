@@ -305,6 +305,80 @@ def deja_de_ignorar(clave):
         c.execute("DELETE FROM ignorados WHERE clave=?", (clave,))
 
 
+def objetivos():
+    """Precio objetivo por producto: {grupo: {grupo, titulo, precio, ts}}. El grupo es el del motor («f:civil war» o «c:<clave>»)."""
+    with bd.conecta() as c:
+        return {r["clave"]: dict(r, grupo=r["clave"]) for r in c.execute("SELECT clave, titulo, precio, ts FROM objetivos ORDER BY titulo")}
+
+
+def pon_objetivo(grupo, titulo, precio):
+    if not grupo or precio is None or precio <= 0:
+        raise ValueError("falta el producto o el precio")
+    with bd.conecta() as c:
+        c.execute("INSERT OR REPLACE INTO objetivos(clave, titulo, precio, ts) VALUES(?,?,?,?)", (grupo, titulo, round(precio, 2), time.time()))
+
+
+def quita_objetivo(grupo):
+    with bd.conecta() as c:
+        c.execute("DELETE FROM objetivos WHERE clave=?", (grupo,))
+
+
+def objetivo_para(x, objs):
+    """El objetivo que el usuario puso a este producto (por su grupo, su clave o, si se puso desde una campaña, por la frase)."""
+    if not objs:
+        return None
+    o = objs.get(x.get("grupo")) or objs.get("c:" + (x.get("clave") or clave_producto(x["titulo"])))
+    if o:
+        return o["precio"]
+    n = extract.normaliza(x["titulo"])
+    for g, o in objs.items():
+        f = g[2:] if g.startswith("f:") else None
+        if f and (f in n or f.replace(" ", "") in n.replace(" ", "")):
+            return o["precio"]
+    return None
+
+
+def rellena_claves():
+    """Pone la clave de producto a los precios guardados antes de que existiera la columna (una vez; luego no hay nada que hacer)."""
+    with bd.conecta() as c:
+        titulos = [r[0] for r in c.execute("SELECT DISTINCT titulo FROM precios WHERE clave IS NULL")]
+        c.executemany("UPDATE precios SET clave=? WHERE titulo=? AND clave IS NULL", [(clave_producto(t), t) for t in titulos])
+    return len(titulos)
+
+
+def historial_producto(grupo):
+    """El mejor precio del producto en cualquier tienda (nuevo, con stock, sin preventas), hora a hora. Por horas y no por
+    búsqueda: una búsqueda parcial (p. ej. al pegar resultados se consulta solo esa tienda) no debe parecer una subida."""
+    segunda = {t["host"] for t in cfg.carga() if t.get("tipo") == "segunda_mano"}
+    with bd.conecta() as c:
+        if grupo.startswith("f:"):
+            f = grupo[2:]
+            titulos = [t for (t,) in c.execute("SELECT DISTINCT titulo FROM precios")
+                       if f in extract.normaliza(t) or f.replace(" ", "") in extract.normaliza(t).replace(" ", "")]
+            filas = []
+            for i in range(0, len(titulos), 500):
+                trozo = titulos[i:i + 500]
+                filas += [dict(r) for r in c.execute("SELECT ts, precio, titulo, tienda, url FROM precios WHERE agotado=0 AND preventa=0 AND titulo IN (%s)"
+                                                     % ",".join("?" * len(trozo)), trozo)]
+        else:
+            filas = [dict(r) for r in c.execute("SELECT ts, precio, titulo, tienda, url FROM precios WHERE agotado=0 AND preventa=0 AND clave=?",
+                                                (grupo[2:] if grupo.startswith("c:") else grupo,))]
+    puntos = {}
+    for f in filas:
+        if f["tienda"] in segunda:
+            continue
+        h = int(f["ts"] // 3600)
+        if h not in puntos or f["precio"] < puntos[h]["precio"]:
+            puntos[h] = {"ts": f["ts"], "precio": f["precio"], "tienda": f["tienda"]}
+    pts = [puntos[t] for t in sorted(puntos)]
+    if len(pts) > 240:
+        paso = len(pts) / 240
+        pts = [pts[int(i * paso)] for i in range(240)] + [pts[-1]]
+    tiendas = len({f["tienda"] for f in filas if f["tienda"] not in segunda})
+    return {"grupo": grupo, "titulo": grupo[2:] if grupo.startswith("f:") else (filas[-1]["titulo"] if filas else ""),
+            "tienda": f"{tiendas} tiendas" if tiendas != 1 else "1 tienda", "puntos": pts, "por_producto": True}
+
+
 def registra_estado(informe, consulta):
     ts = time.time()
     filas = [(h, ts, consulta, i.get("brutos", i.get("encontrados", 0)), i.get("error") or "") for h, i in informe.items()
@@ -438,7 +512,9 @@ def buscar(consulta, incluir="", excluir="", ocultar_agotados=True, hosts=None, 
             i.pop("error_tienda", None)
 
     previo = historial_previo({x["url"] for x in res})
+    objs = objetivos()
     for x in res:
+        x["objetivo_producto"] = objetivo_para(x, objs)
         if "idioma" not in x:
             x["idioma"], x["idioma_seguro"] = idioma_de(x["titulo"])
         t = por_host.get(x["tienda"], {})
@@ -449,6 +525,7 @@ def buscar(consulta, incluir="", excluir="", ocultar_agotados=True, hosts=None, 
     res.sort(key=lambda x: (x["agotado"], x["total"] if con_envio else x["precio"]))
     ts = time.time()
     with bd.conecta() as c:
-        c.executemany("INSERT INTO precios(ts,consulta,tienda,titulo,url,precio,agotado,seg_id,preventa) VALUES(?,?,?,?,?,?,?,?,?)",
-                      [(ts, consulta, x["tienda"], x["titulo"], x["url"], x["precio"], int(x["agotado"]), seg_id, int(x.get("preventa", False))) for x in res])
+        c.executemany("INSERT INTO precios(ts,consulta,tienda,titulo,url,precio,agotado,seg_id,preventa,clave) VALUES(?,?,?,?,?,?,?,?,?,?)",
+                      [(ts, consulta, x["tienda"], x["titulo"], x["url"], x["precio"], int(x["agotado"]), seg_id, int(x.get("preventa", False)), x["clave"])
+                       for x in res])
     return res, informe

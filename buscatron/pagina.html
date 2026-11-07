@@ -41,6 +41,21 @@ textarea{width:100%;min-height:140px;padding:10px 12px;border:1px solid var(--bd
 .guardada{display:flex;gap:10px;align-items:center;justify-content:space-between;font-size:13px;color:var(--mut)}
 .guardada button{white-space:nowrap;flex:0 0 auto}
 .gr{margin-bottom:8px}.gr .res{margin-bottom:0}
+.gr .res.con-acc{border-radius:12px 12px 0 0}
+.accs{display:flex;border:1px solid var(--bd);border-top:0;border-radius:0 0 12px 12px;background:var(--card);overflow:hidden}
+.accs button{flex:1 1 0;min-width:0;min-height:40px;padding:2px 4px;border-radius:0;background:transparent;color:var(--ac);font-size:12.5px;font-weight:600;line-height:1.15}
+.accs button+button{border-left:1px solid var(--bd)}
+.accs button.on{background:var(--ac2)}
+.accs button.no{color:var(--ko)}
+.accs+.otras{margin-top:0}
+.cesta-item{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-top:1px solid var(--bd);font-size:14px}
+.cesta-item span{overflow-wrap:anywhere;min-width:0}
+.cesta-item b{color:var(--ac);white-space:nowrap}
+.plan{border:1px solid var(--bd);border-radius:12px;padding:10px 12px;margin-top:10px;background:var(--bg)}
+.plan h3{margin:0 0 4px;font-size:15px;display:flex;justify-content:space-between;gap:8px}
+.plan a{display:flex;justify-content:space-between;gap:10px;padding:5px 0;font-size:13.5px;color:var(--tx);text-decoration:none;border-top:1px solid var(--bd)}
+.plan a span{overflow-wrap:anywhere;min-width:0}
+.plan a b,.plan h3 span+span{white-space:nowrap}
 .otras{margin:0 6px;border:1px solid var(--bd);border-top:0;border-radius:0 0 12px 12px;background:var(--card);padding:0 12px}
 .otras>summary{min-height:38px;font-size:13px;font-weight:600;color:var(--ac)}
 .otras a{display:flex;gap:10px;padding:8px 0;border-top:1px solid var(--bd);text-decoration:none;color:var(--tx);font-size:14px}
@@ -218,6 +233,14 @@ svg.graf-svg{width:100%;height:auto;display:block}
     <p class="ayuda">Se guardan con sus resultados (las 12 últimas). Toca una para volver a verla al instante, sin repetir la búsqueda.</p>
     <div class="acciones"><button type="button" class="peli mini" id="rec-vaciar">Borrar todas</button></div>
   </details>
+  <details class="card oculto" id="cesta" style="margin-top:0">
+    <summary>🧺 Tu cesta <span class="n" id="n-cesta"></span></summary>
+    <p class="ayuda" style="margin-top:0">BuscaTron calcula en qué tiendas comprar todo para pagar menos en total, con los gastos de envío de cada tienda y su «envío gratis a partir de…». A veces sale mejor juntar varios en la misma tienda que ir siempre a la más barata.</p>
+    <div id="cesta-lista"></div>
+    <div class="acciones"><button type="button" id="cesta-calc">Calcular dónde comprar</button><button type="button" class="peli mini" id="cesta-vaciar">Vaciar</button></div>
+    <div id="cesta-res"></div>
+    <p class="ayuda">Se usan los precios de tu última búsqueda de cada producto: al volver a buscarlo, se actualizan solos.</p>
+  </details>
   <div id="out"></div>
 </section>
 
@@ -274,6 +297,7 @@ svg.graf-svg{width:100%;height:auto;display:block}
       <div><label for="a-chat">Chat ID</label><input type="text" id="a-chat" inputmode="numeric"></div>
     </div>
     <div class="acciones"><button type="button" class="sec" id="a-det">Detectar chat</button><button type="button" class="sec" id="a-prueba-tg">Enviar prueba</button></div>
+    <p class="ayuda">También puedes escribirle al bot: <b>/buscar civil war</b> (o solo «civil war») te manda los 5 productos más baratos; <b>/vigiladas</b>, tus búsquedas vigiladas; <b>/revisar</b>, las revisa ahora. Solo responde a tu chat, con BuscaTron abierto en el ordenador.</p>
   </div>
   <div class="card">
     <h2>✉️ Correo (SMTP)</h2>
@@ -301,6 +325,11 @@ svg.graf-svg{width:100%;height:auto;display:block}
     <h2>🚫 Productos ocultos</h2>
     <p class="ayuda" style="margin-top:0">Los que marcaste con 🚫 («ya lo tengo / no me interesa»). No salen en tus búsquedas ni en los avisos, en ninguna tienda.</p>
     <div id="ocultos"></div>
+  </div>
+  <div class="card">
+    <h2>🎯 Objetivos por producto</h2>
+    <p class="ayuda" style="margin-top:0">Los que pusiste con «🎯 Avisarme a…» en un resultado. Cuando una búsqueda vigilada encuentra ese producto, te avisa si llega a su objetivo, en lugar de usar el objetivo de la búsqueda. Tiene que estar dentro del precio mínimo y máximo de la búsqueda vigilada.</p>
+    <div id="objetivos"></div>
   </div>
   <div class="card" id="c-arranque">
     <h2>🖥️ Arranque con Windows</h2>
@@ -411,27 +440,81 @@ function idiomaTag(x){
 function relativo(ts){const h=(Date.now()/1000-ts)/3600;return h<1?'hace menos de 1 h':h<48?`hace ${Math.round(h)} h`:`hace ${Math.round(h/24)} días`;}
 let ultimoTotal=0;
 function agrupa(items){const m=new Map();items.forEach(x=>{const k=x.grupo||x.url;if(!m.has(k))m.set(k,[]);m.get(k).push(x);});return [...m.values()];}
+let pintados=[];
 function pintaLista(){const c=$('lista-res');if(!c)return;const N=Number($('top').value)||10,conE=ultimoBody.con_envio;
   let cuenta;
-  if($('agrupar').checked){const gs=agrupa(ultimos).slice(0,N);c.innerHTML=gs.map((g,i)=>tarjeta(g[0],i,conE,g.slice(1))).join('');
-    cuenta=`${gs.length} producto${gs.length===1?'':'s'} más barato${gs.length===1?'':'s'}, con ${ultimos.length} ofertas de ${ultimoTotal} encontradas${conE?' (precio con envío)':''}`;}
-  else{c.innerHTML=ultimos.slice(0,N).map((x,i)=>tarjeta(x,i,conE)).join('');cuenta=`${Math.min(N,ultimos.length)} ofertas más baratas de ${ultimoTotal} encontradas${conE?' (precio con envío)':''}`;}
+  if($('agrupar').checked){const todos=agrupa(ultimos);refrescaCesta(todos);pintados=todos.slice(0,N);c.innerHTML=pintados.map((g,i)=>tarjeta(g[0],i,conE,g.slice(1))).join('');
+    cuenta=`${pintados.length} producto${pintados.length===1?'':'s'} más barato${pintados.length===1?'':'s'}, con ${ultimos.length} ofertas de ${ultimoTotal} encontradas${conE?' (precio con envío)':''}`;}
+  else{refrescaCesta(agrupa(ultimos));pintados=ultimos.slice(0,N).map(x=>[x]);c.innerHTML=pintados.map((g,i)=>tarjeta(g[0],i,conE)).join('');cuenta=`${pintados.length} ofertas más baratas de ${ultimoTotal} encontradas${conE?' (precio con envío)':''}`;}
   const cu=$('cuenta-res');if(cu)cu.textContent=cuenta;
-  c.querySelectorAll('.graf').forEach(g=>g.onclick=()=>{const x=ultimos.find(y=>y.url===g.dataset.u);if(x)abreHist(x.url,x.titulo,x.tienda);});
-  c.querySelectorAll('[data-ign]').forEach(g=>g.onclick=async()=>{const t=g.dataset.ign;
+  c.querySelectorAll('.graf').forEach(g=>g.onclick=()=>{const x=pintados[+g.dataset.g][0];abreHist(x.url,x.titulo,x.tienda,$('agrupar').checked?x.grupo:null);});
+  c.querySelectorAll('[data-ign]').forEach(g=>g.onclick=async()=>{const t=pintados[+g.dataset.ign][0].titulo;
     if(!confirm(`¿Ocultar «${t}» en todas tus búsquedas y avisos (ya lo tienes o no te interesa)? Puedes recuperarlo en Ajustes.`))return;
     const r=await api('ignorar',{titulo:t});if(r.error){aviso(r.error);return;}
-    ultimos=ultimos.filter(y=>y.clave!==r.clave);if(ultimoId)api('busquedas',{accion:'actualizar',id:ultimoId,resultados:ultimos});
-    pintaLista();aviso('Producto oculto. Lo puedes recuperar en Ajustes');});}
+    ultimos=ultimos.filter(y=>y.clave!==r.clave);guardaUltimos();
+    pintaLista();aviso('Producto oculto. Lo puedes recuperar en Ajustes');});
+  c.querySelectorAll('[data-obj]').forEach(g=>g.onclick=()=>pideObjetivo(pintados[+g.dataset.obj]));
+  c.querySelectorAll('[data-cesta]').forEach(g=>g.onclick=()=>{const gr=pintados[+g.dataset.cesta];enCesta(gr[0])?quitaDeCesta(claveCesta(gr[0])):alaCesta(gr);pintaLista();});}
+function guardaUltimos(){if(ultimoId)api('busquedas',{accion:'actualizar',id:ultimoId,resultados:ultimos});}
+
+/* 🎯 precio objetivo de un producto */
+async function pideObjetivo(g){const x=g[0],k=x.grupo||('c:'+(x.clave||''));
+  const v=prompt(`¿A qué precio quieres que te avise de «${x.titulo}»?\n\nTe avisarán tus búsquedas vigiladas que lo encuentren a ese precio o menos, en cualquier tienda. Ahora está a ${euro(x.precio)}. Déjalo vacío para quitar el objetivo.`,
+    x.objetivo_producto!=null?String(x.objetivo_producto).replace('.',','):'');
+  if(v===null)return;
+  const n=Number(v.replace(',','.').replace(/[^\d.]/g,''));
+  if(v.trim()&&!(n>0)){aviso('Escribe un precio, por ejemplo 25 o 24,50');return;}
+  const r=await api('objetivos',v.trim()?{grupo:k,titulo:x.titulo,precio:n}:{quitar:k});if(r.error){aviso(r.error);return;}
+  ultimos.forEach(y=>{if((y.grupo||('c:'+y.clave))===k)y.objetivo_producto=v.trim()?n:null;});guardaUltimos();pintaLista();
+  aviso(v.trim()?`Te avisaré cuando una búsqueda vigilada lo encuentre a ${euro(n)} o menos`:'Objetivo quitado: se usa el de cada búsqueda vigilada');}
+async function cargaObjetivos(){const l=await api('objetivos');if(!Array.isArray(l))return;
+  $('objetivos').innerHTML=l.length?l.map(o=>`<div class="ign"><span>${esc(o.titulo)} · <b>${euro(o.precio)}</b></span><button type="button" class="sec mini" data-qobj="${esc(o.grupo)}">Quitar</button></div>`).join('')
+    :'<p class="mut">No has puesto ninguno. Usa «🎯 Avisarme a…» debajo de un resultado.</p>';
+  document.querySelectorAll('#objetivos [data-qobj]').forEach(b=>b.onclick=async()=>{const k=b.dataset.qobj;await api('objetivos',{quitar:k});
+    ultimos.forEach(y=>{if((y.grupo||('c:'+y.clave))===k)y.objetivo_producto=null;});cargaObjetivos();aviso('Objetivo quitado');});}
+
+/* 🧺 cesta: se guarda en este navegador con las ofertas de cada producto */
+let cesta=[];try{cesta=JSON.parse(localStorage.getItem('bt-cesta')||'[]');if(!Array.isArray(cesta))cesta=[];}catch(e){}
+const claveCesta=x=>x.grupo||('c:'+(x.clave||x.titulo));
+const enCesta=x=>cesta.some(p=>p.grupo===claveCesta(x));
+const oferta=o=>({tienda:o.tienda,precio:o.precio,url:o.url,agotado:!!o.agotado,origen:o.origen||''});
+function guardaCesta(){try{localStorage.setItem('bt-cesta',JSON.stringify(cesta))}catch(e){}pintaCesta();}
+function alaCesta(g){const x=g[0];cesta=cesta.filter(p=>p.grupo!==claveCesta(x));
+  cesta.push({grupo:claveCesta(x),titulo:x.titulo,ofertas:g.filter(o=>o.origen!=='segunda_mano').map(oferta),ts:Date.now()/1000});
+  guardaCesta();aviso(`En la cesta (${cesta.length}). Calcula dónde comprar arriba, en «🧺 Tu cesta»`);}
+function quitaDeCesta(k){cesta=cesta.filter(p=>p.grupo!==k);$('cesta-res').innerHTML='';guardaCesta();}
+function refrescaCesta(grupos){let cambia=false;   // una búsqueda nueva trae precios frescos de lo que ya está en la cesta
+  grupos.forEach(g=>{const p=cesta.find(p=>p.grupo===claveCesta(g[0]));if(p){p.ofertas=g.filter(o=>o.origen!=='segunda_mano').map(oferta);p.ts=Date.now()/1000;cambia=true;}});
+  if(cambia)guardaCesta();}
+function pintaCesta(){$('cesta').classList.toggle('oculto',!cesta.length);$('n-cesta').textContent=cesta.length?`${cesta.length} producto${cesta.length>1?'s':''}`:'';
+  $('cesta-lista').innerHTML=cesta.map(p=>{const m=p.ofertas.filter(o=>!o.agotado).sort((a,b)=>a.precio-b.precio)[0];
+    return `<div class="cesta-item"><span>${esc(p.titulo)}<br><span class="mut">${m?`desde <b>${euro(m.precio)}</b> en ${esc(nombreT(m.tienda))} · `:''}${p.ofertas.length} oferta${p.ofertas.length===1?'':'s'} · precios ${relativo(p.ts)}</span></span><button type="button" class="peli mini" data-qc="${esc(p.grupo)}" aria-label="Quitar de la cesta">✕</button></div>`;}).join('');
+  document.querySelectorAll('#cesta-lista [data-qc]').forEach(b=>b.onclick=()=>{quitaDeCesta(b.dataset.qc);pintaLista();});}
+$('cesta-vaciar').onclick=()=>{if(confirm('¿Vaciar la cesta?')){cesta=[];$('cesta-res').innerHTML='';guardaCesta();pintaLista();}};
+$('cesta-calc').onclick=async()=>{const b=$('cesta-calc');b.disabled=true;
+  const r=await api('cesta',{productos:cesta.map(p=>({titulo:p.titulo,ofertas:p.ofertas}))});b.disabled=false;
+  if(r.error){$('cesta-res').innerHTML=`<p class="err">${esc(r.error)}</p>`;return;}
+  const n=r.plan.length;
+  $('cesta-res').innerHTML=`<div class="plan" style="background:var(--ok2);border-color:var(--ok)"><h3><span>Total</span><span>${euro(r.total)}</span></h3>
+    <div class="mut">${n===1?'Todo en 1 tienda':`En ${n} tiendas`}, con envíos. ${r.ahorro>0.004?`<b class="ok">Ahorras ${euro(r.ahorro)}</b> frente a comprar cada uno en su tienda más barata (${euro(r.ingenuo_total)} en ${r.ingenuo_tiendas} tienda${r.ingenuo_tiendas>1?'s':''}).`:'Es lo mismo que comprar cada uno en su tienda más barata.'}</div></div>`+
+    r.plan.map(t=>`<div class="plan"><h3><span>${esc(nombreT(t.tienda))}</span><span>${euro(t.total)}</span></h3>
+      <div class="mut">${euro(t.subtotal)} ${t.envio_desconocido?'+ envío sin datos':t.envio?`+ ${euro(t.envio)} de envío`:'· envío gratis'}</div>
+      ${t.productos.map(p=>`<a href="${esc(p.url)}" target="_blank" rel="noopener"><span>${esc(p.titulo)}</span><b>${euro(p.precio)}</b></a>`).join('')}</div>`).join('')+
+    (r.envios_desconocidos.length?`<p class="ayuda">No sé cuánto cobra de envío ${r.envios_desconocidos.map(h=>esc(nombreT(h))).join(', ')}: se cuenta como 0 €. Ponlo en «Tiendas → Editar la lista de tiendas» para afinar el cálculo.</p>`:'')+
+    (r.sin_ofertas.length?`<p class="ayuda err">Sin ofertas disponibles: ${r.sin_ofertas.map(esc).join(', ')}.</p>`:'');};
+pintaCesta();
+
 function tarjeta(x,i,conEnvio,otros=[]){
   const web=x.origen==='web',sm=x.origen==='segunda_mano',usaTotal=conEnvio&&x.envio!=null;
   const sub=usaTotal?`<small>${euro(x.precio)} + envío ${euro(x.envio)}</small>`:(x.envio==null?'':x.envio===0?'<small>envío gratis</small>':`<small>+ ${euro(x.envio)} de envío</small>`);
-  const tarjetaHtml=`<div class="res ${i===0?'best':''}"><a class="cuerpo" href="${esc(x.url)}" target="_blank" rel="noopener">
+  const tarjetaHtml=`<div class="res con-acc ${i===0?'best':''}"><a class="cuerpo" href="${esc(x.url)}" target="_blank" rel="noopener">
     <div class="pr">${euro(usaTotal?x.total:x.precio)}${sub}</div>
     <div class="info"><div class="t">${esc(x.titulo)}</div>
-    <div class="meta"><span class="tag">${esc(nombreT(x.tienda))}</span>${idiomaTag(x)}${i===0?'<span class="tag ok">Más barato</span>':''}${x.descuento?`<span class="tag ok">−${x.descuento} % sobre su precio de mercado (${euro(x.pvp)})</span>`:''}${x.minimo?'<span class="tag ok">Mínimo histórico</span>':''}${sm?'<span class="tag">Segunda mano</span>':''}${x.estado?`<span class="tag">${esc(x.estado)}</span>`:''}${x.importado?`<span class="tag pre">Pegado a mano ${relativo(x.importado)}</span>`:''}${x.preventa?'<span class="tag pre">Preventa</span>':''}${x.agotado?'<span class="tag ko">Agotado</span>':''}${web?'<span class="tag pre">Web fuera de tu lista</span>':''}</div></div></a>
-    <button type="button" class="graf" data-u="${esc(x.url)}" title="Historial de precios" aria-label="Ver historial de precios">📈</button>
-    <button type="button" class="quita" data-ign="${esc(x.titulo)}" title="Ya lo tengo / no me interesa: ocultarlo siempre" aria-label="Ocultar este producto siempre">🚫</button></div>`;
+    <div class="meta"><span class="tag">${esc(nombreT(x.tienda))}</span>${idiomaTag(x)}${i===0?'<span class="tag ok">Más barato</span>':''}${x.descuento?`<span class="tag ok">−${x.descuento} % sobre su precio de mercado (${euro(x.pvp)})</span>`:''}${x.minimo?'<span class="tag ok">Mínimo histórico</span>':''}${sm?'<span class="tag">Segunda mano</span>':''}${x.estado?`<span class="tag">${esc(x.estado)}</span>`:''}${x.importado?`<span class="tag pre">Pegado a mano ${relativo(x.importado)}</span>`:''}${x.preventa?'<span class="tag pre">Preventa</span>':''}${x.agotado?'<span class="tag ko">Agotado</span>':''}${web?'<span class="tag pre">Web fuera de tu lista</span>':''}${x.objetivo_producto!=null?`<span class="tag ${x.precio<=x.objetivo_producto?'ok':''}">🎯 Tu objetivo: ${euro(x.objetivo_producto)}</span>`:''}</div></div></a>
+    <button type="button" class="graf" data-g="${i}" title="Historial de precios" aria-label="Ver historial de precios">📈</button></div>
+    <div class="accs"><button type="button" data-obj="${i}" class="${x.objetivo_producto!=null?'on':''}" title="Avisarme cuando baje a un precio">🎯 ${x.objetivo_producto!=null?euro(x.objetivo_producto):'Avisarme a…'}</button>
+    <button type="button" data-cesta="${i}" class="${enCesta(x)?'on':''}" title="Para calcular dónde comprar varios productos">🧺 ${enCesta(x)?'En la cesta ✓':'A la cesta'}</button>
+    <button type="button" data-ign="${i}" class="no" title="Ya lo tengo / no me interesa: ocultarlo siempre">🚫 No me interesa</button></div>`;
   const mas=otros.length?`<details class="otras"><summary>${otros.length} tienda${otros.length===1?'':'s'} más, desde ${euro(Math.min(...otros.map(o=>conEnvio&&o.envio!=null?o.total:o.precio)))}</summary>${otros.map(o=>`<a href="${esc(o.url)}" target="_blank" rel="noopener"><b>${euro(conEnvio&&o.envio!=null?o.total:o.precio)}</b><span>${esc(nombreT(o.tienda))}${o.agotado?' · agotado':''}${o.preventa?' · preventa':''}${o.importado?' · pegado a mano':''}${o.estado?' · '+esc(o.estado):''}</span></a>`).join('')}</details>`:'';
   return `<div class="gr">${tarjetaHtml}${mas}</div>`;}
 function cuerpoForm(){return {q:$('q').value,incluir:$('incluir').value,alguna:$('alguna').value,excluir:$('excluir').value,pmin:$('pmin').value,pmax:$('pmax').value,
@@ -559,19 +642,24 @@ function graficaSVG(p){
   return `<svg class="graf-svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="Evolución del precio">${rejilla}${linea}${puntos}
     <circle cx="${X(u.ts).toFixed(1)}" cy="${Y(u.precio).toFixed(1)}" r="4.5" style="fill:var(--ok)"/>
     <text x="${L}" y="${H-6}" font-size="10" style="fill:var(--mut)">${f(xs[0])}</text><text x="${W-R}" y="${H-6}" text-anchor="end" font-size="10" style="fill:var(--mut)">${f(xs[xs.length-1])}</text></svg>`;}
-async function abreHist(url,titulo,tienda){
-  $('hoja').innerHTML=`<button type="button" class="cierra" aria-label="Cerrar">✕</button><h3>${esc(titulo)}</h3><div class="mut">${esc(nombreT(tienda))}</div>
+async function abreHist(url,titulo,tienda,grupo,todas=true){
+  const porProducto=!!(grupo&&todas);
+  $('hoja').innerHTML=`<button type="button" class="cierra" aria-label="Cerrar">✕</button><h3>${esc(titulo)}</h3><div class="mut">${porProducto?'Mejor precio en todas tus tiendas':esc(nombreT(tienda))}</div>
     <div class="carga" style="margin:22px 0"><div class="spin"></div>Cargando historial…</div>`;
   $('hist').classList.add('v');$('hoja').querySelector('.cierra').onclick=cierraHist;
-  const h=await api('historial?url='+encodeURIComponent(url)),p=h.puntos||[];
+  const h=await api(porProducto?'historial?grupo='+encodeURIComponent(grupo):'historial?url='+encodeURIComponent(url)),p=h.puntos||[];
+  const cambio=grupo?`<button type="button" class="sec mini" id="hist-cambia" style="margin-top:8px">${porProducto?'Ver solo '+esc(nombreT(tienda)):'Ver el mejor precio en todas las tiendas'}</button>`:'';
+  const tiendasP=porProducto?[...new Set(p.map(q=>q.tienda))]:[];
+  const sub=porProducto?`Mejor precio de cada hora en ${tiendasP.length} tienda${tiendasP.length===1?'':'s'}${p.length?' · ahora en '+esc(nombreT(p[p.length-1].tienda)):''}`:esc(nombreT(tienda));
   const precios=p.map(q=>q.precio),media=precios.length?precios.reduce((a,b)=>a+b,0)/precios.length:0;
   const stats=p.length?`<div class="stats"><div class="stat"><b>${euro(Math.min(...precios))}</b><span>Mínimo</span></div><div class="stat"><b>${euro(media)}</b><span>Media</span></div>
     <div class="stat"><b>${euro(Math.max(...precios))}</b><span>Máximo</span></div><div class="stat"><b>${euro(precios[precios.length-1])}</b><span>Ahora</span></div></div>`:'';
-  $('hoja').innerHTML=`<button type="button" class="cierra" aria-label="Cerrar">✕</button><h3>${esc(titulo)}</h3><div class="mut">${esc(nombreT(tienda))} · ${p.length} dato${p.length===1?'':'s'}</div>${stats}
+  $('hoja').innerHTML=`<button type="button" class="cierra" aria-label="Cerrar">✕</button><h3>${esc(titulo)}</h3><div class="mut">${sub} · ${p.length} dato${p.length===1?'':'s'}</div>${cambio}${stats}
     ${p.length?graficaSVG(p):'<div class="vacio-msg">Todavía no hay precios guardados de este producto.</div>'}
-    <p class="ayuda">${p.length<2?'Solo hay un precio guardado. Se añade uno cada vez que lo buscas o se revisa una búsqueda vigilada.':'Cada punto es una vez que lo buscaste o se revisó una búsqueda vigilada.'}</p>
+    <p class="ayuda">${p.length<2?'Solo hay un precio guardado. Se añade uno cada vez que lo buscas o se revisa una búsqueda vigilada.':porProducto?'Cada punto es el precio más barato (nuevo y con stock) que encontraron tus búsquedas en esa hora, en la tienda que fuera.':'Cada punto es una vez que lo buscaste o se revisó una búsqueda vigilada.'}</p>
     <div class="acciones"><a style="flex:1 1 140px;display:flex;align-items:center;justify-content:center;min-height:44px;border-radius:10px;text-decoration:none;font-weight:600;background:var(--ac2);color:var(--ac)" href="${esc(url)}" target="_blank" rel="noopener">Abrir en la tienda ↗</a></div>`;
-  $('hoja').querySelector('.cierra').onclick=cierraHist;}
+  $('hoja').querySelector('.cierra').onclick=cierraHist;
+  if($('hist-cambia'))$('hist-cambia').onclick=()=>abreHist(url,titulo,tienda,grupo,!porProducto);}
 
 /* seguimiento */
 function limpiaSeg(){$('sf').reset();$('s-id').value='';$('sf-tit').textContent='＋ Vigilar una búsqueda nueva';}
@@ -645,7 +733,7 @@ async function cargaAjustes(){const a=await api('ajustes');$('a-token').value=a.
   $('a-srv').value=a.smtp_servidor;$('a-pto').value=a.smtp_puerto;$('a-usr').value=a.smtp_usuario;$('a-clv').value=a.smtp_clave;$('a-dst').value=a.correo_destino;
   $('a-nav').checked=!!a.usar_navegador;$('a-navvis').checked=!!a.navegador_visible;$('a-nav').disabled=!a.navegador_disponible;
   if(!a.navegador_disponible)$('a-nav-info').textContent='No disponible: hace falta Chrome o Edge instalado y el complemento Playwright (pip install playwright).';
-  $('a-pin').value=a.pin;$('a-pag').value=a.paginas||3;cargaRed();cargaArranque();cargaEstado();cargaOcultos();}
+  $('a-pin').value=a.pin;$('a-pag').value=a.paginas||3;cargaRed();cargaArranque();cargaEstado();cargaOcultos();cargaObjetivos();}
 async function cargaEstado(){const l=await api('estado_tiendas',{});if(!Array.isArray(l))return;
   $('estado-t').innerHTML=l.map(e=>`<div class="est"><b>${esc(e.nombre)}${e.activa?'':' <span class="tag">desactivada</span>'}</b>
     <span class="mut">${e.manual?'La miras tú: no se consulta sola':e.consultas?`${e.con_resultados} de ${e.consultas} consultas con resultados${e.ultimo_ok?' · último resultado '+relativo(e.ultimo_ok):''}`:'Todavía sin consultas'}${e.sugerir_desactivar?' · <span class="err">nunca da resultados: conviene desactivarla</span>':''}${e.ultimo_error&&!e.con_resultados&&!e.manual?`<br>Último problema: ${esc(e.ultimo_error)}`:''}</span>

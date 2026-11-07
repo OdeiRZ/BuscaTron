@@ -121,8 +121,12 @@ def limpia_avisos(seg_id, res, informe):
 
 
 def _motivo(c, seg, x):
-    """Devuelve el motivo del aviso o None."""
-    if seg["objetivo"] is not None and x["precio"] <= seg["objetivo"]:
+    """Devuelve el motivo del aviso o None. Si el producto tiene su propio objetivo (🎯), manda sobre el de la búsqueda."""
+    propio = x.get("objetivo_producto")
+    if propio is not None:
+        if x["precio"] <= propio:
+            return f"cuesta {x['precio']:.2f} €, por debajo de tu objetivo para este producto de {propio:.2f} €".replace(".", ",")
+    elif seg["objetivo"] is not None and x["precio"] <= seg["objetivo"]:
         return f"cuesta {x['precio']:.2f} €, por debajo de tu objetivo de {seg['objetivo']:.2f} €".replace(".", ",")
     if seg["bajo_historico"]:
         previos = [r[0] for r in c.execute(

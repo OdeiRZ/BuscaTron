@@ -25,7 +25,10 @@ def detectar_chat(a=None):
     a = a or ajustes.carga()
     if not a["telegram_token"]:
         raise ValueError("falta el token de Telegram")
-    url = f"https://api.telegram.org/bot{a['telegram_token']}/getUpdates"
+    from . import telegram_bot           # si el bot de órdenes está escuchando, es él quien recibe los mensajes
+    if telegram_bot.ultimo_chat:
+        return telegram_bot.ultimo_chat
+    url =f"https://api.telegram.org/bot{a['telegram_token']}/getUpdates"
     with urllib.request.urlopen(url, timeout=20) as r:
         res = json.load(r).get("result", [])
     for u in reversed(res):

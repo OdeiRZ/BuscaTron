@@ -12,7 +12,8 @@ from hashlib import sha256
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from urllib.parse import parse_qs, urlparse
 
-from . import ajustes, arranque, busquedas, extract, fetch, importar, motor, notifica, programador, seguimiento, tiendas as cfg
+from . import (ajustes, arranque, busquedas, cesta, extract, fetch, importar, motor, notifica, programador, seguimiento,
+               telegram_bot, tiendas as cfg)
 
 TAILSCALE = ipaddress.ip_network("100.64.0.0/10")
 MAX_FALLOS, VENTANA_FALLOS = 5, 300      # intentos de PIN fallidos por IP y ventana (segundos)
@@ -215,7 +216,9 @@ class Handler(BaseHTTPRequestHandler):
         rutas = {"/api/tiendas": cfg.carga, "/api/seguimientos": seguimiento.lista, "/api/avisos": seguimiento.avisos,
                  "/api/ajustes": ajustes.publico, "/api/red": self._red,
                  "/api/arranque": lambda: {"disponible": arranque.disponible(), "activo": arranque.activo()},
-                 "/api/historial": lambda: motor.historial_de(parse_qs(url.query).get("url", [""])[0]),
+                 "/api/historial": lambda: (motor.historial_producto(parse_qs(url.query)["grupo"][0]) if parse_qs(url.query).get("grupo")
+                                            else motor.historial_de(parse_qs(url.query).get("url", [""])[0])),
+                 "/api/objetivos": lambda: list(motor.objetivos().values()),
                  "/api/busquedas": lambda: (busquedas.obtiene(int(parse_qs(url.query)["id"][0])) or {"error": "búsqueda no encontrada"})
                  if "id" in parse_qs(url.query) else busquedas.lista()}
         if url.path in rutas:
@@ -269,6 +272,14 @@ class Handler(BaseHTTPRequestHandler):
             return {"ignorados": list(motor.ignorados().values())}
         if ruta == "/api/estado_tiendas":
             return motor.estado_tiendas()
+        if ruta == "/api/objetivos":          # 🎯 precio objetivo de un producto
+            if c.get("quitar"):
+                motor.quita_objetivo(c["quitar"])
+            elif c.get("grupo"):
+                motor.pon_objetivo(c["grupo"], (c.get("titulo") or "").strip()[:200], _num(c.get("precio", "")))
+            return list(motor.objetivos().values())
+        if ruta == "/api/cesta":              # 🧺 dónde comprar varios productos pagando menos (envíos incluidos)
+            return cesta.calcula(c.get("productos") or [], {t["host"]: t for t in cfg.carga()})
         if ruta == "/api/trabajo":
             return estado_trabajo(c.get("id", ""))
         if ruta == "/api/busquedas":
@@ -300,7 +311,7 @@ class Handler(BaseHTTPRequestHandler):
                 seguimiento.borra_aviso(int(c["id"]))
             return seguimiento.avisos()
         if ruta == "/api/arranque":           # solo desde este equipo: cambia el inicio de Windows del usuario
-            if not es_local(self.client_address[0]):
+            if not es_local(self.client_address[0]) or self.headers.get("X-Forwarded-For"):   # tailscale serve llega como 127.0.0.1
                 raise ValueError("el arranque con Windows solo se cambia desde el propio equipo")
             try:
                 arranque.activa() if c.get("activar") else arranque.desactiva()
@@ -410,7 +421,9 @@ def sirve(puerto=8790, host="0.0.0.0", abrir=False, bandeja=False):
                          f"¿Ya hay un BuscaTron abierto? Prueba otro: python -m buscatron --puerto {puerto + 1}")
     _servidor.update(host=host, puerto=puerto)
     programador.arranca()
-    local = f"http://127.0.0.1:{puerto}"
+    telegram_bot.arranca()
+    threading.Thread(target=motor.rellena_claves, daemon=True).start()
+    local =f"http://127.0.0.1:{puerto}"
     print(f"BuscaTron en {local}  (Ctrl+C o cierra la ventana para parar)")
     if host not in ("127.0.0.1", "localhost"):
         for d in direcciones_red():

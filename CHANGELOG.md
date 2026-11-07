@@ -3,6 +3,21 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.11.0] - 2026-11-07
+
+### Añadido
+- **🎯 Precio objetivo por producto**: «Avisarme a…» debajo de cada resultado. Las búsquedas vigiladas usan ese objetivo, en lugar del suyo, cuando encuentran el producto en cualquier tienda (por su grupo, su clave o la frase de «al menos una de estas»). Etiqueta «🎯 Tu objetivo» en los resultados y lista en Ajustes → «Objetivos por producto».
+- **🧺 Cesta más barata**: añade varios productos y BuscaTron calcula en qué tiendas comprarlos para pagar menos en total, con el envío de cada tienda y su «gratis desde», y cuánto ahorras frente a ir a la más barata de cada uno. Avisa de las tiendas con envío desconocido. La cesta vive en el navegador y se actualiza sola con cada búsqueda.
+- **📈 Gráfica por producto**: con «Agrupar», el historial muestra el mejor precio del producto en todas tus tiendas, hora a hora (nuevo, con stock, sin preventas ni segunda mano), y en qué tienda está ahora; «Ver solo …» vuelve a la de una tienda. El historial guarda ya la clave de producto, y los precios antiguos se completan solos al arrancar.
+- **Órdenes por Telegram**: `/buscar <texto>` (o el texto sin más), `/vigiladas`, `/revisar` y `/ayuda`, con su menú en Telegram. Solo responde al chat configurado y hace una búsqueda a la vez.
+- **Acceso desde fuera de casa con HTTPS** documentado con `tailscale serve` (solo dentro de tu red de Tailscale), que permite abrir la app del móvil a pantalla completa.
+- 11 pruebas nuevas (152 en total).
+
+### Cambiado
+- La tarjeta de resultado lleva debajo una fila de acciones (🎯 objetivo, 🧺 cesta, 🚫 no me interesa); el 🚫 deja el lateral, donde queda solo el 📈.
+- «Detectar chat» toma el chat del bot de órdenes cuando este está escuchando.
+- Los cambios del arranque con Windows se rechazan también cuando llegan por un proxy local (`tailscale serve`), no solo desde otra IP.
+
 ## [0.10.0] - 2026-11-07
 
 ### Añadido

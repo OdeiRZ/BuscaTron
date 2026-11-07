@@ -6,7 +6,7 @@ Buscador y vigilante de precios **local** para tiendas online españolas. Pensad
 - **Datos en vivo**: no usa cachés ni comparadores intermedios, así que el precio es el que ves en la tienda.
 - **Tus datos se quedan en tu equipo**: lista de tiendas, historial y tokens se guardan en archivos locales que no se suben al repositorio.
 
-> Estado: **versión funcional** (v0.10.0). Consulta el [CHANGELOG](CHANGELOG.md).
+> Estado: **versión funcional** (v0.11.0). Consulta el [CHANGELOG](CHANGELOG.md).
 
 ## Inicio rápido
 
@@ -38,7 +38,10 @@ La web está pensada para móvil (probada a 360 px) y escritorio. Arranca con el
 ### 🔎 Buscar
 - **Agrupa el mismo producto de varias tiendas** (opción «Agrupar», activada por defecto): una tarjeta por producto con su mejor precio y, desplegables, las demás tiendas. El producto se reconoce por sus palabras significativas (sin editorial, «expansión», «castellano», referencias de la tienda…) o, si usas «al menos una de estas», por la frase que encaja.
 - **Descuento sobre el precio de mercado**: «−19 % sobre su precio de mercado (44,99 €)», donde el precio de mercado es el que más se repite entre al menos 3 tiendas (sin contar la segunda mano, y contando también las tiendas que tu filtro de precio deja fuera).
-- **🚫 Ya lo tengo / no me interesa**: oculta un producto para siempre, en todas las tiendas, en tus búsquedas y en los avisos. Se recupera en Ajustes → «Productos ocultos».
+- Debajo de cada producto, tres acciones:
+  - **🎯 Avisarme a…**: un precio objetivo solo para ese producto («avísame de Civil War a 30 €»). Tus búsquedas vigiladas usan ese objetivo en vez del suyo cuando lo encuentran, en cualquier tienda; el producto lleva la etiqueta «🎯 Tu objetivo». Se ven y se quitan en Ajustes → «Objetivos por producto».
+  - **🧺 A la cesta**: ver [Cesta más barata](#cesta-más-barata).
+  - **🚫 No me interesa** (ya lo tengo): oculta un producto para siempre, en todas las tiendas, en tus búsquedas y en los avisos. Se recupera en Ajustes → «Productos ocultos».
 - La búsqueda **sigue en BuscaTron aunque cierres o bloquees el móvil, cambies de app o recargues**: al volver se recoge sola el resultado.
 - Busca un producto en todas las tiendas activas y ve los **N más baratos**, con precio, tienda, enlace y etiquetas (preventa, segunda mano y su estado, mínimo histórico…).
 - Filtros: palabras que debe contener, **al menos una de varias** (separadas por comas; ideal para vigilar varias ediciones o expansiones con una sola búsqueda, p. ej. `tirania, galaxia, titan loco`; ignora espacios y puntos, así que `shield` encuentra «S.H.I.E.L.D.»), palabras a descartar, precio mínimo y máximo, y **páginas leídas por tienda** (1 a 6).
@@ -49,14 +52,14 @@ La web está pensada para móvil (probada a 360 px) y escritorio. Arranca con el
   - **Sumar el envío al precio**: ordena por el precio total (ver [Gastos de envío](#gastos-de-envío)).
   - **Incluir segunda mano** (ver [Segunda mano](#segunda-mano)).
   - **Buscar también en otras webs** (ver [Búsqueda abierta](#búsqueda-abierta)), con región España, Unión Europea o cualquier país.
-- **Historial** (📈 en cada resultado): gráfica del precio de ese artículo con mínimo, media, máximo y precio actual. La etiqueta «Mínimo histórico» salta cuando está al precio más bajo que se le ha visto, con al menos tres datos previos.
+- **Historial** (📈 en cada resultado): con «Agrupar», la gráfica del **producto**: su mejor precio en cualquiera de tus tiendas (nuevo, con stock, sin preventas), hora a hora, y en qué tienda está ahora; el botón «Ver solo …» enseña la de esa tienda. Sin agrupar (y en Avisos), la del artículo de esa tienda. Con mínimo, media, máximo y precio actual. La etiqueta «Mínimo histórico» salta cuando está al precio más bajo que se le ha visto, con al menos tres datos previos.
 - **Búsquedas recientes** (🕘): cada búsqueda se guarda con sus resultados (hasta 12; repetir la misma sustituye a la anterior). Al abrir BuscaTron reaparece la última al instante, con el aviso «resultados guardados hace X» y un botón **Actualizar** para volver a consultarla. Tocando una de la lista se restauran también sus filtros. Cada una se borra con la ✕, o todas con «Borrar todas».
 - Tiendas: actívalas o desactívalas con un toque, añade otras con el dominio (`ejemplo.es`) y, en «Gestionar tiendas», **edita su nombre, su dirección o URL de búsqueda, el envío y el modo «solo enlace»** cuando quieras. Si el buscador de una web no se detecta, pega una URL de búsqueda con `{q}` donde va el producto: `https://ejemplo.es/buscar?q={q}`. Cambiar la dirección a otro dominio hace que se vuelva a descubrir su buscador.
 - **Solo enlace**: marca así las tiendas que bloquean el acceso automático (por ejemplo Wallapop). No se consultan, pero cada búsqueda te ofrece su enlace ya preparado para abrirlo tú y un botón **📋 Pegar resultados** para [importar a mano](#importar-a-mano) lo que veas en ellas.
 
 ### 👁️ Vigiladas
 Pulsa «Vigilar esta búsqueda» (o crea una en la pestaña Vigiladas) y deja que BuscaTron la revise sola cada X horas mientras esté abierto (con el [arranque con Windows](#arranque-con-windows-y-bandeja), siempre).
-- **Aviso por precio objetivo** («menos de 39 €»), por **bajada respecto a la media histórica** del artículo («un 15 % menos de lo habitual»), o por ambos.
+- **Aviso por precio objetivo** («menos de 39 €»), por **bajada respecto a la media histórica** del artículo («un 15 % menos de lo habitual»), o por ambos. Si un producto tiene **su propio objetivo (🎯)**, se usa ese en lugar del de la búsqueda («por debajo de tu objetivo para este producto de 30 €»); tiene que estar dentro del precio mínimo y máximo de la búsqueda.
 - Cada seguimiento lleva las mismas opciones que la búsqueda: preventas, envío, segunda mano, otras webs y páginas por tienda.
 - **Comprueba la ficha del producto** antes de avisar: si su ficha dice que está agotado o en preventa (y no las incluyes), no avisa, aunque el listado de la tienda no lo diga. También el idioma (ver [Idioma de los juegos](#idioma-de-los-juegos)): un juego en francés no te avisa aunque su título esté en español.
 - No repite avisos: solo vuelve a avisar si el precio baja más, o pasados 30 días.
@@ -74,6 +77,7 @@ Cada revisión **retira los avisos que ya no cumplen tu búsqueda** (porque se a
 - **Arranque con Windows**: interruptor para iniciar BuscaTron al encender el equipo.
 - **Estado de las tiendas**: cuántas de sus últimas 10 consultas dieron resultados, cuándo fue el último y su último problema, con un botón para desactivarla; avisa de las que nunca dan nada.
 - **Productos ocultos**, para volver a mostrarlos.
+- **Objetivos por producto** (🎯), para quitarlos.
 - **Telegram** y **correo (SMTP)** para recibir los avisos, con botón de prueba.
 - **Acceso desde el móvil** y PIN opcional.
 - **Navegador**: usar tu Chrome para tiendas que cargan con JavaScript.
@@ -142,6 +146,15 @@ El precio mostrado no incluye el envío salvo que lo configures:
 - Si el envío de una tienda es conocido, la tarjeta muestra «+ 4,95 € envío» o «envío gratis».
 - Con «Sumar el envío al precio», los resultados se ordenan por el **precio total** (precio + envío, o 0 si superas el mínimo gratuito).
 
+## Cesta más barata
+
+Para comprar varios productos a la vez. Añádelos con **🧺 A la cesta** desde los resultados y, en «🧺 Tu cesta» (encima de los resultados), pulsa **Calcular dónde comprar**:
+
+- Prueba todas las combinaciones de tiendas (las 6 más baratas de cada producto) y se queda con la que **menos cuesta en total, envíos incluidos**: cada tienda cobra su envío una vez, o nada si el pedido llega a su «gratis desde». A igual precio, prefiere menos tiendas (menos paquetes).
+- Te dice cuánto ahorras frente a comprar cada uno en su tienda más barata. Ejemplo: 32 € + 30 € en una tienda con envío gratis desde 60 € (62 €) frente a 30 € + 29 € + 4 € de envío en otra (63 €).
+- Si no sabes el envío de una tienda, se cuenta como 0 € y lo avisa: ponlo en «Tiendas → Editar la lista de tiendas».
+- La cesta se guarda en ese navegador con las ofertas de tu última búsqueda de cada producto, y **se actualiza sola** cada vez que una búsqueda vuelve a encontrarlo. La segunda mano no entra.
+
 ## Arranque con Windows y bandeja
 
 - Activa «Arrancar con Windows» en Ajustes (o `python -m buscatron --arranque on`). Crea un acceso directo en la carpeta Inicio de tu usuario (`shell:startup`): **no necesita permisos de administrador**.
@@ -159,6 +172,18 @@ El precio mostrado no incluye el envío salvo que lo configures:
 
 > El token se guarda en texto plano en `config.json`, que está en `.gitignore`. No lo compartas ni lo subas.
 
+### Órdenes al bot
+Con BuscaTron abierto en el ordenador, el bot también te responde (el menú «/» de Telegram las muestra):
+
+| Orden | Qué hace |
+|---|---|
+| `/buscar civil war` (o escribir solo `civil war`) | busca en tus tiendas (en castellano y con stock) y te manda los 5 productos más baratos, agrupados, con las otras tiendas |
+| `/vigiladas` | tus búsquedas vigiladas, su última revisión y la próxima |
+| `/revisar` | revisa ahora todas las vigiladas activas; los avisos llegan como siempre |
+| `/ayuda` | la lista de órdenes |
+
+Solo obedece al chat configurado en Ajustes (cualquier otro se ignora) y hace una búsqueda a la vez. Escucha con *long polling* (`getUpdates`), así que no hace falta abrir puertos ni tener dirección pública. «Detectar chat» sigue funcionando: toma el último chat que escribió al bot.
+
 ## Usar desde el móvil
 
 BuscaTron escucha en tu red local, así que puedes abrirlo desde el móvil conectado a la **misma Wi-Fi**:
@@ -167,6 +192,15 @@ BuscaTron escucha en tu red local, así que puedes abrirlo desde el móvil conec
 2. Arranca BuscaTron con `BuscaTron.bat` o con el arranque con Windows. Las direcciones, por ejemplo `http://192.168.0.28:8790`, aparecen en la ventana y en Ajustes → «Acceso desde el móvil».
 3. Escribe la dirección de tu red local (suele empezar por 192.168) en el navegador del móvil. Para tenerla como una app, en Chrome: menú ⋮ → **«Añadir a pantalla de inicio»** (BuscaTron trae su nombre e icono). Para que se abra a pantalla completa, sin la barra del navegador, Chrome exige una conexión segura (HTTPS), que la red local no tiene; por ejemplo, `tailscale serve` da una dirección HTTPS.
 4. **Recomendado:** pon un **PIN** en Ajustes → «Acceso desde el móvil». El móvil lo pedirá una vez y lo recordará 30 días. Este equipo no lo necesita.
+
+### Desde fuera de casa y a pantalla completa (Tailscale)
+Con [Tailscale](https://tailscale.com) en el PC y en el móvil, BuscaTron funciona desde cualquier sitio y con HTTPS, que es lo que Chrome pide para abrir la app a pantalla completa:
+
+1. En la consola de Tailscale, **DNS → HTTPS Certificates → Enable** (una vez por red; MagicDNS tiene que estar activado).
+2. En el PC: `tailscale serve --bg 8790`. Publica `https://<nombre-del-pc>.<tu-red>.ts.net` **solo dentro de tu red de Tailscale** (no es Funnel: nadie de fuera la ve) y lo reenvía a BuscaTron.
+3. En el móvil, con Tailscale conectado, abre esa dirección y «Añadir a pantalla de inicio».
+
+Las peticiones que llegan por `tailscale serve` no cuentan como «este equipo»: el arranque con Windows sigue sin poder cambiarse desde el móvil. Para quitarlo: `tailscale serve --https=443 off`.
 
 Si el móvil no carga:
 - Comprueba que usa la **Wi-Fi** y no los datos móviles, y que es la misma red que el PC.
@@ -242,6 +276,8 @@ buscatron/
   navegador.py     navegador opcional (Playwright + Chrome)
   tiendas.py       lista de tiendas, plantillas, segunda mano y tiendas «solo enlace»
   seguimiento.py   vigilancia, reglas de aviso y no repetición
+  cesta.py         cesta más barata: combinación de tiendas con envíos
+  telegram_bot.py  órdenes por Telegram (/buscar, /vigiladas, /revisar)
   programador.py   revisiones automáticas cada X horas
   notifica.py      avisos por Telegram y correo
   ajustes.py       configuración local
@@ -260,7 +296,7 @@ permitir_acceso_movil.bat     abre el cortafuegos para tu red local (pide admini
 python -m unittest discover -s tests
 ```
 
-141 pruebas, sin red. Cubren las reglas de aviso (objetivo, media histórica, no repetir, reaviso, limpieza de obsoletos), el extractor (precios tachados, texto oculto, títulos recortados, preventas, estados de segunda mano, páginas siguientes, datos de producto, envío), el motor (paginación, filtros, total con envío, mínimo histórico, historial), la búsqueda abierta, el filtro de IP y el PIN, la importación a mano y las búsquedas guardadas.
+152 pruebas, sin red. Cubren las reglas de aviso (objetivo de la búsqueda y del producto, media histórica, no repetir, reaviso, limpieza de obsoletos), la cesta más barata, el historial por producto, las órdenes del bot, el extractor (precios tachados, texto oculto, títulos recortados, preventas, estados de segunda mano, páginas siguientes, datos de producto, envío), el motor (paginación, filtros, total con envío, mínimo histórico, historial), la búsqueda abierta, el filtro de IP y el PIN, la importación a mano y las búsquedas guardadas.
 
 ## Limitaciones conocidas
 

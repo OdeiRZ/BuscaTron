@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS fichas(url TEXT PRIMARY KEY, idioma TEXT, agotado INT
 CREATE TABLE IF NOT EXISTS ignorados(clave TEXT PRIMARY KEY, titulo TEXT, ts REAL);
 CREATE TABLE IF NOT EXISTS estado_tiendas(host TEXT, ts REAL, consulta TEXT, encontrados INTEGER, error TEXT);
 CREATE INDEX IF NOT EXISTS ix_estado_tiendas ON estado_tiendas(host, ts);
+CREATE TABLE IF NOT EXISTS objetivos(clave TEXT PRIMARY KEY, titulo TEXT, precio REAL, ts REAL);
 CREATE TABLE IF NOT EXISTS recordatorios(host TEXT, ts_importado REAL, PRIMARY KEY(host, ts_importado));
 CREATE TABLE IF NOT EXISTS importados(
     host TEXT, ts REAL, consulta TEXT, titulo TEXT, url TEXT, precio REAL, agotado INTEGER DEFAULT 0, preventa INTEGER DEFAULT 0);
@@ -60,9 +61,11 @@ def conecta(ruta=None):
     except sqlite3.OperationalError:
         pass
     for tabla, columna in (("seguimientos", "castellano INTEGER DEFAULT 1"), ("seguimientos", "opciones TEXT DEFAULT '{}'"),
-                           ("precios", "preventa INTEGER DEFAULT 0"), ("avisos", "oculto INTEGER DEFAULT 0")):   # bases creadas por versiones anteriores
+                           ("precios", "preventa INTEGER DEFAULT 0"), ("avisos", "oculto INTEGER DEFAULT 0"),
+                           ("precios", "clave TEXT")):   # bases creadas por versiones anteriores
         try:
             c.execute(f"ALTER TABLE {tabla} ADD COLUMN {columna}")
         except sqlite3.OperationalError:
             pass
+    c.execute("CREATE INDEX IF NOT EXISTS ix_precios_clave ON precios(clave, ts)")
     return c
