@@ -88,6 +88,26 @@ class Guardado(unittest.TestCase):
         self.assertEqual([x["titulo"] for x in importar.vigentes("f.es", "marvel champions hulk")], ["Marvel Champions: Pack de Héroe Hulk"])
 
 
+class Recordatorios(unittest.TestCase):
+    def setUp(self):
+        self.p = mock.patch.object(bd, "RUTA", os.path.join(tempfile.mkdtemp(), "t.db"))
+        self.p.start()
+
+    def tearDown(self):
+        self.p.stop()
+
+    def test_avisa_una_vez_antes_de_caducar(self):
+        importar.guarda("f.es", "marvel champions", importar.parsea(TEXTO, "marvel champions"), "https://f.es/?q=x")
+        with bd.conecta() as c:
+            ts = c.execute("SELECT MAX(ts) FROM importados").fetchone()[0]
+        self.assertEqual(importar.por_caducar(ahora=ts + 3600), [])                          # recién pegado
+        pend = importar.por_caducar(ahora=ts + 65 * 3600)                                    # quedan 7 h
+        self.assertEqual([(h, c) for h, _, _, c in pend], [("f.es", "marvel champions")])
+        importar.marca_recordado("f.es", ts)
+        self.assertEqual(importar.por_caducar(ahora=ts + 66 * 3600), [])                     # no se repite
+        self.assertEqual(importar.por_caducar(ahora=ts + 80 * 3600), [])                     # ya caducado: nada
+
+
 class EnLaBusqueda(unittest.TestCase):
     def setUp(self):
         d = tempfile.mkdtemp()

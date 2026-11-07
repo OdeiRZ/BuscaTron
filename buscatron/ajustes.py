@@ -8,7 +8,7 @@ RUTA = os.path.join(cfg.RAIZ, "config.json")
 SECRETOS = ("telegram_token", "smtp_clave", "pin")
 DEFECTO = {"telegram_token": "", "telegram_chat": "", "smtp_servidor": "", "smtp_puerto": 587,
            "smtp_usuario": "", "smtp_clave": "", "correo_destino": "",
-           "usar_navegador": True, "navegador_visible": False, "pin": "", "secreto": "", "paginas": 3, "segunda_mano_sembrada": False, "amazon_automatico": False}
+           "usar_navegador": True, "navegador_visible": False, "pin": "", "secreto": "", "paginas": 3, "segunda_mano_sembrada": False, "amazon_automatico": False, "ultima_limpieza": 0}
 
 
 def carga():

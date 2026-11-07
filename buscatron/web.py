@@ -43,6 +43,26 @@ def _pagina():
         return f.read()
 
 
+def _archivo(nombre, tipo):
+    def lee():
+        with open(os.path.join(os.path.dirname(__file__), nombre), "rb") as f:
+            return f.read(), tipo
+    return lee
+
+
+MANIFIESTO = {"name": "BuscaTron", "short_name": "BuscaTron", "description": "Compara precios en tus tiendas",
+              "start_url": "/", "scope": "/", "display": "standalone", "background_color": "#0f1117", "theme_color": "#4f46e5", "lang": "es",
+              "icons": [{"src": "/icono-192.png", "sizes": "192x192", "type": "image/png"},
+                        {"src": "/icono-512.png", "sizes": "512x512", "type": "image/png"},
+                        {"src": "/icono-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}]}
+SW = b"self.addEventListener('install',e=>self.skipWaiting());self.addEventListener('activate',e=>self.clients.claim());" \
+     b"self.addEventListener('fetch',()=>{});"   # sin caché: los precios tienen que venir siempre en directo
+ESTATICOS = {"/manifest.webmanifest": lambda: (json.dumps(MANIFIESTO, ensure_ascii=False).encode(), "application/manifest+json; charset=utf-8"),
+             "/sw.js": lambda: (SW, "text/javascript; charset=utf-8"),
+             "/icono-192.png": _archivo("icono-192.png", "image/png"), "/icono-512.png": _archivo("icono-512.png", "image/png"),
+             "/apple-touch-icon.png": _archivo("icono-192.png", "image/png")}
+
+
 def _num(v):
     v = str(v).replace(",", ".").strip()
     return float(v) if v else None
@@ -79,7 +99,7 @@ def busca(c):
                             preventas=bool(c.get("preventas")), con_envio=bool(c.get("con_envio")), segunda_mano=bool(c.get("segunda_mano")),
                             abierta=bool(c.get("abierta")), region=c.get("region") if c.get("region") in ("es", "ue", "mundo") else "es",
                             paginas=int(_num(c.get("paginas", "")) or 0) or None, alguna=str(c.get("alguna") or ""))
-    resp = {"resultados": res[: int(c.get("top") or 50)], "total": len(res), "informe": inf,
+    resp = {"resultados": res[:300], "total": len(res), "informe": inf,          # la página agrupa y enseña los N primeros
             "webs": sorted({x["tienda"] for x in res if x.get("origen") == "web"})}
     if c.get("guardar", True) and c.get("q", "").strip():        # se recuerda para no tener que repetirla
         resp["id"], resp["ts"] = busquedas.guarda(c, resp)
@@ -184,6 +204,9 @@ class Handler(BaseHTTPRequestHandler):
         est = self._estado()
         if est == "denegado":
             return self._enviar("Acceso no permitido desde esta red.".encode(), "text/plain; charset=utf-8", 403)
+        estatico = ESTATICOS.get(urlparse(self.path).path)
+        if estatico:                                   # manifiesto e iconos de la app (también antes del PIN)
+            return self._enviar(*estatico())
         if est == "pin":
             if self.path.startswith("/api/"):
                 return self._json({"error": "pin"}, 401)
@@ -237,6 +260,15 @@ class Handler(BaseHTTPRequestHandler):
             return lanza_busqueda(c)
         if ruta == "/api/buscar":
             return busca(c)
+        if ruta == "/api/ignorar":            # «ya lo tengo / no me interesa»
+            if c.get("quitar"):
+                motor.deja_de_ignorar(c["quitar"])
+            elif (c.get("titulo") or "").strip():
+                motor.ignora(c["titulo"].strip())
+                return {"clave": motor.clave_producto(c["titulo"].strip()), "ignorados": list(motor.ignorados().values())}
+            return {"ignorados": list(motor.ignorados().values())}
+        if ruta == "/api/estado_tiendas":
+            return motor.estado_tiendas()
         if ruta == "/api/trabajo":
             return estado_trabajo(c.get("id", ""))
         if ruta == "/api/busquedas":

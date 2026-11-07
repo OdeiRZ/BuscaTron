@@ -183,7 +183,7 @@ class Avisos(Base):
         self.assertEqual((canales, asunto), (["telegram"], "BuscaTron · marvel · resumen"))
         self.assertIn("Sin avisos nuevos", texto)
         self.assertIn("1 tiendas sin respuesta", texto)
-        self.assertLess(texto.index("25,00 €"), texto.index("30,00 €"))     # del más barato al más caro
+        self.assertLess(texto.index("25,00 €"), texto.index("30,00 €"))     # del más barato al más caro (aquí, dos productos distintos)
         self.assertNotIn("40,00 €", texto)                                  # el agotado no cuenta
 
     def test_sin_la_opcion_o_sin_telegram_no_hay_resumen(self):
@@ -206,6 +206,18 @@ class Avisos(Base):
         motor_real = inspect.signature(motor.buscar.__wrapped__ if hasattr(motor.buscar, "__wrapped__") else motor.buscar)
         opciones = {k: v for k, v in seguimiento.OPCIONES.items() if k not in seguimiento.NO_SON_DE_BUSQUEDA}
         motor_real.bind("q", "", "", True, None, None, None, 1, castellano=True, **opciones)   # lanzaría TypeError
+
+    def test_el_mensaje_agrupa_el_mismo_producto(self):
+        self.sid = seguimiento.guarda({"consulta": "marvel", "objetivo": "40", "canales": "telegram"})
+        a = {**item(36.5, url="https://b.es/a"), "tienda": "b.es", "grupo": "f:apocalipsis", "descuento": 19, "pvp": 44.99}
+        b = {**item(38.21, url="https://j.es/a"), "tienda": "j.es", "grupo": "f:apocalipsis"}
+        c = {**item(30, url="https://t.es/z"), "tienda": "t.es", "grupo": "f:otro"}
+        self.revisa_con([a, b, c], {"b.es": {"encontrados": 1, "error": None}})
+        texto = self.enviados[0][2]
+        self.assertEqual(texto.count("https://"), 2)                       # un enlace por producto, no por oferta
+        self.assertIn("También: 38,21 € en j.es", texto)
+        self.assertIn("−19 % sobre su precio de mercado, 44,99 €", texto)
+        self.assertLess(texto.index("30,00 €"), texto.index("36,50 €"))   # productos del más barato al más caro
 
     def test_vaciar_avisos(self):
         self.sid = seguimiento.guarda({"consulta": "marvel", "objetivo": "40"})

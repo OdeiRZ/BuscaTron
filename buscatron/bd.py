@@ -19,12 +19,36 @@ CREATE TABLE IF NOT EXISTS busquedas(
 CREATE INDEX IF NOT EXISTS ix_busquedas ON busquedas(ts);
 CREATE TABLE IF NOT EXISTS idiomas(url TEXT PRIMARY KEY, valor TEXT, codigo TEXT, ts REAL);
 CREATE TABLE IF NOT EXISTS fichas(url TEXT PRIMARY KEY, idioma TEXT, agotado INTEGER, preventa INTEGER, ts REAL);
+CREATE TABLE IF NOT EXISTS ignorados(clave TEXT PRIMARY KEY, titulo TEXT, ts REAL);
+CREATE TABLE IF NOT EXISTS estado_tiendas(host TEXT, ts REAL, consulta TEXT, encontrados INTEGER, error TEXT);
+CREATE INDEX IF NOT EXISTS ix_estado_tiendas ON estado_tiendas(host, ts);
+CREATE TABLE IF NOT EXISTS recordatorios(host TEXT, ts_importado REAL, PRIMARY KEY(host, ts_importado));
 CREATE TABLE IF NOT EXISTS importados(
     host TEXT, ts REAL, consulta TEXT, titulo TEXT, url TEXT, precio REAL, agotado INTEGER DEFAULT 0, preventa INTEGER DEFAULT 0);
 CREATE INDEX IF NOT EXISTS ix_importados ON importados(host, ts);
 CREATE TABLE IF NOT EXISTS avisos(
     id INTEGER PRIMARY KEY AUTOINCREMENT, ts REAL, seg_id INTEGER, titulo TEXT, tienda TEXT, url TEXT, precio REAL, motivo TEXT, oculto INTEGER DEFAULT 0);
 """
+
+
+def limpia(dias=180, ahora=None):
+    """Compacta el historial: de los precios de hace más de `dias` deja uno por producto y día (el más bajo), y poda
+    las tablas auxiliares. Devuelve cuántas filas se borraron de cada tabla."""
+    import time
+    ahora = ahora or time.time()
+    corte = ahora - dias * 86400
+    borradas = {}
+    with conecta() as c:
+        borradas["precios"] = c.execute("""DELETE FROM precios WHERE ts < ? AND rowid NOT IN (
+            SELECT rid FROM (SELECT rowid rid, ROW_NUMBER() OVER (PARTITION BY url, CAST(ts / 86400 AS INTEGER) ORDER BY precio, rowid) n
+                             FROM precios WHERE ts < ?) WHERE n = 1)""", (corte, corte)).rowcount
+        borradas["fichas"] = c.execute("DELETE FROM fichas WHERE ts < ?", (ahora - 60 * 86400,)).rowcount
+        borradas["idiomas"] = c.execute("DELETE FROM idiomas WHERE ts < ?", (ahora - 60 * 86400,)).rowcount
+        borradas["importados"] = c.execute("DELETE FROM importados WHERE ts < ?", (ahora - 7 * 86400,)).rowcount
+        borradas["recordatorios"] = c.execute("DELETE FROM recordatorios WHERE ts_importado < ?", (ahora - 7 * 86400,)).rowcount
+        borradas["estado_tiendas"] = c.execute("""DELETE FROM estado_tiendas WHERE rowid NOT IN (
+            SELECT rid FROM (SELECT rowid rid, ROW_NUMBER() OVER (PARTITION BY host ORDER BY ts DESC) n FROM estado_tiendas) WHERE n <= 30)""").rowcount
+    return borradas
 
 
 def conecta(ruta=None):

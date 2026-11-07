@@ -4,6 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#4f46e5">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="BuscaTron">
 <title>BuscaTron · Comparador de precios</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%234f46e5'/%3E%3Cstop offset='1' stop-color='%237c3aed'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='url(%23g)'/%3E%3Cpath d='M15 33 33 15h17v17L32 50z' fill='%23fff'/%3E%3Ccircle cx='41' cy='24' r='4' fill='%234f46e5'/%3E%3C/svg%3E">
 <script>try{var t=localStorage.getItem('bt-tema');document.documentElement.dataset.theme=(t==='dark'||t==='light')?t:(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light')}catch(e){}</script>
@@ -35,6 +40,16 @@ textarea{width:100%;min-height:140px;padding:10px 12px;border:1px solid var(--bd
 .rec-abre .mut{font-size:12px}
 .guardada{display:flex;gap:10px;align-items:center;justify-content:space-between;font-size:13px;color:var(--mut)}
 .guardada button{white-space:nowrap;flex:0 0 auto}
+.gr{margin-bottom:8px}.gr .res{margin-bottom:0}
+.otras{margin:0 6px;border:1px solid var(--bd);border-top:0;border-radius:0 0 12px 12px;background:var(--card);padding:0 12px}
+.otras>summary{min-height:38px;font-size:13px;font-weight:600;color:var(--ac)}
+.otras a{display:flex;gap:10px;padding:8px 0;border-top:1px solid var(--bd);text-decoration:none;color:var(--tx);font-size:14px}
+.otras a b{min-width:70px;text-align:right;color:var(--ac)}
+.ign{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-top:1px solid var(--bd);font-size:14px}
+.ign span{overflow-wrap:anywhere}
+.est{display:grid;grid-template-columns:1fr auto;gap:2px 8px;padding:9px 0;border-top:1px solid var(--bd);font-size:14px}
+.est .mut{grid-column:1}
+.est button{grid-row:1/3;grid-column:2;align-self:center}
 .manual-fila{flex:1 1 100%;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .grid{display:grid;grid-template-columns:1fr;gap:10px;margin-top:10px}
 @media(min-width:520px){.grid{grid-template-columns:1fr 1fr}.grid .full{grid-column:1/-1}}
@@ -149,6 +164,7 @@ svg.graf-svg{width:100%;height:auto;display:block}
       <button id="go">Buscar</button>
     </div>
     <label class="sw"><input type="checkbox" id="sinag" checked> Ocultar los agotados</label>
+    <label class="sw"><input type="checkbox" id="agrupar" checked> Agrupar el mismo producto de varias tiendas</label>
     <div style="margin-top:10px"><label for="idioma">Idioma del juego</label>
       <select id="idioma"><option value="castellano">En castellano</option><option value="estricto">Solo castellano seguro</option><option value="todos">Cualquier idioma</option></select>
       <p class="ayuda" style="margin-top:4px"><b>En castellano</b> oculta lo que dice estar en otro idioma. <b>Solo castellano seguro</b> oculta también lo dudoso. Cada resultado lleva una etiqueta con su idioma, y antes de avisarte BuscaTron lo comprueba en la ficha del producto.</p></div>
@@ -276,6 +292,16 @@ svg.graf-svg{width:100%;height:auto;display:block}
       <input type="number" id="a-pag" inputmode="numeric" min="1" max="6" value="3"></div></div>
     <p class="ayuda">Más páginas encuentran más productos, pero cada búsqueda tarda más. Puedes cambiarlo en cada búsqueda, en «Más opciones».</p>
   </div>
+  <div class="card">
+    <h2>🏪 Estado de las tiendas</h2>
+    <p class="ayuda" style="margin-top:0">Cómo les ha ido a tus tiendas en sus últimas 10 consultas. Las que nunca dan resultados solo ralentizan las búsquedas: conviene desactivarlas.</p>
+    <div id="estado-t"><p class="mut">Cargando…</p></div>
+  </div>
+  <div class="card">
+    <h2>🚫 Productos ocultos</h2>
+    <p class="ayuda" style="margin-top:0">Los que marcaste con 🚫 («ya lo tengo / no me interesa»). No salen en tus búsquedas ni en los avisos, en ninguna tienda.</p>
+    <div id="ocultos"></div>
+  </div>
   <div class="card" id="c-arranque">
     <h2>🖥️ Arranque con Windows</h2>
     <p class="ayuda" style="margin-top:0" id="arr-info"></p>
@@ -285,6 +311,7 @@ svg.graf-svg{width:100%;height:auto;display:block}
   <div class="card">
     <h2>📱 Acceso desde el móvil</h2>
     <p class="ayuda" style="margin-top:0" id="red-info"></p>
+    <p class="ayuda">Para tenerla como una app más: abre esa dirección en Chrome del móvil, menú ⋮ → «Añadir a pantalla de inicio». Tendrás el icono de BuscaTron junto a tus apps.</p>
     <div class="manuales" id="red-urls"></div>
     <div class="grid"><div class="full"><label for="a-pin">PIN de acceso (opcional, mínimo 4 caracteres)</label>
       <input type="password" id="a-pin" autocomplete="new-password" inputmode="numeric" placeholder="Sin PIN"></div></div>
@@ -372,26 +399,41 @@ function filtrosN(){const n=['incluir','alguna','excluir','pmin','pmax'].filter(
 const OPC=['preventas','conenvio','segmano','abierta'];
 function opcionesN(){const n=OPC.filter(i=>$(i).checked).length;$('n-mas').textContent=n?`${n} en uso`:'';
   $('region').disabled=!$('abierta').checked;
-  try{localStorage.setItem('bt-opc',JSON.stringify({...Object.fromEntries(OPC.map(i=>[i,$(i).checked])),region:$('region').value,paginas:$('paginas').value,sinag:$('sinag').checked,idioma:$('idioma').value}))}catch(e){}}
+  try{localStorage.setItem('bt-opc',JSON.stringify({...Object.fromEntries(OPC.map(i=>[i,$(i).checked])),region:$('region').value,paginas:$('paginas').value,sinag:$('sinag').checked,idioma:$('idioma').value,agrupar:$('agrupar').checked}))}catch(e){}}
 [...OPC,'region','paginas','sinag','idioma'].forEach(i=>$(i).onchange=opcionesN);
 try{const o=JSON.parse(localStorage.getItem('bt-opc')||'{}');OPC.forEach(i=>{if(i in o)$(i).checked=!!o[i];});if(o.region)$('region').value=o.region;if(o.paginas)$('paginas').value=o.paginas;
-  if('sinag' in o)$('sinag').checked=!!o.sinag;if(o.idioma)$('idioma').value=o.idioma;}catch(e){}
+  if('sinag' in o)$('sinag').checked=!!o.sinag;if(o.idioma)$('idioma').value=o.idioma;if('agrupar' in o)$('agrupar').checked=!!o.agrupar;}catch(e){}
+$('agrupar').onchange=()=>{opcionesN();pintaLista();};
 opcionesN();
 function idiomaTag(x){
   const n={es:x.idioma_seguro?'En castellano':'Probablemente en castellano',en:x.idioma_seguro?'En inglés':'Probablemente en inglés',otro:'En otro idioma'}[x.idioma];
   return n?`<span class="tag ${x.idioma==='es'?'ok':'ko'}">${n}</span>`:'';}
 function relativo(ts){const h=(Date.now()/1000-ts)/3600;return h<1?'hace menos de 1 h':h<48?`hace ${Math.round(h)} h`:`hace ${Math.round(h/24)} días`;}
-function pintaLista(){const c=$('lista-res');if(!c)return;
-  c.innerHTML=ultimos.map((x,i)=>tarjeta(x,i,ultimoBody.con_envio)).join('');
-  c.querySelectorAll('.graf').forEach(g=>g.onclick=()=>{const x=ultimos[+g.dataset.i];abreHist(x.url,x.titulo,x.tienda);});}
-function tarjeta(x,i,conEnvio){
+let ultimoTotal=0;
+function agrupa(items){const m=new Map();items.forEach(x=>{const k=x.grupo||x.url;if(!m.has(k))m.set(k,[]);m.get(k).push(x);});return [...m.values()];}
+function pintaLista(){const c=$('lista-res');if(!c)return;const N=Number($('top').value)||10,conE=ultimoBody.con_envio;
+  let cuenta;
+  if($('agrupar').checked){const gs=agrupa(ultimos).slice(0,N);c.innerHTML=gs.map((g,i)=>tarjeta(g[0],i,conE,g.slice(1))).join('');
+    cuenta=`${gs.length} producto${gs.length===1?'':'s'} más barato${gs.length===1?'':'s'}, con ${ultimos.length} ofertas de ${ultimoTotal} encontradas${conE?' (precio con envío)':''}`;}
+  else{c.innerHTML=ultimos.slice(0,N).map((x,i)=>tarjeta(x,i,conE)).join('');cuenta=`${Math.min(N,ultimos.length)} ofertas más baratas de ${ultimoTotal} encontradas${conE?' (precio con envío)':''}`;}
+  const cu=$('cuenta-res');if(cu)cu.textContent=cuenta;
+  c.querySelectorAll('.graf').forEach(g=>g.onclick=()=>{const x=ultimos.find(y=>y.url===g.dataset.u);if(x)abreHist(x.url,x.titulo,x.tienda);});
+  c.querySelectorAll('[data-ign]').forEach(g=>g.onclick=async()=>{const t=g.dataset.ign;
+    if(!confirm(`¿Ocultar «${t}» en todas tus búsquedas y avisos (ya lo tienes o no te interesa)? Puedes recuperarlo en Ajustes.`))return;
+    const r=await api('ignorar',{titulo:t});if(r.error){aviso(r.error);return;}
+    ultimos=ultimos.filter(y=>y.clave!==r.clave);if(ultimoId)api('busquedas',{accion:'actualizar',id:ultimoId,resultados:ultimos});
+    pintaLista();aviso('Producto oculto. Lo puedes recuperar en Ajustes');});}
+function tarjeta(x,i,conEnvio,otros=[]){
   const web=x.origen==='web',sm=x.origen==='segunda_mano',usaTotal=conEnvio&&x.envio!=null;
   const sub=usaTotal?`<small>${euro(x.precio)} + envío ${euro(x.envio)}</small>`:(x.envio==null?'':x.envio===0?'<small>envío gratis</small>':`<small>+ ${euro(x.envio)} de envío</small>`);
-  return `<div class="res ${i===0?'best':''}"><a class="cuerpo" href="${esc(x.url)}" target="_blank" rel="noopener">
+  const tarjetaHtml=`<div class="res ${i===0?'best':''}"><a class="cuerpo" href="${esc(x.url)}" target="_blank" rel="noopener">
     <div class="pr">${euro(usaTotal?x.total:x.precio)}${sub}</div>
     <div class="info"><div class="t">${esc(x.titulo)}</div>
-    <div class="meta"><span class="tag">${esc(nombreT(x.tienda))}</span>${idiomaTag(x)}${i===0?'<span class="tag ok">Más barato</span>':''}${x.minimo?'<span class="tag ok">Mínimo histórico</span>':''}${sm?'<span class="tag">Segunda mano</span>':''}${x.estado?`<span class="tag">${esc(x.estado)}</span>`:''}${x.importado?`<span class="tag pre">Pegado a mano ${relativo(x.importado)}</span>`:''}${x.preventa?'<span class="tag pre">Preventa</span>':''}${x.agotado?'<span class="tag ko">Agotado</span>':''}${web?'<span class="tag pre">Web fuera de tu lista</span>':''}</div></div></a>
-    <button type="button" class="graf" data-i="${i}" title="Historial de precios" aria-label="Ver historial de precios">📈</button></div>`;}
+    <div class="meta"><span class="tag">${esc(nombreT(x.tienda))}</span>${idiomaTag(x)}${i===0?'<span class="tag ok">Más barato</span>':''}${x.descuento?`<span class="tag ok">−${x.descuento} % sobre su precio de mercado (${euro(x.pvp)})</span>`:''}${x.minimo?'<span class="tag ok">Mínimo histórico</span>':''}${sm?'<span class="tag">Segunda mano</span>':''}${x.estado?`<span class="tag">${esc(x.estado)}</span>`:''}${x.importado?`<span class="tag pre">Pegado a mano ${relativo(x.importado)}</span>`:''}${x.preventa?'<span class="tag pre">Preventa</span>':''}${x.agotado?'<span class="tag ko">Agotado</span>':''}${web?'<span class="tag pre">Web fuera de tu lista</span>':''}</div></div></a>
+    <button type="button" class="graf" data-u="${esc(x.url)}" title="Historial de precios" aria-label="Ver historial de precios">📈</button>
+    <button type="button" class="quita" data-ign="${esc(x.titulo)}" title="Ya lo tengo / no me interesa: ocultarlo siempre" aria-label="Ocultar este producto siempre">🚫</button></div>`;
+  const mas=otros.length?`<details class="otras"><summary>${otros.length} tienda${otros.length===1?'':'s'} más, desde ${euro(Math.min(...otros.map(o=>conEnvio&&o.envio!=null?o.total:o.precio)))}</summary>${otros.map(o=>`<a href="${esc(o.url)}" target="_blank" rel="noopener"><b>${euro(conEnvio&&o.envio!=null?o.total:o.precio)}</b><span>${esc(nombreT(o.tienda))}${o.agotado?' · agotado':''}${o.preventa?' · preventa':''}${o.importado?' · pegado a mano':''}${o.estado?' · '+esc(o.estado):''}</span></a>`).join('')}</details>`:'';
+  return `<div class="gr">${tarjetaHtml}${mas}</div>`;}
 function cuerpoForm(){return {q:$('q').value,incluir:$('incluir').value,alguna:$('alguna').value,excluir:$('excluir').value,pmin:$('pmin').value,pmax:$('pmax').value,
   top:$('top').value,sin_agotados:$('sinag').checked,castellano:$('idioma').value!=='todos',idioma:$('idioma').value,tiendas:tiendas.filter(t=>t.activa).map(t=>t.host),
   preventas:$('preventas').checked,con_envio:$('conenvio').checked,segunda_mano:$('segmano').checked,abierta:$('abierta').checked,region:$('region').value,paginas:$('paginas').value};}
@@ -400,12 +442,12 @@ function aplicaParams(p){$('q').value=p.q||'';$('incluir').value=p.incluir||'';$
   $('preventas').checked=!!p.preventas;$('conenvio').checked=!!p.con_envio;$('segmano').checked=!!p.segunda_mano;$('abierta').checked=!!p.abierta;
   if(p.region)$('region').value=p.region;if(p.paginas)$('paginas').value=p.paginas;filtrosN();opcionesN();}
 function muestra(r,body,guardada){
-  ultimos=r.resultados;ultimoBody=body;ultimoId=r.id||null;
+  ultimos=r.resultados;ultimoBody=body;ultimoId=r.id||null;ultimoTotal=r.total||ultimos.length;
   const nuevas=(r.webs||[]).filter(h=>!tiendas.some(t=>t.host.replace(/^www\./,'')===h));
   const manuales=Object.entries(r.informe).filter(([h,i])=>i.manual);
   const fallos=Object.entries(r.informe).filter(([h,i])=>i.error).map(([h,i])=>`<div class="err" style="margin-top:6px"><b>${esc(nombreT(h))}</b>: ${esc(i.error)}</div>`);
   const guard=guardada?`<div class="card guardada"><span>🕘 Búsqueda guardada ${relativo(guardada)}: los precios pueden haber cambiado.</span><button type="button" class="sec mini" id="actualizar">Repetir</button></div>`:'';
-  $('out').innerHTML=guard+(ultimos.length?`<div class="cuenta">${ultimos.length} más baratos de ${r.total} encontrados${body.con_envio?' (precio con envío)':''}</div><div id="lista-res"></div>
+  $('out').innerHTML=guard+(ultimos.length?`<div class="cuenta" id="cuenta-res"></div><div id="lista-res"></div>
     <div class="acciones"><button type="button" class="sec" id="vigilar">👁️ Vigilar esta búsqueda</button></div>`
     :`<div class="card vacio-msg"><span class="em">🤷</span>Ningún resultado con esos filtros.<br>Prueba a quitar palabras de «Descartar», a ampliar el precio o a mostrar los agotados.</div>`)+
     (nuevas.length?`<div class="card"><h2>🆕 Webs nuevas encontradas</h2><p class="ayuda" style="margin-top:0">No están en tu lista de tiendas. Añádelas para que se consulten en todas tus búsquedas.</p><div class="manuales">${nuevas.map(h=>`<button type="button" class="sec mini" data-add="${esc(h)}">＋ ${esc(h)}</button>`).join('')}</div></div>`:'')+
@@ -500,11 +542,9 @@ function abrePegar(host,enlace){
     if(r2.error||!$('lista-res'))return;
     ultimos=ultimos.filter(x=>x.tienda!==host).concat(r2.resultados);
     ultimos.sort((a,b)=>(a.agotado-b.agotado)||(ultimoBody.con_envio?a.total-b.total:a.precio-b.precio));
-    ultimos=ultimos.slice(0,Number($('top').value)||10);
     if(ultimoId)api('busquedas',{accion:'actualizar',id:ultimoId,resultados:ultimos});
     pintaLista();
-    const inf=(r2.informe[host]||{}),sp=$('imp-'+host);if(sp)sp.textContent=inf.importados?`${inf.importados} pegado${inf.importados>1?'s':''} ${relativo(inf.importado_ts)}`:'';
-    const cu=document.querySelector('#out .cuenta');if(cu)cu.textContent=`${ultimos.length} más baratos${ultimoBody.con_envio?' (precio con envío)':''}`;};}
+    const inf=(r2.informe[host]||{}),sp=$('imp-'+host);if(sp)sp.textContent=inf.importados?`${inf.importados} pegado${inf.importados>1?'s':''} ${relativo(inf.importado_ts)}`:'';};}
 function graficaSVG(p){
   const W=320,H=170,L=46,R=12,T=14,B=26,xs=p.map(q=>q.ts),ys=p.map(q=>q.precio);
   let x0=Math.min(...xs),x1=Math.max(...xs),y0=Math.min(...ys),y1=Math.max(...ys);
@@ -605,7 +645,17 @@ async function cargaAjustes(){const a=await api('ajustes');$('a-token').value=a.
   $('a-srv').value=a.smtp_servidor;$('a-pto').value=a.smtp_puerto;$('a-usr').value=a.smtp_usuario;$('a-clv').value=a.smtp_clave;$('a-dst').value=a.correo_destino;
   $('a-nav').checked=!!a.usar_navegador;$('a-navvis').checked=!!a.navegador_visible;$('a-nav').disabled=!a.navegador_disponible;
   if(!a.navegador_disponible)$('a-nav-info').textContent='No disponible: hace falta Chrome o Edge instalado y el complemento Playwright (pip install playwright).';
-  $('a-pin').value=a.pin;$('a-pag').value=a.paginas||3;cargaRed();cargaArranque();}
+  $('a-pin').value=a.pin;$('a-pag').value=a.paginas||3;cargaRed();cargaArranque();cargaEstado();cargaOcultos();}
+async function cargaEstado(){const l=await api('estado_tiendas',{});if(!Array.isArray(l))return;
+  $('estado-t').innerHTML=l.map(e=>`<div class="est"><b>${esc(e.nombre)}${e.activa?'':' <span class="tag">desactivada</span>'}</b>
+    <span class="mut">${e.manual?'La miras tú: no se consulta sola':e.consultas?`${e.con_resultados} de ${e.consultas} consultas con resultados${e.ultimo_ok?' · último resultado '+relativo(e.ultimo_ok):''}`:'Todavía sin consultas'}${e.sugerir_desactivar?' · <span class="err">nunca da resultados: conviene desactivarla</span>':''}${e.ultimo_error&&!e.con_resultados&&!e.manual?`<br>Último problema: ${esc(e.ultimo_error)}`:''}</span>
+    ${e.manual?'':`<button type="button" class="${e.activa?'peli':'sec'} mini" data-act="${esc(e.host)}">${e.activa?'Desactivar':'Activar'}</button>`}</div>`).join('');
+  document.querySelectorAll('#estado-t [data-act]').forEach(b=>b.onclick=async()=>{const t=tiendas.find(x=>x.host===b.dataset.act);if(!t)return;
+    t.activa=!t.activa;await guardaActivas();cargaEstado();aviso(t.activa?'Tienda activada: entra en tus búsquedas':'Tienda desactivada: ya no se consulta');});}
+async function cargaOcultos(){const r=await api('ignorar',{});const l=r.ignorados||[];
+  $('ocultos').innerHTML=l.length?l.map(o=>`<div class="ign"><span>${esc(o.titulo)}</span><button type="button" class="sec mini" data-clave="${esc(o.clave)}">Mostrar de nuevo</button></div>`).join('')
+    :'<p class="mut">No has ocultado ningún producto. Usa el botón 🚫 de un resultado.</p>';
+  document.querySelectorAll('#ocultos [data-clave]').forEach(b=>b.onclick=async()=>{await api('ignorar',{quitar:b.dataset.clave});cargaOcultos();aviso('Volverá a salir en tus búsquedas');});}
 async function cargaArranque(){const r=await api('arranque');if(r.error||r.disponible===false){$('c-arranque').classList.add('oculto');return;}
   $('c-arranque').classList.remove('oculto');$('a-arr').checked=!!r.activo;
   $('arr-info').textContent=r.activo?'Activado: BuscaTron se abre solo al encender el ordenador.':'Desactivado: tendrás que abrir BuscaTron tú (icono del escritorio).';}
@@ -629,6 +679,7 @@ async function prueba(canal){await api('ajustes',ajustesForm());const r=await ap
 $('a-prueba-tg').onclick=()=>prueba('telegram');$('a-prueba-co').onclick=()=>prueba('correo');
 
 cargaT().then(()=>{if(!retomaBusqueda())cargaRec(true);});cargaNavAv();
+if('serviceWorker' in navigator&&window.isSecureContext)navigator.serviceWorker.register('/sw.js').catch(()=>{});
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&!buscando)retomaBusqueda();});
 try{const t=localStorage.getItem('bt-tab');if(t&&t!=='buscar')ir(t);}catch(e){}
 </script>

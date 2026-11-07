@@ -9,6 +9,7 @@ from urllib.parse import urlparse
 from . import bd, extract
 
 CADUCA_HORAS = 72
+AVISO_ANTES_HORAS = 12      # el recordatorio llega unas horas antes de que caduque
 MAX_BLOQUE = 8          # líneas que se miran tras un título para encontrar su precio
 IGNORAR = ("resultado", "busqueda", "buscar", "mostrando", "ordenar", "filtrar", "filtros", "te recomendamos", "has buscado")
 
@@ -81,6 +82,26 @@ def guarda(host, consulta, items, url_busqueda):
         c.execute("DELETE FROM importados WHERE host=? AND consulta=?", (host, extract.normaliza(consulta)))
         c.executemany("INSERT INTO importados(host,ts,consulta,titulo,url,precio,agotado,preventa) VALUES(?,?,?,?,?,?,?,?)", filas)
     return len(filas)
+
+
+def por_caducar(ahora=None):
+    """Tiendas cuyo último pegado caduca en las próximas horas y de las que aún no se ha avisado:
+    [(host, ts_del_pegado, segundos_que_quedan, consulta)]."""
+    ahora = ahora or time.time()
+    out = []
+    with bd.conecta() as c:
+        for f in c.execute("SELECT host, MAX(ts) ts FROM importados GROUP BY host").fetchall():
+            queda = f["ts"] + CADUCA_HORAS * 3600 - ahora
+            if 0 < queda <= AVISO_ANTES_HORAS * 3600 and not c.execute(
+                    "SELECT 1 FROM recordatorios WHERE host=? AND ts_importado=?", (f["host"], f["ts"])).fetchone():
+                consulta = c.execute("SELECT consulta FROM importados WHERE host=? AND ts=? LIMIT 1", (f["host"], f["ts"])).fetchone()[0]
+                out.append((f["host"], f["ts"], queda, consulta))
+    return out
+
+
+def marca_recordado(host, ts_importado):
+    with bd.conecta() as c:
+        c.execute("INSERT OR IGNORE INTO recordatorios(host, ts_importado) VALUES(?,?)", (host, ts_importado))
 
 
 def vigentes(host, consulta, ahora=None):

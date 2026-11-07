@@ -252,6 +252,83 @@ def historial_previo(urls):
     return out
 
 
+# Palabras que no distinguen un producto de otro (editorial, tipo de producto, idioma, relleno de la tienda).
+RUIDO = {"asmodee", "fantasy", "flight", "games", "ffg", "lcg", "el", "la", "los", "las", "de", "del", "al", "the", "of", "a", "y", "en",
+         "card", "game", "cards", "juego", "juegos", "cartas", "expansion", "exp", "castellano", "espanol", "espanola", "edicion",
+         "comprar", "barato", "producto", "agotado", "preventa", "nuevo", "nueva", "living", "eng", "es", "esp", "spanish"}
+
+
+def clave_producto(titulo):
+    """Identificador de un producto independiente de la tienda: sus palabras significativas, sin orden ni ruido.
+    «Asmodee Marvel Champions: La Era de Apocalipsis» y «La Era de Apocalípsis - Marvel Champions» dan la misma clave."""
+    palabras = set()
+    for w in extract.normaliza(titulo).split():
+        if w in RUIDO or (re.search(r"\d", w) and re.search(r"[a-z]", w) and len(w) >= 5):    # referencias como ASM631069
+            continue
+        palabras.add(w[:-1] if len(w) > 4 and w.endswith("s") else w)                            # «apocalipsis» = «apocalipsi», plurales
+    return " ".join(sorted(palabras))
+
+
+def grupo_de(titulo, frases=()):
+    """Con el filtro «al menos una de estas», el producto es la frase que encaja (más fiable); si no, su clave."""
+    n = extract.normaliza(titulo)
+    for f in frases:
+        if f in n or f.replace(" ", "") in n.replace(" ", ""):
+            return "f:" + f
+    return "c:" + clave_producto(titulo)
+
+
+def pvp_de(precios):
+    """PVP aproximado de un producto: el precio (redondeado al euro) que más se repite entre tiendas, con al menos 3
+    tiendas; si hay empate, el más alto. None si no hay datos suficientes."""
+    if len(precios) < 3:
+        return None
+    cuenta = {}
+    for p in precios:
+        cuenta.setdefault(round(p), []).append(p)
+    mejor = max(cuenta.values(), key=lambda v: (len(v), max(v)))
+    return round(max(mejor), 2) if len(mejor) >= 2 else None
+
+
+def ignorados():
+    with bd.conecta() as c:
+        return {r["clave"]: dict(r) for r in c.execute("SELECT clave, titulo, ts FROM ignorados ORDER BY ts DESC")}
+
+
+def ignora(titulo):
+    with bd.conecta() as c:
+        c.execute("INSERT OR REPLACE INTO ignorados(clave, titulo, ts) VALUES(?,?,?)", (clave_producto(titulo), titulo, time.time()))
+
+
+def deja_de_ignorar(clave):
+    with bd.conecta() as c:
+        c.execute("DELETE FROM ignorados WHERE clave=?", (clave,))
+
+
+def registra_estado(informe, consulta):
+    ts = time.time()
+    filas = [(h, ts, consulta, i.get("brutos", i.get("encontrados", 0)), i.get("error") or "") for h, i in informe.items()
+             if not i.get("manual") and h != "Búsqueda abierta"]
+    with bd.conecta() as c:
+        c.executemany("INSERT INTO estado_tiendas(host, ts, consulta, encontrados, error) VALUES(?,?,?,?,?)", filas)
+
+
+def estado_tiendas(ultimas=10):
+    """Por tienda: sus últimas consultas, cuántas dieron resultados y el último fallo; sugiere desactivar las que nunca dan nada."""
+    lista = {t["host"]: t for t in cfg.carga()}
+    out = []
+    with bd.conecta() as c:
+        for h, t in lista.items():
+            filas = [dict(r) for r in c.execute("SELECT ts, encontrados, error FROM estado_tiendas WHERE host=? ORDER BY ts DESC LIMIT ?", (h, ultimas))]
+            con = sum(1 for f in filas if f["encontrados"])
+            ult_ok = next((f["ts"] for f in filas if f["encontrados"]), None)
+            ult_err = next((f["error"] for f in filas if f["error"]), "")
+            out.append({"host": h, "nombre": t.get("nombre") or h, "activa": t.get("activa", True), "manual": bool(t.get("manual")),
+                        "consultas": len(filas), "con_resultados": con, "ultimo_ok": ult_ok, "ultimo_error": ult_err,
+                        "sugerir_desactivar": bool(t.get("activa", True) and not t.get("manual") and len(filas) >= 6 and con == 0)})
+    return sorted(out, key=lambda x: (not x["sugerir_desactivar"], x["manual"], -x["con_resultados"], x["nombre"]))
+
+
 def historial_de(url):
     """Precios guardados de un artículo (uno por revisión, el más bajo si hay varios) y datos para la gráfica."""
     with bd.conecta() as c:
@@ -285,6 +362,7 @@ def buscar(consulta, incluir="", excluir="", ocultar_agotados=True, hosts=None, 
     frases = [f for f in (extract.normaliza(x).strip() for x in (alguna or "").split(",")) if f]   # basta con una (p. ej. nombres de campañas)
     exc = extract.normaliza(excluir).split()
     nav = {"visible": False} if aj["usar_navegador"] and navegador.disponible() else None   # siempre en segundo plano
+    ocultos = set(ignorados())                                       # «ya lo tengo / no me interesa»
 
     def pasa(x, prior=None):
         x["idioma"], x["idioma_seguro"] = idioma_con_tienda(x["titulo"], prior)
@@ -295,7 +373,7 @@ def buscar(consulta, incluir="", excluir="", ocultar_agotados=True, hosts=None, 
                 and not (ocultar_agotados and x["agotado"])
                 and not (x.get("preventa") and not preventas)
                 and permite(x["idioma"], x["idioma_seguro"], modo)
-                and not (pmin is not None and x["precio"] < pmin) and not (pmax is not None and x["precio"] > pmax))
+                and clave_producto(x["titulo"]) not in ocultos)
 
     res, informe = [], {}
     with cf.ThreadPoolExecutor(6) as ex:
@@ -314,7 +392,7 @@ def buscar(consulta, incluir="", excluir="", ocultar_agotados=True, hosts=None, 
                 x["tienda"], x["origen"] = host, por_host[host].get("tipo", "tienda")
                 res.append(x)
                 kept += 1
-        informe[host] = {"encontrados": kept, "error": err if not kept else None}
+        informe[host] = {"encontrados": kept, "error": err if not kept else None, "brutos": len(items), "error_tienda": err}
     for t in manuales:
         informe[t["host"]] = {"encontrados": 0, "error": None, "manual": cfg.url_busqueda(t["plantilla"], consulta)}
         previos = [x for x in importar.vigentes(t["host"], consulta) if pasa(x)]      # lo que el usuario pegó a mano
@@ -335,6 +413,29 @@ def buscar(consulta, incluir="", excluir="", ocultar_agotados=True, hosts=None, 
                 kept += 1
         informe["Búsqueda abierta"] = {"encontrados": kept, "error": info if not kept else None}
     cfg.guarda(lista)  # persiste las plantillas descubiertas
+    registra_estado({h: {"brutos": i.get("brutos", 0), "error": i.get("error_tienda")} for h, i in informe.items() if "brutos" in i}, consulta)
+
+    # producto (grupo) y PVP aproximado, con todas las tiendas; después, el filtro de precio
+    precios_grupo = {}
+    for x in res:
+        x["grupo"] = grupo_de(x["titulo"], frases)
+        x["clave"] = clave_producto(x["titulo"])
+        if not x["agotado"] and x.get("origen") != "segunda_mano":            # la segunda mano no marca el precio de mercado
+            precios_grupo.setdefault(x["grupo"], {})
+            precios_grupo[x["grupo"]].setdefault(x["tienda"], x["precio"])          # una vez por tienda
+    pvps = {g: pvp_de(list(p.values())) for g, p in precios_grupo.items()}
+    for x in res:
+        pvp = pvps.get(x["grupo"])
+        x["pvp"] = pvp if pvp and pvp > x["precio"] else None
+        x["descuento"] = round(100 * (1 - x["precio"] / pvp)) if x["pvp"] else None
+    res = [x for x in res if not (pmin is not None and x["precio"] < pmin) and not (pmax is not None and x["precio"] > pmax)]
+    for h, i in informe.items():
+        if "brutos" in i:
+            i["encontrados"] = sum(1 for x in res if x["tienda"] == h)
+            if not i["encontrados"] and not i["error"] and i["brutos"]:
+                i["error"] = "tiene productos, pero ninguno pasa tus filtros"
+            i.pop("brutos", None)
+            i.pop("error_tienda", None)
 
     previo = historial_previo({x["url"] for x in res})
     for x in res:

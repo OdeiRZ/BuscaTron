@@ -195,9 +195,10 @@ def revisa(seg_id, enviar=True):
         envio = {}
         if nuevos and enviar:
             canales = [k for k in seg["canales"].split(",") if k in ("telegram", "correo")]
-            lineas = [f"{x['precio']:.2f} € · {x['titulo']} ({x['tienda']})\n{x['motivo']}\n{x['url']}" for x in nuevos[:10]]
-            if len(nuevos) > 10:
-                lineas.append(f"… y {len(nuevos) - 10} más en la pestaña Avisos")
+            grupos = agrupa(nuevos)
+            lineas = [linea_grupo(g, con_motivo=True) for g in grupos[:10]]
+            if len(grupos) > 10:
+                lineas.append(f"… y {len(grupos) - 10} productos más en la pestaña Avisos")
             envio = notifica.envia(canales, f"BuscaTron · {seg['nombre']}", "\n\n".join(lineas))
         elif enviar and opc.get("resumen") and "telegram" in seg["canales"].split(","):
             envio = notifica.envia(["telegram"], f"BuscaTron · {seg['nombre']} · resumen", resumen(seg, opc, modo, res, informe))
@@ -207,16 +208,49 @@ def revisa(seg_id, enviar=True):
             _en_curso.discard(seg_id)
 
 
+def euros(v):
+    return f"{v:.2f}".replace(".", ",") + " €"
+
+
+def _nombres():
+    return {t["host"]: t.get("nombre") or t["host"].replace("www.", "") for t in motor.cfg.carga()}
+
+
+def agrupa(items):
+    """Agrupa por producto (la clave «grupo» del motor), cada grupo del más barato al más caro, los grupos por su mejor precio."""
+    g = {}
+    for x in items:
+        g.setdefault(x.get("grupo") or x["url"], []).append(x)
+    grupos = [sorted(v, key=lambda x: x["precio"]) for v in g.values()]
+    return sorted(grupos, key=lambda v: v[0]["precio"])
+
+
+def linea_grupo(g, con_motivo=False, nombres=None):
+    """«Título · 36,50 € en Bixoto (−19 % sobre su precio de mercado)», el motivo del aviso, el enlace y las otras tiendas."""
+    nombres = nombres or _nombres()
+    x = g[0]
+    partes = [f"{x['titulo']}\n{euros(x['precio'])} en {nombres.get(x.get('tienda'), x.get('tienda', ''))}"
+              + (f" (−{x['descuento']} % sobre su precio de mercado, {euros(x['pvp'])})" if x.get("descuento") else "")]
+    if con_motivo and x.get("motivo"):
+        partes.append(x["motivo"])
+    partes.append(x["url"])
+    if len(g) > 1:
+        otras = ", ".join(f"{euros(o['precio'])} en {nombres.get(o.get('tienda'), o.get('tienda', ''))}" for o in g[1:4])
+        partes.append("También: " + otras + (f" y {len(g) - 4} más" if len(g) > 4 else ""))
+    return "\n".join(partes)
+
+
 def resumen(seg, opc, modo, res, informe, n=5):
     """Mensaje de una revisión sin avisos nuevos: los n más baratos que cumplen la búsqueda."""
     validos = [x for x in res if not (x.get("agotado") and seg["sin_agotados"]) and not (x.get("preventa") and not opc.get("preventas"))
                and (modo == "todos" or motor.permite(x.get("idioma", "?"), x.get("idioma_seguro", False), modo))]
-    validos.sort(key=lambda x: x["precio"])
+    grupos = agrupa(validos)
     caidas = sum(1 for i in informe.values() if i.get("error"))
     lineas = [f"Sin avisos nuevos. Revisados {len(res)} resultados" + (f" ({caidas} tiendas sin respuesta)" if caidas else "") + "."]
-    if validos:
-        lineas.append(f"Los {min(n, len(validos))} más baratos ahora:")
-        lineas += [f"{x['precio']:.2f} € · {x['titulo']} ({x.get('tienda', '')})".replace(".", ",", 1) + f"\n{x['url']}" for x in validos[:n]]
+    if grupos:
+        nombres = _nombres()
+        lineas.append(f"Los {min(n, len(grupos))} productos más baratos ahora:")
+        lineas += [linea_grupo(g, nombres=nombres) for g in grupos[:n]]
     else:
         lineas.append("Ningún producto cumple ahora tu búsqueda.")
     return "\n\n".join(lineas)

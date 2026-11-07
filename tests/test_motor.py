@@ -120,6 +120,16 @@ class Buscar(unittest.TestCase):
         res, _ = motor.buscar("juego", alguna="shield")
         self.assertEqual(self.titulos(res), ["Marvel Champions: Agentes de S.H.I.E.L.D."])
 
+    def test_ocultos_no_salen_y_el_precio_de_mercado_usa_tambien_las_caras(self):
+        motor.ignora("Juego B")
+        self.items["b.es"] = [self.x("Juego A", 44)]
+        self.items["a.es"] = [self.x("Juego A", 30), self.x("Juego B", 10)]
+        self.lista.append({"host": "c.es", "activa": True, "tipo": "tienda"})
+        self.items["c.es"] = [self.x("Juego A", 44.5)]
+        res, _ = motor.buscar("juego", pmax=40)
+        self.assertEqual([(x["titulo"], x["precio"]) for x in res], [("Juego A", 30)])   # las de 44 € se filtran por precio, «Juego B» está oculto
+        self.assertEqual((res[0]["pvp"], res[0]["descuento"]), (44.5, 33))              # pero cuentan para el precio de mercado
+
     def test_minimo_historico(self):
         for p in (30, 28, 26):                                # tres observaciones previas más caras
             with bd.conecta() as c:
@@ -285,6 +295,79 @@ class VentanaSoloSiHaceFalta(unittest.TestCase):
         self.assertEqual([h for h, v in llamadas if v is True], ["pide.es"])                          # ventana solo para la que la pide
         self.assertEqual(len(res), 3)
         self.assertIsNone(inf["pide.es"]["error"])
+
+
+class Agrupacion(unittest.TestCase):
+    def test_la_misma_expansion_en_tiendas_distintas_tiene_la_misma_clave(self):
+        titulos = ["Asmodee Marvel Champions: La Era de Apocalipsis", "Marvel Champions: La era de Apocalipsis",
+                   "La Era de Apocalípsis - Marvel Champions", "Marvel Champions (El Juego de Cartas) Expansion La era de Apocalipsis",
+                   "Fantasy Flight Games | Marvel Champions: La era de Apocalípsis"]
+        self.assertEqual(len({motor.clave_producto(t) for t in titulos}), 1)
+
+    def test_productos_distintos_no_se_juntan(self):
+        self.assertNotEqual(motor.clave_producto("Marvel Champions: Héroes Reunidos 1"), motor.clave_producto("Marvel Champions: Héroes Reunidos 2"))
+        self.assertNotEqual(motor.clave_producto("Marvel Champions: Civil War"), motor.clave_producto("Marvel Champions: La Era de Apocalipsis"))
+
+    def test_las_referencias_de_la_tienda_no_cuentan(self):
+        self.assertEqual(motor.clave_producto("MARVEL CHAMPIONS ASMODEE SHADOWLANDS SCENARIO PACK ASM631069"),
+                         motor.clave_producto("Marvel Champions Shadowlands Scenario Pack"))
+
+    def test_con_frases_el_grupo_es_la_frase(self):
+        self.assertEqual(motor.grupo_de("Asmodee Marvel Champions: Agentes de S.H.I.E.L.D.", ["tirania", "shield"]), "f:shield")
+        self.assertTrue(motor.grupo_de("Marvel Champions Vision", ["tirania"]).startswith("c:"))
+
+    def test_precio_de_mercado(self):
+        self.assertEqual(motor.pvp_de([36.5, 38.21, 44.99, 44.95, 44.9]), 44.99)       # el que más se repite
+        self.assertEqual(motor.pvp_de([40.49, 40.46, 44.99, 44.99]), 44.99)           # empate: el más alto
+        self.assertIsNone(motor.pvp_de([30, 40]))                                      # pocas tiendas
+        self.assertIsNone(motor.pvp_de([20, 30, 40]))                                  # ningún precio se repite
+
+
+class OcultosYEstado(unittest.TestCase):
+    def setUp(self):
+        self.p = mock.patch.object(bd, "RUTA", os.path.join(tempfile.mkdtemp(), "t.db"))
+        self.p.start()
+
+    def tearDown(self):
+        self.p.stop()
+
+    def test_ocultar_y_recuperar(self):
+        motor.ignora("Marvel Champions: Héroes Reunidos 1")
+        self.assertIn(motor.clave_producto("Heroes Reunidos 1 - Marvel Champions"), motor.ignorados())   # otra tienda, mismo producto
+        motor.deja_de_ignorar(motor.clave_producto("Marvel Champions: Héroes Reunidos 1"))
+        self.assertEqual(motor.ignorados(), {})
+
+    def test_estado_de_las_tiendas(self):
+        lista = [{"host": "nada.es", "activa": True}, {"host": "bien.es", "activa": True}, {"host": "manual.es", "activa": True, "manual": True}]
+        with mock.patch.object(tiendas, "carga", lambda: lista):
+            for i in range(6):
+                motor.registra_estado({"nada.es": {"brutos": 0, "error": "no tiene nada"}, "bien.es": {"brutos": 5, "error": None}}, f"q{i}")
+            e = {x["host"]: x for x in motor.estado_tiendas()}
+        self.assertTrue(e["nada.es"]["sugerir_desactivar"])
+        self.assertEqual((e["bien.es"]["con_resultados"], e["bien.es"]["sugerir_desactivar"]), (6, False))
+        self.assertFalse(e["manual.es"]["sugerir_desactivar"])
+        self.assertEqual(e["nada.es"]["ultimo_error"], "no tiene nada")
+
+
+class Limpieza(unittest.TestCase):
+    def test_compacta_lo_viejo_y_conserva_lo_reciente(self):
+        d = tempfile.mkdtemp()
+        ahora = 400 * 86400
+        with mock.patch.object(bd, "RUTA", os.path.join(d, "t.db")):
+            with bd.conecta() as c:
+                filas = [(10 * 86400 + h * 3600, p) for h, p in ((1, 12), (5, 10), (9, 11))]          # 3 precios del mismo día, viejos
+                filas += [(11 * 86400, 13)]                                                           # otro día viejo
+                filas += [(ahora - 3600 * k, 20 + k) for k in range(3)]                              # recientes
+                c.executemany("INSERT INTO precios(ts,consulta,tienda,titulo,url,precio,agotado,seg_id,preventa) VALUES(?,?,?,?,?,?,?,?,?)",
+                              [(ts, "q", "t.es", "J", "https://x/j", p, 0, None, 0) for ts, p in filas])
+                for k in range(35):
+                    c.execute("INSERT INTO estado_tiendas VALUES(?,?,?,?,?)", ("t.es", float(k), "q", 1, ""))
+            borradas = bd.limpia(dias=180, ahora=ahora)
+            with bd.conecta() as c:
+                quedan = sorted(r[0] for r in c.execute("SELECT precio FROM precios"))
+                n_estado = c.execute("SELECT COUNT(*) FROM estado_tiendas").fetchone()[0]
+        self.assertEqual(quedan, [10, 13, 20, 21, 22])          # del día con 3 precios queda el más bajo
+        self.assertEqual((borradas["precios"], n_estado), (2, 30))
 
 
 class Historial(unittest.TestCase):
