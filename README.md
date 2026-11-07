@@ -203,7 +203,7 @@ Resultado de la prueba el 6/11/2026 (las webs cambian, así que puede variar):
 |---|---|
 | ✅ Funcionan (16) | Juegos de la Mesa Redonda, Zacatrus, Dungeon Marvels, Jugamos Una, Jugamos Otra, El Taller del Modelista, Mathom, Tablerum, Outlet Games, Ludus Belli, Bandua, Goblin Trader, Gameria, Masqueoca, Turol Games y **Amazon** (estas dos con navegador) |
 | ➖ Responden, sin el producto probado (2) | Tiendas MGI, Outlet-PC |
-| 🔗 Solo enlace (2) | Ferretería Ibérica Madrid y Bixoto (con [importación a mano](#importar-a-mano)); Bixoto bloquea la IP tras unas pocas consultas automáticas |
+| 🔗 Solo enlace (2) | Ferretería Ibérica Madrid y Bixoto (con [importación a mano](#importar-a-mano)); Bixoto bloquea la IP incluso con una sola consulta automática desde un Chrome real (probado el 7/11/2026), así que no se consulta nunca de forma automática |
 | 🛒 Segunda mano | Vinted y Milanuncios funcionan; Wallapop y eBay, solo enlace |
 
 ## Archivos locales
