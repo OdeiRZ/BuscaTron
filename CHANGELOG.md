@@ -3,6 +3,13 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.9.1] - 2026-11-07
+
+### Corregido
+- **«Error: TypeError: Failed to fetch» en el móvil**: una búsqueda tarda entre 30 y 90 s y la página la esperaba con una sola conexión abierta; si se bloqueaba la pantalla, se cambiaba de app o se recargaba, el navegador cortaba esa conexión (11 de los 12 fallos del registro venían del móvil) y se perdía el resultado. Ahora la búsqueda corre en segundo plano en el servidor: la página recibe un número al instante (`/api/buscar` con `asincrono`) y pregunta cada 2 s cómo va (`/api/trabajo`). Si se corta la conexión, la búsqueda sigue; al volver a la página o a la app se retoma sola, y si BuscaTron se reinició mientras tanto se muestra la última búsqueda guardada. Los resultados se conservan una hora para recogerlos.
+- Las peticiones cortas reintentan una vez si la red falla un momento (por ejemplo, al desbloquear el móvil).
+- 4 pruebas nuevas (118 en total).
+
 ## [0.9.0] - 2026-11-07
 
 ### Añadido

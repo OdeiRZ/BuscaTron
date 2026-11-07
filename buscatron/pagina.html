@@ -306,7 +306,8 @@ const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const euro=n=>Number(n).toFixed(2).replace('.',',')+' €';
 const fecha=t=>t?new Date(t*1000).toLocaleString('es-ES',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'nunca';
-const api=async(ruta,cuerpo)=>{const r=await fetch('/api/'+ruta,cuerpo===undefined?{}:{method:'POST',body:JSON.stringify(cuerpo)});return r.json();};
+const api=async(ruta,cuerpo)=>{const pide=()=>fetch('/api/'+ruta,cuerpo===undefined?{}:{method:'POST',body:JSON.stringify(cuerpo)});
+  let r;try{r=await pide();}catch(e){await new Promise(z=>setTimeout(z,1200));r=await pide();}return r.json();};
 let tiendas=[],segs=[],tt;
 function aviso(t){const e=$('toast');e.textContent=t;e.classList.add('v');clearTimeout(tt);tt=setTimeout(()=>e.classList.remove('v'),2600);}
 const nombreT=h=>{const t=tiendas.find(x=>x.host===h);return (t&&t.nombre)||h.replace(/^www\./,'');};
@@ -412,15 +413,36 @@ function muestra(r,body,guardada){
   document.querySelectorAll('#out [data-pegar]').forEach(b=>b.onclick=()=>abrePegar(b.dataset.pegar,b.dataset.enlace));
   document.querySelectorAll('#out [data-add]').forEach(g=>g.onclick=async()=>{const r2=await api('tiendas',{anadir:g.dataset.add});
     if(r2.error){aviso(r2.error);return;}tiendas=r2;pintaT();g.remove();aviso('Tienda añadida a tu lista');});}
-$('f').onsubmit=async e=>{e.preventDefault();const b=$('go');b.disabled=true;b.textContent='Buscando…';
-  const lento=$('abierta').checked||$('segmano').checked;
-  $('out').innerHTML=`<div class="card carga"><div class="spin"></div><div>Consultando las tiendas…<br><span class="mut">Suele tardar entre 10 y ${lento?'90':'40'} segundos.</span></div></div>`;
-  const body=cuerpoForm();
-  try{const r=await api('buscar',body);
-    if(r.error){$('out').innerHTML=`<div class="card err">${esc(r.error)}</div>`;return;}
-    muestra(r,body,null);cargaRec();
-  }catch(err){$('out').innerHTML=`<div class="card err">Error: ${esc(err)}</div>`;}
-  finally{b.disabled=false;b.textContent='Buscar';}};
+/* La búsqueda corre en el servidor: aquí solo se lanza y se va preguntando cómo va. Si el móvil corta la conexión
+   (pantalla bloqueada, otra app, recarga), la búsqueda sigue y se recoge al volver. */
+const esperaMs=ms=>new Promise(r=>setTimeout(r,ms));
+let buscando=null;
+function pintaBuscando(lento){$('out').innerHTML=`<div class="card carga"><div class="spin"></div><div>Consultando las tiendas…<br><span class="mut">Suele tardar entre 10 y ${lento?'90':'40'} segundos. Puedes bloquear el móvil o cambiar de app: la búsqueda sigue y la verás al volver.</span></div></div>`;}
+function estadoBoton(activo){const b=$('go');b.disabled=activo;b.textContent=activo?'Buscando…':'Buscar';}
+async function sigueBusqueda(tid,body){
+  buscando=tid;estadoBoton(true);let fallos=0;
+  try{
+    while(buscando===tid){
+      let r;
+      try{r=await api('trabajo',{id:tid});fallos=0;}
+      catch(e){if(++fallos>=90){$('out').innerHTML='<div class="card err">No hay conexión con BuscaTron. Comprueba que estás en la misma Wi-Fi y vuelve a buscar.</div>';break;}await esperaMs(2000);continue;}
+      if(r.estado==='hecho'){muestra(r.resp,body,null);cargaRec();break;}
+      if(r.estado==='error'){$('out').innerHTML=`<div class="card err">${esc(r.error)}</div>`;break;}
+      if(r.estado==='desconocido'){cargaRec(true);break;}   // BuscaTron se reinició: se enseña la última guardada
+      await esperaMs(2000);
+    }
+  }finally{if(buscando===tid){buscando=null;estadoBoton(false);try{localStorage.removeItem('bt-trabajo')}catch(e){}}}}
+$('f').onsubmit=async e=>{e.preventDefault();if(buscando)return;
+  const body=cuerpoForm();pintaBuscando(body.abierta||body.segunda_mano);estadoBoton(true);
+  let r;
+  for(let i=0;i<3;i++){try{r=await api('buscar',{...body,asincrono:true});break;}catch(err){if(i===2){$('out').innerHTML=`<div class="card err">No se pudo contactar con BuscaTron (${esc(err)}). ¿Está en marcha?</div>`;estadoBoton(false);return;}await esperaMs(1500);}}
+  if(r.error){$('out').innerHTML=`<div class="card err">${esc(r.error)}</div>`;estadoBoton(false);return;}
+  try{localStorage.setItem('bt-trabajo',JSON.stringify({id:r.trabajo,body,ts:Date.now()}))}catch(e){}
+  sigueBusqueda(r.trabajo,body);};
+function retomaBusqueda(){   // al recargar o volver a la app con una búsqueda a medias
+  let t=null;try{t=JSON.parse(localStorage.getItem('bt-trabajo')||'null')}catch(e){}
+  if(!t||Date.now()-t.ts>3600e3||buscando)return false;
+  aplicaParams(t.body);pintaBuscando(t.body.abierta||t.body.segunda_mano);sigueBusqueda(t.id,t.body);return true;}
 
 /* búsquedas recientes (guardadas con sus resultados) */
 function resumenParams(p){const e=[p.idioma==='estricto'&&'castellano estricto',p.idioma==='todos'&&'cualquier idioma',p.pmin&&`desde ${p.pmin} €`,p.pmax&&`hasta ${p.pmax} €`,p.incluir&&`con ${p.incluir}`,p.excluir&&`sin ${p.excluir}`,p.segunda_mano&&'segunda mano',p.abierta&&'otras webs'].filter(Boolean);
@@ -593,7 +615,8 @@ async function prueba(canal){await api('ajustes',ajustesForm());const r=await ap
   const e=r.error||r[canal];msg(e?e:'Enviado. Revisa el canal.',!e);}
 $('a-prueba-tg').onclick=()=>prueba('telegram');$('a-prueba-co').onclick=()=>prueba('correo');
 
-cargaT().then(()=>cargaRec(true));cargaNavAv();
+cargaT().then(()=>{if(!retomaBusqueda())cargaRec(true);});cargaNavAv();
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&!buscando)retomaBusqueda();});
 try{const t=localStorage.getItem('bt-tab');if(t&&t!=='buscar')ir(t);}catch(e){}
 </script>
 </body>

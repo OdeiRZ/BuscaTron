@@ -18,6 +18,9 @@ TAILSCALE = ipaddress.ip_network("100.64.0.0/10")
 MAX_FALLOS, VENTANA_FALLOS = 5, 300      # intentos de PIN fallidos por IP y ventana (segundos)
 _fallos = {}
 _servidor = {"host": "127.0.0.1", "puerto": 8790}
+TRABAJOS = {}                 # búsquedas en curso o recién terminadas: {id: {estado, resp, error, ts}}
+_cerrojo_trabajos = threading.Lock()
+VIDA_TRABAJO = 3600           # segundos que se guarda el resultado de una búsqueda para recogerlo
 
 LOGIN = """<!doctype html><html lang="es"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1"><title>BuscaTron · Acceso</title>
@@ -65,6 +68,51 @@ def es_local(ip):
 
 def token_sesion(pin):
     return hmac.new(ajustes.secreto().encode(), pin.encode(), sha256).hexdigest()
+
+
+def busca(c):
+    """Hace la búsqueda y devuelve la respuesta (y la guarda como búsqueda reciente)."""
+    res, inf = motor.buscar(c.get("q", "").strip(), c.get("incluir", ""), c.get("excluir", ""),
+                            bool(c.get("sin_agotados", True)), c.get("tiendas"),
+                            _num(c.get("pmin", "")), _num(c.get("pmax", "")),
+                            castellano=bool(c.get("castellano", True)), idioma=c.get("idioma") if c.get("idioma") in motor.MODOS_IDIOMA else None,
+                            preventas=bool(c.get("preventas")), con_envio=bool(c.get("con_envio")), segunda_mano=bool(c.get("segunda_mano")),
+                            abierta=bool(c.get("abierta")), region=c.get("region") if c.get("region") in ("es", "ue", "mundo") else "es",
+                            paginas=int(_num(c.get("paginas", "")) or 0) or None)
+    resp = {"resultados": res[: int(c.get("top") or 50)], "total": len(res), "informe": inf,
+            "webs": sorted({x["tienda"] for x in res if x.get("origen") == "web"})}
+    if c.get("guardar", True) and c.get("q", "").strip():        # se recuerda para no tener que repetirla
+        resp["id"], resp["ts"] = busquedas.guarda(c, resp)
+    return resp
+
+
+def lanza_busqueda(c):
+    """Empieza una búsqueda en segundo plano y devuelve su número al instante. La página la consulta con
+    /api/trabajo: así, si el móvil corta la conexión (pantalla bloqueada, otra app, recarga), la búsqueda sigue."""
+    tid = os.urandom(8).hex()
+    with _cerrojo_trabajos:
+        ahora = time.time()
+        for k in [k for k, v in TRABAJOS.items() if ahora - v["ts"] > VIDA_TRABAJO]:
+            del TRABAJOS[k]
+        TRABAJOS[tid] = {"estado": "buscando", "ts": ahora}
+
+    def corre():
+        try:
+            r = {"estado": "hecho", "resp": busca(c)}
+        except Exception as e:                       # noqa: BLE001  (se le cuenta a la página)
+            r = {"estado": "error", "error": str(e) or e.__class__.__name__}
+        with _cerrojo_trabajos:
+            TRABAJOS[tid].update(r, ts=time.time())
+    threading.Thread(target=corre, daemon=True, name="busqueda-" + tid).start()
+    return {"trabajo": tid}
+
+
+def estado_trabajo(tid):
+    with _cerrojo_trabajos:
+        t = TRABAJOS.get(tid)
+        if not t:
+            return {"estado": "desconocido"}          # p. ej. BuscaTron se reinició: la página recurre a la última guardada
+        return {k: v for k, v in t.items() if k != "ts"}
 
 
 def analiza_direccion(entrada):
@@ -185,19 +233,12 @@ class Handler(BaseHTTPRequestHandler):
         return self._json({"error": "PIN incorrecto"}, 401)
 
     def _post(self, ruta, c):
+        if ruta == "/api/buscar" and c.get("asincrono"):
+            return lanza_busqueda(c)
         if ruta == "/api/buscar":
-            res, inf = motor.buscar(c.get("q", "").strip(), c.get("incluir", ""), c.get("excluir", ""),
-                                    bool(c.get("sin_agotados", True)), c.get("tiendas"),
-                                    _num(c.get("pmin", "")), _num(c.get("pmax", "")),
-                                    castellano=bool(c.get("castellano", True)), idioma=c.get("idioma") if c.get("idioma") in motor.MODOS_IDIOMA else None, preventas=bool(c.get("preventas")),
-                                    con_envio=bool(c.get("con_envio")), segunda_mano=bool(c.get("segunda_mano")),
-                                    abierta=bool(c.get("abierta")), region=c.get("region") if c.get("region") in ("es", "ue", "mundo") else "es",
-                                    paginas=int(_num(c.get("paginas", "")) or 0) or None)
-            resp = {"resultados": res[: int(c.get("top") or 50)], "total": len(res), "informe": inf,
-                    "webs": sorted({x["tienda"] for x in res if x.get("origen") == "web"})}
-            if c.get("guardar", True) and c.get("q", "").strip():        # se recuerda para no tener que repetirla
-                resp["id"], resp["ts"] = busquedas.guarda(c, resp)
-            return resp
+            return busca(c)
+        if ruta == "/api/trabajo":
+            return estado_trabajo(c.get("id", ""))
         if ruta == "/api/busquedas":
             accion = c.get("accion")
             if accion == "borrar":

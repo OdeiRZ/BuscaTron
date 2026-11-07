@@ -76,5 +76,46 @@ class YaAbierto(unittest.TestCase):
                 web.sirve(8790, "0.0.0.0", abrir=False)
 
 
+class BusquedaEnSegundoPlano(unittest.TestCase):
+    def setUp(self):
+        web.TRABAJOS.clear()
+
+    def espera(self, tid):
+        import time
+        for _ in range(200):
+            r = web.estado_trabajo(tid)
+            if r["estado"] != "buscando":
+                return r
+            time.sleep(0.01)
+        self.fail("la búsqueda no terminó")
+
+    def test_devuelve_un_numero_al_instante_y_el_resultado_despues(self):
+        import time
+        def lenta(c):
+            time.sleep(0.2)
+            return {"resultados": [1, 2], "total": 2}
+        with mock.patch.object(web, "busca", lenta):
+            r = web.lanza_busqueda({"q": "x"})
+            self.assertEqual(web.estado_trabajo(r["trabajo"])["estado"], "buscando")
+            fin = self.espera(r["trabajo"])
+        self.assertEqual((fin["estado"], fin["resp"]["total"]), ("hecho", 2))
+
+    def test_un_error_se_cuenta_en_vez_de_perderse(self):
+        def rota(c):
+            raise ValueError("falla la tienda")
+        with mock.patch.object(web, "busca", rota):
+            fin = self.espera(web.lanza_busqueda({"q": "x"})["trabajo"])
+        self.assertEqual((fin["estado"], fin["error"]), ("error", "falla la tienda"))
+
+    def test_numero_desconocido(self):
+        self.assertEqual(web.estado_trabajo("no-existe"), {"estado": "desconocido"})
+
+    def test_los_trabajos_viejos_se_limpian(self):
+        web.TRABAJOS["viejo"] = {"estado": "hecho", "resp": {}, "ts": 0}
+        with mock.patch.object(web, "busca", lambda c: {}):
+            self.espera(web.lanza_busqueda({"q": "x"})["trabajo"])
+        self.assertNotIn("viejo", web.TRABAJOS)
+
+
 if __name__ == "__main__":
     unittest.main()
