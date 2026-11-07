@@ -22,8 +22,11 @@ class Base(unittest.TestCase):
         self.n = mock.patch.object(notifica, "envia", lambda c, a, t: self.enviados.append((c, a, t)) or {})
         self.n.start()
         self.idioma_ficha = None          # lo que «lee» la ficha del producto: None, 'es', 'en' u 'otro'
+        self.agotado_ficha = None
+        self.preventa_ficha = None
         self.fichas = []
-        self.v = mock.patch("buscatron.motor.verifica_idioma", lambda x, lista=None: self.fichas.append(x["url"]) or self.idioma_ficha)
+        self.v = mock.patch("buscatron.motor.ficha", lambda x, lista=None: self.fichas.append(x["url"]) or
+                            {"idioma": self.idioma_ficha, "agotado": self.agotado_ficha, "preventa": self.preventa_ficha})
         self.t = mock.patch("buscatron.tiendas.carga", lambda: [])
         self.v.start()
         self.t.start()
@@ -149,11 +152,22 @@ class Avisos(Base):
         self.idioma_ficha = "es"
         self.assertNotIn("no verificado", self.busca(30)["avisos"][0]["motivo"])
 
-    def test_con_cualquier_idioma_no_se_consultan_fichas(self):
+    def test_con_cualquier_idioma_la_ficha_no_filtra_por_idioma(self):
         self.sid = seguimiento.guarda({"consulta": "marvel", "objetivo": "40", "castellano": False})
         self.idioma_ficha = "otro"
         self.assertEqual(len(self.busca(30)["avisos"]), 1)
-        self.assertEqual(self.fichas, [])
+
+    def test_si_la_ficha_dice_agotado_no_se_avisa(self):
+        self.sid = seguimiento.guarda({"consulta": "marvel", "objetivo": "40", "canales": "telegram"})
+        self.agotado_ficha = True
+        self.assertEqual((self.busca(30)["avisos"], self.enviados), ([], []))
+
+    def test_si_la_ficha_dice_preventa_solo_avisa_con_preventas_activadas(self):
+        self.sid = seguimiento.guarda({"consulta": "marvel", "objetivo": "40"})
+        self.preventa_ficha = True
+        self.assertEqual(self.busca(30)["avisos"], [])
+        seguimiento.guarda({"id": self.sid, "consulta": "marvel", "objetivo": "40", "opciones": {"preventas": True}})
+        self.assertEqual(len(self.busca(29)["avisos"]), 1)
 
     def test_modo_estricto_tambien_exige_la_ficha(self):
         self.sid = seguimiento.guarda({"consulta": "marvel", "objetivo": "40", "opciones": {"idioma": "estricto"}})

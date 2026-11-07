@@ -3,6 +3,18 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.9.3] - 2026-11-07
+
+### Corregido
+- **Precio erróneo en El Taller del Modelista**: se mostraba el descuento («-2,59 €») en lugar del precio (22,40 €). Ahora se ignoran los importes con signo menos y los de clases de descuento («discount», «descuento», «ahorro»…), y se usa el precio de los microdatos (`itemprop="price"`) cuando la tienda lo da. Se borraron del historial los 9 precios falsos de 2,59 €, que además marcaban un «Mínimo histórico» falso.
+- **Stock de los microdatos**: `itemprop="availability"` con *OutOfStock* o *PreOrder* marca el producto como agotado o preventa (el Shadowlands de El Taller del Modelista es una preventa).
+- **Avisos de productos sin stock**: antes de avisar se lee la ficha de cada candidato (datos de schema.org) y no se avisa si dice agotado, ni si dice preventa salvo que el seguimiento incluya preventas. Se recuerda 6 horas por producto (tabla `fichas`).
+- **Bixoto** pasa a «solo enlace» con «Pegar resultados»: cada búsqueda automática acababa en un bloqueo temporal de la IP.
+- 5 pruebas nuevas (123 en total).
+
+### Notas
+- Tablerum anuncia «Motivos Siniestros» como disponible tanto en el listado como en la ficha (*InStock*, con botón de compra), así que BuscaTron no puede saber que no hay stock; el aviso se ocultó a mano.
+
 ## [0.9.2] - 2026-11-07
 
 ### Cambiado

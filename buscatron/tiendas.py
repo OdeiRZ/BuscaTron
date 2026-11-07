@@ -33,6 +33,7 @@ CONOCIDAS = {
 # Tiendas que bloquean cualquier acceso automático: no se consultan, solo se ofrece el enlace de búsqueda.
 MANUALES = {
     "ferreteriaibermadrid.es": "https://ferreteriaibermadrid.es/#3273/fullscreen/m=and&q={q}",
+    "bixoto.com": "https://bixoto.com/es?search={q}",     # bloquea la IP tras unas pocas consultas automáticas
 }
 
 

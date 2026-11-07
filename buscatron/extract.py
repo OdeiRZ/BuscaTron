@@ -9,7 +9,7 @@ from urllib.parse import parse_qsl, urlencode, urljoin, urlparse, urlunparse
 PRECIO = re.compile(r"(\d{1,3}(?:\.\d{3})*(?:,\d{1,2})|\d+(?:\.\d{1,2})?)\s*(?:€|eur)", re.I)
 PRECIO_ANTES = re.compile(r"(?:€|eur)\s*(\d{1,3}(?:\.\d{3})*(?:,\d{1,2})|\d+(?:[.,]\d{1,2})?)", re.I)
 TACHADO_PARTES = {"old", "regular", "before", "compare", "was", "strike", "strikethrough", "through", "tachado", "tachada", "antes",
-                  "original", "msrp"}
+                  "original", "msrp", "discount", "descuento", "saving", "savings", "ahorro", "ahorras", "reduction", "rebaja"}
 
 
 def es_tachado(attrs):
@@ -128,10 +128,16 @@ class _Parser(HTMLParser):
                        "clase_next": bool(re.search(r"\bnext\b|siguiente", etiquetas, re.I))}
         if tag == "img" and self._a is not None and a.get("alt"):
             self._a["txt"].append(a["alt"])
-        if tag == "meta" and a.get("itemprop") == "price" and a.get("content"):
+        if a.get("itemprop") == "price" and a.get("content") and not self._tachado:    # precio de los microdatos (el bueno)
             v = a_numero(a["content"])
             if v:
                 self.eventos.append(("p", v))
+        if a.get("itemprop") == "availability" and a.get("content"):                  # stock de los microdatos
+            disp = a["content"].lower()
+            if any(k in disp for k in ("outofstock", "soldout", "discontinued")):
+                self.eventos.append(("x", "Agotado"))
+            elif any(k in disp for k in ("preorder", "presale")):
+                self.eventos.append(("x", "Preventa"))
 
     def handle_endtag(self, tag):
         if tag in ("script", "style", "noscript") and self._skip:
@@ -172,6 +178,8 @@ class _Parser(HTMLParser):
         if not self._tachado:
             for rx in (PRECIO, PRECIO_ANTES):
                 for m in rx.finditer(d):
+                    if d[:m.start()].rstrip().endswith(("-", "−", "–")):      # «-2,59 €» es un descuento, no un precio
+                        continue
                     v = a_numero(m.group(1))
                     if v:
                         self.eventos.append(("p", v))

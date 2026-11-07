@@ -99,6 +99,28 @@ class Tachados(unittest.TestCase):
         self.assertEqual([x["precio"] for x in r], [24.95])
 
 
+class DescuentosYMicrodatos(unittest.TestCase):
+    TALLER = ('<article><h2><a href="/65082-shadowlands.html">Marvel Champions: Shadowlands - Pack de Escenarios.</a></h2>'
+              '<div class="product-price-and-shipping"><span class="regular-price">24,99 €</span>'
+              '<span class="discount-amount discount-product">-2,59 €</span><div itemprop="offers">'
+              '<meta itemprop="availability" content="https://schema.org/PreOrder" />'
+              '<span class="price" itemprop="price" content="22.4"> 22,40 € </span></div></div>'
+              '<ul><li class="product-flag discount">-2,59 €</li></ul></article>')
+
+    def test_el_descuento_no_es_el_precio(self):            # El Taller del Modelista: salía 2,59 € en vez de 22,40 €
+        r = extract.extrae(self.TALLER, "https://t.es/", "marvel champions")
+        self.assertEqual(r[0]["precio"], 22.4)
+
+    def test_disponibilidad_de_los_microdatos(self):
+        self.assertTrue(extract.extrae(self.TALLER, "https://t.es/", "marvel champions")[0]["preventa"])
+        agotado = self.TALLER.replace("PreOrder", "OutOfStock")
+        self.assertTrue(extract.extrae(agotado, "https://t.es/", "marvel champions")[0]["agotado"])
+
+    def test_un_precio_negativo_suelto_no_cuenta(self):
+        h = '<a href="/a">Marvel Champions Uno</a><span>Ahorras -5,00 €</span><b>30,00 €</b>'
+        self.assertEqual(extract.extrae(h, "https://t.es/", "marvel champions")[0]["precio"], 30.0)
+
+
 class Vinted(unittest.TestCase):
     def test_titulo_estado_y_precio_salen_del_title(self):
         h = ('<a href="/items/1-a" title="Sleeves Marvel Champions, Marca: Marvel, Estado: Muy bueno, 2.50 €, 3.25 €"></a>'

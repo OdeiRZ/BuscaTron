@@ -172,6 +172,41 @@ def verifica_idioma(x, lista=None):
     return cod
 
 
+FICHA_HORAS = 6       # el stock cambia: la ficha se vuelve a leer pasado este tiempo
+
+
+def ficha(x, lista=None):
+    """Lo que dice la ficha del producto: {'idioma': 'es'|'en'|'otro'|None, 'agotado': bool|None, 'preventa': bool|None}.
+    None = no se pudo saber. Sirve para no avisar de algo que en su ficha está agotado, en preventa o en otro idioma
+    (el listado de algunas tiendas no lo dice). Se guarda unas horas para no repetir la consulta."""
+    nada = {"idioma": None, "agotado": None, "preventa": None}
+    if "btitem=" in x["url"]:
+        return nada                                       # lo importado a mano no tiene ficha
+    with bd.conecta() as c:
+        f = c.execute("SELECT idioma, agotado, preventa, ts FROM fichas WHERE url=?", (x["url"],)).fetchone()
+    if f and time.time() - f["ts"] < FICHA_HORAS * 3600:
+        return {"idioma": f["idioma"] or None, "agotado": None if f["agotado"] is None else bool(f["agotado"]),
+                "preventa": None if f["preventa"] is None else bool(f["preventa"])}
+    t = next((t for t in (lista or cfg.carga()) if t["host"] == x.get("tienda")), {})
+    try:
+        if t.get("js") and navegador.disponible() and ajustes.carga()["usar_navegador"]:
+            st, html = navegador.get(x["url"], visible=False)
+        else:
+            st, html = fetch.get(x["url"], timeout=20)
+    except Exception:
+        return nada
+    if st != 200:
+        return nada
+    datos = extract.datos_producto(html, x["url"]) or {}
+    r = {"idioma": extract.codigo_idioma(extract.idioma_pagina(html)),
+         "agotado": datos.get("agotado") if datos else None, "preventa": datos.get("preventa") if datos else None}
+    with bd.conecta() as c:
+        c.execute("INSERT OR REPLACE INTO fichas(url, idioma, agotado, preventa, ts) VALUES(?,?,?,?,?)",
+                  (x["url"], r["idioma"] or "", None if r["agotado"] is None else int(r["agotado"]),
+                   None if r["preventa"] is None else int(r["preventa"]), time.time()))
+    return r
+
+
 def pasa_idioma(titulo, modo):
     return permite(*idioma_de(titulo), modo)
 

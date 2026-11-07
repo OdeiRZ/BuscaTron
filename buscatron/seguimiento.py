@@ -151,15 +151,19 @@ def revisa(seg_id, enviar=True):
         limpia_avisos(seg_id, res, informe)
         opc = opciones_de(seg)
         modo = motor.modo_idioma(bool(seg["castellano"]), opc.get("idioma"))
-        if modo != "todos":
-            # Los títulos no siempre dicen el idioma (Amazon traduce los suyos): antes de avisar se mira la ficha del producto.
-            with bd.conecta() as c0:
-                dudosos = [x for x in res if not (x.get("idioma") == "es" and x.get("idioma_seguro")) and _motivo(c0, seg, {**x, "_ts": ts})]
-            lista = motor.cfg.carga()
-            for x in dudosos:
-                cod = motor.verifica_idioma(x, lista)
-                if cod:
-                    x["idioma"], x["idioma_seguro"], x["idioma_verificado"] = cod, True, True
+        # Antes de avisar se mira la ficha de cada candidato: el listado no siempre dice si está agotado, si es una
+        # preventa o en qué idioma está (Amazon traduce sus títulos).
+        with bd.conecta() as c0:
+            candidatos = [x for x in res if _motivo(c0, seg, {**x, "_ts": ts})]
+        lista = motor.cfg.carga()
+        for x in candidatos:
+            f = motor.ficha(x, lista)
+            if f["agotado"]:
+                x["agotado"] = True
+            if f["preventa"]:
+                x["preventa"] = True
+            if modo != "todos" and f["idioma"]:
+                x["idioma"], x["idioma_seguro"], x["idioma_verificado"] = f["idioma"], True, True
         nuevos = []
         with bd.conecta() as c:
             for x in res:
@@ -167,6 +171,8 @@ def revisa(seg_id, enviar=True):
                 motivo = _motivo(c, seg, x)
                 if not motivo:
                     continue
+                if (x.get("agotado") and seg["sin_agotados"]) or (x.get("preventa") and not opc.get("preventas")):
+                    continue                  # su ficha dice que está agotado o en preventa
                 if modo != "todos" and not motor.permite(x.get("idioma", "?"), x.get("idioma_seguro", False), modo):
                     continue                  # su ficha dice que no está en castellano
                 if modo != "todos" and not (x.get("idioma") == "es" and x.get("idioma_seguro")):
