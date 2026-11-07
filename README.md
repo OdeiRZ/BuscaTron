@@ -6,7 +6,7 @@ Buscador y vigilante de precios **local** para tiendas online españolas. Pensad
 - **Datos en vivo**: no usa cachés ni comparadores intermedios, así que el precio es el que ves en la tienda.
 - **Tus datos se quedan en tu equipo**: lista de tiendas, historial y tokens se guardan en archivos locales que no se suben al repositorio.
 
-> Estado: **versión funcional** (v0.9.3). Consulta el [CHANGELOG](CHANGELOG.md).
+> Estado: **versión funcional** (v0.9.4). Consulta el [CHANGELOG](CHANGELOG.md).
 
 ## Inicio rápido
 
@@ -51,8 +51,8 @@ La web está pensada para móvil (probada a 360 px) y escritorio. Arranca con el
 - Tiendas: actívalas o desactívalas con un toque, añade otras con el dominio (`ejemplo.es`) y, en «Gestionar tiendas», **edita su nombre, su dirección o URL de búsqueda, el envío y el modo «solo enlace»** cuando quieras. Si el buscador de una web no se detecta, pega una URL de búsqueda con `{q}` donde va el producto: `https://ejemplo.es/buscar?q={q}`. Cambiar la dirección a otro dominio hace que se vuelva a descubrir su buscador.
 - **Solo enlace**: marca así las tiendas que bloquean el acceso automático (por ejemplo Wallapop). No se consultan, pero cada búsqueda te ofrece su enlace ya preparado para abrirlo tú y un botón **📋 Pegar resultados** para [importar a mano](#importar-a-mano) lo que veas en ellas.
 
-### 👁️ Seguimiento
-Guarda una búsqueda y deja que BuscaTron la revise sola cada X horas mientras esté abierto (con el [arranque con Windows](#arranque-con-windows-y-bandeja), siempre).
+### 👁️ Vigiladas
+Pulsa «Vigilar esta búsqueda» (o crea una en la pestaña Vigiladas) y deja que BuscaTron la revise sola cada X horas mientras esté abierto (con el [arranque con Windows](#arranque-con-windows-y-bandeja), siempre).
 - **Aviso por precio objetivo** («menos de 39 €»), por **bajada respecto a la media histórica** del artículo («un 15 % menos de lo habitual»), o por ambos.
 - Cada seguimiento lleva las mismas opciones que la búsqueda: preventas, envío, segunda mano, otras webs y páginas por tienda.
 - **Comprueba la ficha del producto** antes de avisar: si su ficha dice que está agotado o en preventa (y no las incluyes), no avisa, aunque el listado de la tienda no lo diga. También el idioma (ver [Idioma de los juegos](#idioma-de-los-juegos)): un juego en francés no te avisa aunque su título esté en español.
@@ -78,28 +78,28 @@ Los títulos de las tiendas casi nunca dicen el idioma (en una muestra real, el 
 
 | Etiqueta | Significa |
 |---|---|
-| **Castellano** (verde) | el título lo dice: «Castellano», «Español» |
-| **Parece castellano** (verde) | se deduce: artículos y términos españoles («Pack de héroes», «La Tiranía del Cráneo Rojo»), o la mayoría de lo que vende esa tienda está en castellano |
-| **Inglés** / **Otro idioma** (rojo) | el título lo dice: «Inglés», «Français», o frases inglesas como «Players», «Playing Time», «Ages 14+» |
-| **Parece inglés** (rojo) | se deduce por palabras inglesas sin ninguna española («Hero Pack … Card Game») |
+| **En castellano** (verde) | el título lo dice: «Castellano», «Español» |
+| **Probablemente en castellano** (verde) | se deduce: artículos y términos españoles («Pack de héroes», «La Tiranía del Cráneo Rojo»), o la mayoría de lo que vende esa tienda está en castellano |
+| **En inglés** / **En otro idioma** (rojo) | el título lo dice: «Inglés», «Français», o frases inglesas como «Players», «Playing Time», «Ages 14+» |
+| **Probablemente en inglés** (rojo) | se deduce por palabras inglesas sin ninguna española («Hero Pack … Card Game») |
 | *(sin etiqueta)* | no hay pistas |
 
-El selector **«Idioma de los juegos»** (en la búsqueda y en cada seguimiento) tiene tres modos:
-- **Solo castellano** (por defecto): oculta solo lo que **dice expresamente** otro idioma. Lo dudoso se muestra, con su etiqueta.
-- **Castellano estricto**: deja solo lo que **está o parece** en castellano. Es más seguro, pero también oculta los títulos sin pistas.
+El selector **«Idioma del juego»** (en la búsqueda y en cada seguimiento) tiene tres modos:
+- **En castellano** (por defecto): oculta solo lo que **dice expresamente** estar en otro idioma. Lo dudoso se muestra, con su etiqueta.
+- **Solo castellano seguro**: deja solo lo que **está o parece** en castellano. Es más seguro, pero también oculta los títulos sin pistas.
 - **Cualquier idioma**: no filtra.
 
-**La ficha manda en los avisos.** Algunas tiendas, sobre todo Amazon, traducen los títulos de sus anuncios: «Extensión Marvel Champions: Deadpool» puede ser la edición francesa. Por eso, antes de enviar un aviso de un seguimiento, BuscaTron abre la **ficha del producto** y lee su campo «Idioma» («Idioma: Francés»): si no es castellano, no avisa. Si la ficha no dice el idioma o no se puede leer, avisa igualmente pero el motivo lo indica («idioma no verificado»). El resultado se recuerda 30 días, así que cada ficha se consulta una vez. Con «Cualquier idioma» no se consulta ninguna ficha.
+**La ficha manda en los avisos.** Algunas tiendas, sobre todo Amazon, traducen los títulos de sus anuncios: «Extensión Marvel Champions: Deadpool» puede ser la edición francesa. Por eso, antes de enviar un aviso de un seguimiento, BuscaTron abre la **ficha del producto** y lee su campo «Idioma» («Idioma: Francés»): si no es castellano, no avisa. Si la ficha no dice el idioma o no se puede leer, avisa igualmente pero el motivo lo indica («idioma sin confirmar»). El resultado se recuerda 30 días, así que cada ficha se consulta una vez. Con «Cualquier idioma» no se consulta ninguna ficha.
 
 ## Importar a mano
 
 Para las tiendas que no se pueden consultar solas (por ejemplo **Ferretería Ibérica**, cuya web está detrás de una comprobación de Cloudflare que rechaza cualquier navegador controlado por un programa), **tú miras en tu navegador y BuscaTron lee lo que copies**:
 
-1. En los resultados, en «Para revisar a mano», abre el enlace de la tienda: ya lleva tu búsqueda puesta.
+1. En los resultados, en «Tiendas que tienes que mirar tú», abre el enlace de la tienda: ya lleva tu búsqueda puesta.
 2. En esa página selecciona todo (Ctrl+A) y copia (Ctrl+C). En el móvil: mantén pulsado, «Seleccionar todo» y «Copiar».
-3. Pulsa **📋 Pegar resultados**, pega el texto y pulsa **Importar**.
+3. Pulsa **📋 Pegar resultados**, pega el texto y pulsa **Añadir a los resultados**.
 
-Los avisos de productos importados lo indican («precio importado a mano hace 5 h, no en directo»), porque BuscaTron no puede comprobar esa tienda por su cuenta. Los productos y precios se mezclan **al instante** con el resto de la lista (y con el historial, las gráficas y los avisos de los seguimientos), con la etiqueta «Importado hace X h». Se recuerdan **72 horas** y se guardan también en la búsqueda reciente, así que no hace falta repetirlo al volver.
+Los avisos de productos importados lo indican («precio pegado a mano hace 5 h, sin comprobar en directo»), porque BuscaTron no puede comprobar esa tienda por su cuenta. Los productos y precios se mezclan **al instante** con el resto de la lista (y con el historial, las gráficas y los avisos de los seguimientos), con la etiqueta «Pegado a mano hace X h». Se recuerdan **72 horas** y se guardan también en la búsqueda reciente, así que no hace falta repetirlo al volver.
 
 - Acepta el texto de la página o su código HTML (en ese caso conserva los enlaces de cada producto). **No hace ninguna petición a la tienda.**
 - Se leen los productos cuyo título contiene tu búsqueda y que llevan un precio justo después; si hay dos precios seguidos (el anterior y el actual) se toma el menor. Las cabeceras («Resultados de búsqueda…»), los productos sin relación y los precios de lo que viene detrás no se cuentan. Reconoce «agotado» y «preventa» igual que en las demás tiendas. Probado con el texto real de Ferretería Ibérica: 47 productos leídos con sus precios.

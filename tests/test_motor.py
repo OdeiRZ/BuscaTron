@@ -244,7 +244,7 @@ class Cortesia(unittest.TestCase):
             raise TimeoutError("timed out")
         with mock.patch.object(motor, "_intenta", tienda_rota):
             h, r, err = motor._tienda({"host": "caida.es", "plantilla": "https://caida.es/?q={q}"}, "x")
-            self.assertIn("error", err)
+            self.assertIn("no se pudo conectar", err)
             h, r, err = motor._tienda({"host": "caida.es", "plantilla": "https://caida.es/?q={q}"}, "x")
             self.assertIn("no responde", err)
         self.assertEqual(len(llamadas), 1)                                                # la segunda vez ni se intenta

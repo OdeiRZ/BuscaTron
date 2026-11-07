@@ -66,7 +66,7 @@ class Avisos(Base):
         self.assertEqual(self.busca(36)["avisos"], [])          # 10 % menos: no basta
         r = self.busca(30)                                      # 25 % menos
         self.assertEqual(len(r["avisos"]), 1)
-        self.assertIn("media", r["avisos"][0]["motivo"])
+        self.assertIn("precio habitual", r["avisos"][0]["motivo"])
 
     def test_historial_insuficiente(self):
         self.sid = seguimiento.guarda({"consulta": "marvel", "bajo_historico": "10"})
@@ -131,9 +131,9 @@ class Avisos(Base):
         importado = {**item(31, url="https://f.es/importado"), "importado": time.time() - 5 * 3600}
         r = self.revisa_con([directo, importado], {"t.es": {"encontrados": 2, "error": None}})
         motivos = {x["url"]: x["motivo"] for x in r["avisos"]}
-        self.assertNotIn("importado", motivos["https://t.es/directo"])
-        self.assertIn("importado a mano hace 5 h, no en directo", motivos["https://f.es/importado"])
-        self.assertIn("no en directo", self.enviados[0][2])                     # y también en el mensaje de Telegram
+        self.assertNotIn("pegado", motivos["https://t.es/directo"])
+        self.assertIn("pegado a mano hace 5 h, sin comprobar en directo", motivos["https://f.es/importado"])
+        self.assertIn("sin comprobar en directo", self.enviados[0][2])                     # y también en el mensaje de Telegram
 
     def test_una_ficha_en_otro_idioma_impide_el_aviso(self):          # el caso de «Extensión Marvel Champions: Deadpool» en francés
         self.sid = seguimiento.guarda({"consulta": "marvel", "objetivo": "40", "canales": "telegram"})
@@ -145,12 +145,12 @@ class Avisos(Base):
     def test_si_no_se_puede_leer_la_ficha_se_avisa_pero_se_dice(self):
         self.sid = seguimiento.guarda({"consulta": "marvel", "objetivo": "40"})
         self.idioma_ficha = None
-        self.assertIn("idioma no verificado", self.busca(30)["avisos"][0]["motivo"])
+        self.assertIn("idioma sin confirmar", self.busca(30)["avisos"][0]["motivo"])
 
     def test_una_ficha_en_castellano_avisa_sin_reservas(self):
         self.sid = seguimiento.guarda({"consulta": "marvel", "objetivo": "40"})
         self.idioma_ficha = "es"
-        self.assertNotIn("no verificado", self.busca(30)["avisos"][0]["motivo"])
+        self.assertNotIn("sin confirmar", self.busca(30)["avisos"][0]["motivo"])
 
     def test_con_cualquier_idioma_la_ficha_no_filtra_por_idioma(self):
         self.sid = seguimiento.guarda({"consulta": "marvel", "objetivo": "40", "castellano": False})

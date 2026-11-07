@@ -3,6 +3,22 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.9.4] - 2026-11-07
+
+### Cambiado
+- **Nombres y mensajes más claros en toda la aplicación**, con un mismo nombre para cada cosa:
+  - La pestaña «Seguimiento» pasa a **«Vigiladas»**, a juego con el botón «Vigilar esta búsqueda»; sus tarjetas dicen en frases completas cuándo avisan («Te avisa si cuesta 39,00 € o menos»), dónde («pestaña Avisos y Telegram») y cuándo se revisan («se revisa sola cada 12 h; la próxima, dentro de 5,8 h»).
+  - Filtros: «Solo títulos que contengan» y «Descartar títulos que contengan» en vez de «Debe contener» y «Excluir palabras»; «Resultados que se muestran».
+  - Idioma: modos «En castellano», «Solo castellano seguro» y «Cualquier idioma», explicados debajo; etiquetas «En castellano», «Probablemente en castellano», «En inglés»…
+  - Tiendas bloqueadas: «Tiendas que tienes que mirar tú», con «Pegar resultados» y «Añadir a los resultados»; la etiqueta pasa a «Pegado a mano hace X h».
+  - Búsqueda guardada: «Búsqueda guardada hace X: los precios pueden haber cambiado», con el botón «Repetir».
+- **Mensajes de error de las tiendas que explican qué pasó**: «rechaza las consultas automáticas (error 403)», «no encuentra la página de búsqueda (error 404)», «no tiene nada que coincida con la búsqueda», «no responde; se volverá a probar dentro de N min», «pide demostrar que eres humano…».
+- **Motivo de los avisos** con el precio y en formato español: «cuesta 36,50 €, por debajo de tu objetivo de 39,00 €» o «un 18 % más barato que su precio habitual (44,95 €)».
+- Confirmaciones que dicen qué se conserva («Se borran también sus avisos; el historial de precios se conserva») y mensajes de conexión que dicen qué comprobar.
+
+### Corregido
+- En el móvil, la opción de idioma se cortaba, el botón de la búsqueda guardada se partía en tres líneas y los contadores de los desplegables se partían en dos. Las horas decimales se muestran con coma.
+
 ## [0.9.3] - 2026-11-07
 
 ### Corregido

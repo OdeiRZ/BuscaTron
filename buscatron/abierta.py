@@ -117,7 +117,7 @@ def busca(consulta, region="es", excluir_hosts=(), castellano=True, nav=None, ma
     """Devuelve (productos, mensaje). `excluir_hosts`: dominios ya consultados como tiendas."""
     urls, errores = buscadores(consulta, region, castellano)
     if not urls:
-        return [], "no se pudo consultar el buscador" + (f" ({'; '.join(errores)})" if errores else "")
+        return [], "no se pudo usar el buscador de internet" + (f" ({'; '.join(errores)})" if errores else "")
     elegidas, por_dominio = [], {}
     for u in urls:
         d = _dominio(u)
@@ -135,4 +135,4 @@ def busca(consulta, region="es", excluir_hosts=(), castellano=True, nav=None, ma
                 if x["url"] not in vistos:
                     vistos.add(x["url"])
                     items.append(x)
-    return items, f"sin precios legibles en las {len(elegidas)} webs revisadas" if not items else None
+    return items, f"no encontré precios en las {len(elegidas)} webs revisadas" if not items else None

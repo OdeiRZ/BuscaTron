@@ -5,7 +5,7 @@ import time
 
 from . import ajustes, bd, fetch, extract, descubre, importar, navegador, tiendas as cfg
 
-DESAFIO = "pide comprobación humana (captcha): activa «Mostrar la ventana» en Ajustes y resuélvela una vez"
+DESAFIO = "pide demostrar que eres humano (captcha). Para resolverlo tú, activa en Ajustes → Navegador la opción de abrir una ventana"
 MIN_HISTORIAL = 3
 PAUSA = 0.6                 # segundos entre dos peticiones seguidas a la misma tienda (para no parecer un ataque)
 MAX_INTENTOS = 4            # direcciones de búsqueda que se prueban en una tienda cuyo buscador no se conoce
@@ -20,7 +20,7 @@ def _candidatas(t, consulta, get):
         return [(t["plantilla"], cfg.url_busqueda(t["plantilla"], consulta))], None
     st, home = get(base + "/")
     if st != 200:
-        return [], f"portada HTTP {st}"
+        return [], f"su web no responde bien (error {st})"
     pl = descubre.plantilla(home, base + "/")
     urls = [(pl, cfg.url_busqueda(pl, consulta))] if pl else []
     urls += [(base + p, cfg.url_busqueda(base + p, consulta)) for p in cfg.PLANTILLAS]
@@ -36,13 +36,13 @@ def _intenta(t, consulta, get, paginas=1, con_estado=False):
             time.sleep(PAUSA)
         st, html = get(url)
         if st == 429:
-            return [], "limita las peticiones (429): vuelve a probar dentro de un rato"
+            return [], "pide esperar por demasiadas consultas (error 429): vuelve a probar más tarde"
         if st != 200:
-            err = f"HTTP {st}"
+            err = ("rechaza las consultas automáticas" if st in (401, 403) else "no encuentra la página de búsqueda" if st == 404 else "su web no responde bien") + f" (error {st})"
             continue
         items, sig = extract.analiza(html, url, consulta, con_estado=con_estado)
         if not items:
-            err = "sin resultados"
+            err = "no tiene nada que coincida con la búsqueda"
             continue
         t["plantilla"] = pl
         paginas_vistas, urls_vistas = {url}, {x["url"] for x in items}
@@ -65,7 +65,7 @@ def _intenta(t, consulta, get, paginas=1, con_estado=False):
             urls_vistas |= {x["url"] for x in nuevos}
             sig = sig2
         return items, None
-    return [], err or "sin buscador detectable"
+    return [], err or "no encuentro su buscador: añade la dirección de búsqueda en «Editar la lista de tiendas»"
 
 
 def _tienda(t, consulta, nav=None, paginas=1):
@@ -74,14 +74,14 @@ def _tienda(t, consulta, nav=None, paginas=1):
     estados = t.get("tipo") == "segunda_mano"
     caida = _caidas.get(h)
     if caida and time.time() - caida < REINTENTO_CAIDA:     # no insistir contra una web que no responde
-        return h, [], f"no responde (se vuelve a intentar en {int((caida + REINTENTO_CAIDA - time.time()) / 60) + 1} min)"
+        return h, [], f"no responde; se volverá a probar dentro de {int((caida + REINTENTO_CAIDA - time.time()) / 60) + 1} min"
     try:
         if not (nav and t.get("js")):
             r, err = _intenta(t, consulta, fetch.get, paginas, estados)
             if r:
                 return h, r, None
         if nav is None:
-            return h, [], (err or "sin resultados") + " (puede cargar con JavaScript: activa el navegador en Ajustes)"
+            return h, [], (err or "no tiene nada que coincida con la búsqueda") + " (quizá solo la lea un navegador: activa «Usar Chrome» en Ajustes)"
         visible = nav["visible"]
         get = lambda u: navegador.get(u, visible=visible, esperar_humano=90 if visible else 0)
         plant = t.get("plantilla")
@@ -91,13 +91,13 @@ def _tienda(t, consulta, nav=None, paginas=1):
             return h, r, None
         if plant is None:
             t["plantilla"] = None
-        return h, [], err or "sin resultados"
+        return h, [], err or "no tiene nada que coincida con la búsqueda"
     except navegador.Desafio:
         return h, [], DESAFIO
     except Exception as e:
         if isinstance(e, OSError):                           # tiempo agotado, conexión rechazada…
             _caidas[h] = time.time()
-        return h, [], f"error: {str(e)[:70]}"
+        return h, [], f"no se pudo conectar ({str(e)[:60]})"
 
 
 OTROS_IDIOMAS = re.compile(r"\b(ingles|inglesa|english|frances|francesa|francais|aleman|alemana|deutsch|italiano|italiana|portugues|portuguesa|polaco|polaca|neerlandes|ruso|rusa|players|playing time|minutes)\b|\bages \d+")

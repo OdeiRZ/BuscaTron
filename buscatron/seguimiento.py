@@ -121,14 +121,14 @@ def limpia_avisos(seg_id, res, informe):
 def _motivo(c, seg, x):
     """Devuelve el motivo del aviso o None."""
     if seg["objetivo"] is not None and x["precio"] <= seg["objetivo"]:
-        return f"≤ tu objetivo ({seg['objetivo']:.2f} €)"
+        return f"cuesta {x['precio']:.2f} €, por debajo de tu objetivo de {seg['objetivo']:.2f} €".replace(".", ",")
     if seg["bajo_historico"]:
         previos = [r[0] for r in c.execute(
             "SELECT precio FROM precios WHERE url=? AND ts < ? AND agotado=0 AND preventa=0", (x["url"], x["_ts"]))]
         if len(previos) >= MIN_OBSERVACIONES:
             med = statistics.median(previos)
             if x["precio"] <= med * (1 - seg["bajo_historico"] / 100):
-                return f"{(1 - x['precio'] / med) * 100:.0f} % por debajo de su media ({med:.2f} €)"
+                return f"un {(1 - x['precio'] / med) * 100:.0f} % más barato que su precio habitual ({med:.2f} €)".replace(".", ",")
     return None
 
 
@@ -176,9 +176,9 @@ def revisa(seg_id, enviar=True):
                 if modo != "todos" and not motor.permite(x.get("idioma", "?"), x.get("idioma_seguro", False), modo):
                     continue                  # su ficha dice que no está en castellano
                 if modo != "todos" and not (x.get("idioma") == "es" and x.get("idioma_seguro")):
-                    motivo += " · idioma no verificado"
+                    motivo += " · idioma sin confirmar"
                 if x.get("importado"):      # no se consulta en directo: es lo que el usuario pegó a mano
-                    motivo += f" · precio importado a mano {_edad(x['importado'])}, no en directo"
+                    motivo += f" · precio pegado a mano {_edad(x['importado'])}, sin comprobar en directo"
                 ult = c.execute("SELECT precio, ts FROM avisos WHERE seg_id=? AND url=? ORDER BY ts DESC LIMIT 1",
                                 (seg_id, x["url"])).fetchone()
                 if ult and x["precio"] >= ult["precio"] - 0.005 and ts - ult["ts"] < REAVISO_DIAS * 86400:
