@@ -3,6 +3,16 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.9.6] - 2026-11-07
+
+### Añadido
+- **Filtro «al menos una de estas»** (palabras o frases separadas por comas) en la búsqueda y en las búsquedas vigiladas. Permite vigilar todas las campañas de un juego con **una sola búsqueda** (el nombre del juego, que trae todo el catálogo) en lugar de una por campaña, que dependía del buscador de cada tienda y casi no encontraba nada. Ignora espacios y puntos: «shield» encuentra «S.H.I.E.L.D.».
+- 4 pruebas nuevas (130 en total), entre ellas una que comprueba que las opciones de una búsqueda vigilada existen de verdad en el motor.
+
+### Corregido
+- **Las búsquedas vigiladas con «resumen por Telegram» fallaban** (v0.9.5): la opción se pasaba al motor de búsqueda, que no la admite, y la revisión se habría interrumpido sin avisar. Las pruebas simulaban el motor y no lo detectaron.
+- Turol Games pone «Producto agotado» delante del título: ahora se quita del título y el producto cuenta como agotado.
+
 ## [0.9.5] - 2026-11-07
 
 ### Añadido

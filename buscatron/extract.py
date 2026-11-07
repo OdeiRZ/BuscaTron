@@ -220,8 +220,11 @@ def analiza(html, base, consulta, ventana=40, con_estado=False):
             titulo = titulo_desde_url(e[1])
         detalle = re.search(r"Estado:\s*([^,]+)", titulo)         # Vinted: «Título, Marca: X, Estado: Muy bueno, 1.00 €»
         titulo = re.split(r",\s*(?:Marca|Estado|Tama[ñn]o):", titulo)[0].strip()
+        marca = re.match(r"\s*(producto agotado|agotado|sin stock|fuera de stock)\s*[:\-–]?\s*", titulo, re.I)
+        if marca:                                    # Turol Games: «Producto agotado Marvel Champions…» dentro del título
+            titulo = titulo[marca.end():]
         preventa = bool(PREVENTA.search(titulo) or any(PREVENTA.search(t) for t in textos))
-        agotado = any(AGOTADO.search(t) for t in textos) or (not preventa and any(RESERVA.fullmatch(t.strip()) for t in textos))
+        agotado = bool(marca) or any(AGOTADO.search(t) for t in textos) or (not preventa and any(RESERVA.fullmatch(t.strip()) for t in textos))
         estado = ""
         if con_estado and detalle:
             estado = detalle.group(1).strip().lower()

@@ -121,6 +121,13 @@ class DescuentosYMicrodatos(unittest.TestCase):
         self.assertEqual(extract.extrae(h, "https://t.es/", "marvel champions")[0]["precio"], 30.0)
 
 
+class AgotadoEnElTitulo(unittest.TestCase):
+    def test_turol_pone_producto_agotado_delante_del_titulo(self):
+        h = '<a href="/p">Producto agotado Marvel Champions: Agentes de S.H.I.E.L.D.</a><b>40,49 €</b>'
+        x = extract.extrae(h, "https://t.es/", "marvel champions")[0]
+        self.assertEqual((x["titulo"], x["agotado"]), ("Marvel Champions: Agentes de S.H.I.E.L.D.", True))
+
+
 class Vinted(unittest.TestCase):
     def test_titulo_estado_y_precio_salen_del_title(self):
         h = ('<a href="/items/1-a" title="Sleeves Marvel Champions, Marca: Marvel, Estado: Muy bueno, 2.50 €, 3.25 €"></a>'

@@ -199,6 +199,14 @@ class Avisos(Base):
         self.assertEqual(len(self.enviados), 1)
         self.assertNotIn("resumen", self.enviados[0][1])
 
+    def test_las_opciones_que_recibe_el_motor_existen_de_verdad(self):
+        # el fallo de la v0.9.5: «resumen» se pasaba a motor.buscar, que no lo admite
+        import inspect
+        from buscatron import motor
+        motor_real = inspect.signature(motor.buscar.__wrapped__ if hasattr(motor.buscar, "__wrapped__") else motor.buscar)
+        opciones = {k: v for k, v in seguimiento.OPCIONES.items() if k not in seguimiento.NO_SON_DE_BUSQUEDA}
+        motor_real.bind("q", "", "", True, None, None, None, 1, castellano=True, **opciones)   # lanzaría TypeError
+
     def test_vaciar_avisos(self):
         self.sid = seguimiento.guarda({"consulta": "marvel", "objetivo": "40"})
         self.busca(30)

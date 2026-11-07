@@ -8,7 +8,8 @@ from . import bd, motor, notifica
 
 CAMPOS = ("nombre", "consulta", "incluir", "excluir", "pmin", "pmax", "objetivo", "bajo_historico",
           "sin_agotados", "castellano", "opciones", "canales", "cada_horas", "activo")
-OPCIONES = {"preventas": False, "con_envio": False, "segunda_mano": False, "abierta": False, "region": "es", "paginas": None, "idioma": None, "resumen": False}
+OPCIONES = {"preventas": False, "con_envio": False, "segunda_mano": False, "abierta": False, "region": "es", "paginas": None, "idioma": None, "resumen": False, "alguna": ""}
+NO_SON_DE_BUSQUEDA = ("resumen",)      # opciones del seguimiento que el motor no recibe
 MIN_OBSERVACIONES = 4      # mínimo de precios previos de un artículo para fiarse de su media
 REAVISO_DIAS = 30
 _cerrojo = threading.Lock()
@@ -46,7 +47,7 @@ def _opciones(o):
     return {"preventas": bool(o.get("preventas")), "con_envio": bool(o.get("con_envio")), "segunda_mano": bool(o.get("segunda_mano")),
             "abierta": bool(o.get("abierta")), "region": region, "paginas": int(min(max(paginas, 1), 6)) if paginas else None,
             "idioma": o.get("idioma") if o.get("idioma") in ("castellano", "estricto", "todos") else None,
-            "resumen": bool(o.get("resumen"))}
+            "resumen": bool(o.get("resumen")), "alguna": str(o.get("alguna") or "").strip()[:500]}
 
 
 def guarda(d):
@@ -148,7 +149,8 @@ def revisa(seg_id, enviar=True):
         ts = time.time()
         res, informe = motor.buscar(seg["consulta"], seg["incluir"], seg["excluir"], bool(seg["sin_agotados"]),
                                     None, seg["pmin"], seg["pmax"], seg_id,
-                                    castellano=bool(seg["castellano"]), **opciones_de(seg))
+                                    castellano=bool(seg["castellano"]),
+                                    **{k: v for k, v in opciones_de(seg).items() if k not in NO_SON_DE_BUSQUEDA})
         limpia_avisos(seg_id, res, informe)
         opc = opciones_de(seg)
         modo = motor.modo_idioma(bool(seg["castellano"]), opc.get("idioma"))

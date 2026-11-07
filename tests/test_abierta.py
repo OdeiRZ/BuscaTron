@@ -58,7 +58,7 @@ class Busca(unittest.TestCase):
 class OpcionesSeguimiento(unittest.TestCase):
     def test_se_normalizan_las_opciones(self):
         o = seguimiento._opciones({"preventas": 1, "abierta": True, "region": "marte", "paginas": "9", "con_envio": ""})
-        self.assertEqual(o, {"preventas": True, "con_envio": False, "segunda_mano": False, "abierta": True, "region": "es", "paginas": 6, "idioma": None, "resumen": False})
+        self.assertEqual(o, {"preventas": True, "con_envio": False, "segunda_mano": False, "abierta": True, "region": "es", "paginas": 6, "idioma": None, "resumen": False, "alguna": ""})
         self.assertIsNone(seguimiento._opciones(None)["paginas"])
 
     def test_opciones_de_un_seguimiento_antiguo(self):

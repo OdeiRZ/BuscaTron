@@ -78,7 +78,7 @@ def busca(c):
                             castellano=bool(c.get("castellano", True)), idioma=c.get("idioma") if c.get("idioma") in motor.MODOS_IDIOMA else None,
                             preventas=bool(c.get("preventas")), con_envio=bool(c.get("con_envio")), segunda_mano=bool(c.get("segunda_mano")),
                             abierta=bool(c.get("abierta")), region=c.get("region") if c.get("region") in ("es", "ue", "mundo") else "es",
-                            paginas=int(_num(c.get("paginas", "")) or 0) or None)
+                            paginas=int(_num(c.get("paginas", "")) or 0) or None, alguna=str(c.get("alguna") or ""))
     resp = {"resultados": res[: int(c.get("top") or 50)], "total": len(res), "informe": inf,
             "webs": sorted({x["tienda"] for x in res if x.get("origen") == "web"})}
     if c.get("guardar", True) and c.get("q", "").strip():        # se recuerda para no tener que repetirla

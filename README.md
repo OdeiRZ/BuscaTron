@@ -6,7 +6,7 @@ Buscador y vigilante de precios **local** para tiendas online españolas. Pensad
 - **Datos en vivo**: no usa cachés ni comparadores intermedios, así que el precio es el que ves en la tienda.
 - **Tus datos se quedan en tu equipo**: lista de tiendas, historial y tokens se guardan en archivos locales que no se suben al repositorio.
 
-> Estado: **versión funcional** (v0.9.5). Consulta el [CHANGELOG](CHANGELOG.md).
+> Estado: **versión funcional** (v0.9.6). Consulta el [CHANGELOG](CHANGELOG.md).
 
 ## Inicio rápido
 
@@ -38,7 +38,7 @@ La web está pensada para móvil (probada a 360 px) y escritorio. Arranca con el
 ### 🔎 Buscar
 - La búsqueda **sigue en BuscaTron aunque cierres o bloquees el móvil, cambies de app o recargues**: al volver se recoge sola el resultado.
 - Busca un producto en todas las tiendas activas y ve los **N más baratos**, con precio, tienda, enlace y etiquetas (preventa, segunda mano y su estado, mínimo histórico…).
-- Filtros: palabras que debe contener o excluir, precio mínimo y máximo, y **páginas leídas por tienda** (1 a 6).
+- Filtros: palabras que debe contener, **al menos una de varias** (separadas por comas; ideal para vigilar varias ediciones o expansiones con una sola búsqueda, p. ej. `tirania, galaxia, titan loco`; ignora espacios y puntos, así que `shield` encuentra «S.H.I.E.L.D.»), palabras a descartar, precio mínimo y máximo, y **páginas leídas por tienda** (1 a 6).
 - **Ocultar agotados** (activado por defecto). Reconoce «agotado», «sin stock», «en reposición» y «reserva», y descarta los productos que la tienda no puede enviar ya.
 - **Idioma de los juegos** (selector con tres modos y una etiqueta de idioma en cada producto; ver [Idioma de los juegos](#idioma-de-los-juegos)): por defecto *Solo castellano*.
 - En **«Más fuentes y opciones»** (se recuerdan entre búsquedas):
@@ -255,7 +255,7 @@ permitir_acceso_movil.bat     abre el cortafuegos para tu red local (pide admini
 python -m unittest discover -s tests
 ```
 
-126 pruebas, sin red. Cubren las reglas de aviso (objetivo, media histórica, no repetir, reaviso, limpieza de obsoletos), el extractor (precios tachados, texto oculto, títulos recortados, preventas, estados de segunda mano, páginas siguientes, datos de producto, envío), el motor (paginación, filtros, total con envío, mínimo histórico, historial), la búsqueda abierta, el filtro de IP y el PIN, la importación a mano y las búsquedas guardadas.
+130 pruebas, sin red. Cubren las reglas de aviso (objetivo, media histórica, no repetir, reaviso, limpieza de obsoletos), el extractor (precios tachados, texto oculto, títulos recortados, preventas, estados de segunda mano, páginas siguientes, datos de producto, envío), el motor (paginación, filtros, total con envío, mínimo histórico, historial), la búsqueda abierta, el filtro de IP y el PIN, la importación a mano y las búsquedas guardadas.
 
 ## Limitaciones conocidas
 

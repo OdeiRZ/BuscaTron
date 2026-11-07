@@ -109,6 +109,17 @@ class Buscar(unittest.TestCase):
         res, _ = motor.buscar("juego")                       # sin la opción, se ordena por precio
         self.assertEqual(self.titulos(res), ["Juego A", "Juego B"])
 
+    def test_alguna_de_estas_palabras(self):
+        res, _ = motor.buscar("juego", alguna="juego b, otra cosa", preventas=True)
+        self.assertEqual(self.titulos(res), ["Juego B"])
+        res, _ = motor.buscar("juego", alguna="  ,  ")                    # vacío: no filtra
+        self.assertEqual(self.titulos(res), ["Juego A", "Juego B"])
+
+    def test_alguna_ignora_espacios_y_puntos(self):                     # «shield» encuentra «S.H.I.E.L.D.»
+        self.items["a.es"] = [self.x("Marvel Champions: Agentes de S.H.I.E.L.D.", 38)]
+        res, _ = motor.buscar("juego", alguna="shield")
+        self.assertEqual(self.titulos(res), ["Marvel Champions: Agentes de S.H.I.E.L.D."])
+
     def test_minimo_historico(self):
         for p in (30, 28, 26):                                # tres observaciones previas más caras
             with bd.conecta() as c:

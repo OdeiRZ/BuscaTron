@@ -267,7 +267,7 @@ def historial_de(url):
 
 
 def buscar(consulta, incluir="", excluir="", ocultar_agotados=True, hosts=None, pmin=None, pmax=None, seg_id=None,
-           castellano=True, preventas=False, con_envio=False, segunda_mano=False, abierta=False, region="es", paginas=None, idioma=None):
+           castellano=True, preventas=False, con_envio=False, segunda_mano=False, abierta=False, region="es", paginas=None, idioma=None, alguna=""):
     """Devuelve (resultados ordenados por precio, informe por tienda).
     preventas: incluir productos en preventa · con_envio: ordenar por precio + envío · segunda_mano: incluir
     Vinted, Milanuncios… · abierta: buscar también en webs que no están en la lista (region: es | ue | mundo)."""
@@ -282,12 +282,15 @@ def buscar(consulta, incluir="", excluir="", ocultar_agotados=True, hosts=None, 
     activas = [t for t in activas if t not in manuales]
     por_host = {t["host"]: t for t in lista}
     inc = extract.normaliza(incluir).split()
+    frases = [f for f in (extract.normaliza(x).strip() for x in (alguna or "").split(",")) if f]   # basta con una (p. ej. nombres de campañas)
     exc = extract.normaliza(excluir).split()
     nav = {"visible": False} if aj["usar_navegador"] and navegador.disponible() else None   # siempre en segundo plano
 
     def pasa(x, prior=None):
         x["idioma"], x["idioma_seguro"] = idioma_con_tienda(x["titulo"], prior)
         n = extract.normaliza(x["titulo"])
+        if frases and not any(f in n or f.replace(" ", "") in n.replace(" ", "") for f in frases):
+            return False
         return (all(w in n for w in inc) and not any(w in n for w in exc)
                 and not (ocultar_agotados and x["agotado"])
                 and not (x.get("preventa") and not preventas)
