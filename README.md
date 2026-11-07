@@ -6,7 +6,7 @@ Buscador y vigilante de precios **local** para tiendas online españolas. Pensad
 - **Datos en vivo**: no usa cachés ni comparadores intermedios, así que el precio es el que ves en la tienda.
 - **Tus datos se quedan en tu equipo**: lista de tiendas, historial y tokens se guardan en archivos locales que no se suben al repositorio.
 
-> Estado: **versión funcional** (v0.11.0). Consulta el [CHANGELOG](CHANGELOG.md).
+> Estado: **versión funcional** (v0.11.1). Consulta el [CHANGELOG](CHANGELOG.md).
 
 ## Inicio rápido
 
@@ -38,9 +38,8 @@ La web está pensada para móvil (probada a 360 px) y escritorio. Arranca con el
 ### 🔎 Buscar
 - **Agrupa el mismo producto de varias tiendas** (opción «Agrupar», activada por defecto): una tarjeta por producto con su mejor precio y, desplegables, las demás tiendas. El producto se reconoce por sus palabras significativas (sin editorial, «expansión», «castellano», referencias de la tienda…) o, si usas «al menos una de estas», por la frase que encaja.
 - **Descuento sobre el precio de mercado**: «−19 % sobre su precio de mercado (44,99 €)», donde el precio de mercado es el que más se repite entre al menos 3 tiendas (sin contar la segunda mano, y contando también las tiendas que tu filtro de precio deja fuera).
-- Debajo de cada producto, tres acciones:
+- Debajo de cada producto, dos acciones:
   - **🎯 Avisarme a…**: un precio objetivo solo para ese producto («avísame de Civil War a 30 €»). Tus búsquedas vigiladas usan ese objetivo en vez del suyo cuando lo encuentran, en cualquier tienda; el producto lleva la etiqueta «🎯 Tu objetivo». Se ven y se quitan en Ajustes → «Objetivos por producto».
-  - **🧺 A la cesta**: ver [Cesta más barata](#cesta-más-barata).
   - **🚫 No me interesa** (ya lo tengo): oculta un producto para siempre, en todas las tiendas, en tus búsquedas y en los avisos. Se recupera en Ajustes → «Productos ocultos».
 - La búsqueda **sigue en BuscaTron aunque cierres o bloquees el móvil, cambies de app o recargues**: al volver se recoge sola el resultado.
 - Busca un producto en todas las tiendas activas y ve los **N más baratos**, con precio, tienda, enlace y etiquetas (preventa, segunda mano y su estado, mínimo histórico…).
@@ -145,15 +144,6 @@ El precio mostrado no incluye el envío salvo que lo configures:
 - En «Gestionar tiendas», cada tienda tiene **Envío (€)** y **Gratis desde (€)**. El botón **Detectar** busca en la portada de la tienda frases como «Envío gratis a partir de 50 €» y rellena los campos; es solo una pista, así que revísala.
 - Si el envío de una tienda es conocido, la tarjeta muestra «+ 4,95 € envío» o «envío gratis».
 - Con «Sumar el envío al precio», los resultados se ordenan por el **precio total** (precio + envío, o 0 si superas el mínimo gratuito).
-
-## Cesta más barata
-
-Para comprar varios productos a la vez. Añádelos con **🧺 A la cesta** desde los resultados y, en «🧺 Tu cesta» (encima de los resultados), pulsa **Calcular dónde comprar**:
-
-- Prueba todas las combinaciones de tiendas (las 6 más baratas de cada producto) y se queda con la que **menos cuesta en total, envíos incluidos**: cada tienda cobra su envío una vez, o nada si el pedido llega a su «gratis desde». A igual precio, prefiere menos tiendas (menos paquetes).
-- Te dice cuánto ahorras frente a comprar cada uno en su tienda más barata. Ejemplo: 32 € + 30 € en una tienda con envío gratis desde 60 € (62 €) frente a 30 € + 29 € + 4 € de envío en otra (63 €).
-- Si no sabes el envío de una tienda, se cuenta como 0 € y lo avisa: ponlo en «Tiendas → Editar la lista de tiendas».
-- La cesta se guarda en ese navegador con las ofertas de tu última búsqueda de cada producto, y **se actualiza sola** cada vez que una búsqueda vuelve a encontrarlo. La segunda mano no entra.
 
 ## Arranque con Windows y bandeja
 
@@ -276,7 +266,6 @@ buscatron/
   navegador.py     navegador opcional (Playwright + Chrome)
   tiendas.py       lista de tiendas, plantillas, segunda mano y tiendas «solo enlace»
   seguimiento.py   vigilancia, reglas de aviso y no repetición
-  cesta.py         cesta más barata: combinación de tiendas con envíos
   telegram_bot.py  órdenes por Telegram (/buscar, /vigiladas, /revisar)
   programador.py   revisiones automáticas cada X horas
   notifica.py      avisos por Telegram y correo
@@ -296,7 +285,7 @@ permitir_acceso_movil.bat     abre el cortafuegos para tu red local (pide admini
 python -m unittest discover -s tests
 ```
 
-152 pruebas, sin red. Cubren las reglas de aviso (objetivo de la búsqueda y del producto, media histórica, no repetir, reaviso, limpieza de obsoletos), la cesta más barata, el historial por producto, las órdenes del bot, el extractor (precios tachados, texto oculto, títulos recortados, preventas, estados de segunda mano, páginas siguientes, datos de producto, envío), el motor (paginación, filtros, total con envío, mínimo histórico, historial), la búsqueda abierta, el filtro de IP y el PIN, la importación a mano y las búsquedas guardadas.
+149 pruebas, sin red. Cubren las reglas de aviso (objetivo de la búsqueda y del producto, media histórica, no repetir, reaviso, limpieza de obsoletos), el historial por producto, las órdenes del bot, el extractor (precios tachados, texto oculto, títulos recortados, preventas, estados de segunda mano, páginas siguientes, datos de producto, envío), el motor (paginación, filtros, total con envío, mínimo histórico, historial), la búsqueda abierta, el filtro de IP y el PIN, la importación a mano y las búsquedas guardadas.
 
 ## Limitaciones conocidas
 

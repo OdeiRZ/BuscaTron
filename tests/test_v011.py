@@ -1,4 +1,4 @@
-"""Objetivo por producto, cesta más barata, historial por producto y órdenes por Telegram."""
+"""Objetivo por producto, historial por producto y órdenes por Telegram."""
 import os
 import sys
 import tempfile
@@ -7,7 +7,7 @@ import unittest
 from unittest import mock
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from buscatron import bd, cesta, motor, seguimiento, telegram_bot  # noqa: E402
+from buscatron import bd, motor, seguimiento, telegram_bot  # noqa: E402
 
 
 class ConBase(unittest.TestCase):
@@ -73,35 +73,6 @@ class Historial(ConBase):
         self.assertEqual(motor.rellena_claves(), 1)
         self.assertEqual(motor.rellena_claves(), 0)
         self.assertEqual(len(motor.historial_producto("c:" + motor.clave_producto("Era de Apocalipsis"))["puntos"]), 1)
-
-
-class Cesta(unittest.TestCase):
-    TIENDAS = {"a.es": {"envio": 5, "envio_gratis": 60}, "b.es": {"envio": 4}, "c.es": {}}
-
-    def test_juntar_en_una_tienda_sale_mejor_por_el_envio_gratis(self):
-        prods = [{"titulo": "X", "ofertas": [{"tienda": "a.es", "precio": 32, "url": "ax"}, {"tienda": "b.es", "precio": 30, "url": "bx"}]},
-                 {"titulo": "Y", "ofertas": [{"tienda": "a.es", "precio": 30, "url": "ay"}, {"tienda": "b.es", "precio": 29, "url": "by"}]}]
-        r = cesta.calcula(prods, self.TIENDAS)
-        self.assertEqual(r["total"], 62)                     # 32 + 30 en a.es, envío gratis desde 60
-        self.assertEqual([b["tienda"] for b in r["plan"]], ["a.es"])
-        self.assertEqual(r["ingenuo_total"], 63)             # 30 + 29 + 4 en b.es
-        self.assertEqual(r["ahorro"], 1)
-
-    def test_envio_desconocido_agotados_y_sin_ofertas(self):
-        prods = [{"titulo": "X", "ofertas": [{"tienda": "c.es", "precio": 10, "url": "cx"}, {"tienda": "a.es", "precio": 5, "url": "ax", "agotado": True}]},
-                 {"titulo": "Z", "ofertas": []}]
-        r = cesta.calcula(prods, self.TIENDAS)
-        self.assertEqual(r["total"], 10)
-        self.assertEqual(r["envios_desconocidos"], ["c.es"])
-        self.assertEqual(r["sin_ofertas"], ["Z"])
-        self.assertIn("error", cesta.calcula([{"titulo": "Z", "ofertas": []}], self.TIENDAS))
-
-    def test_muchos_productos_no_se_dispara(self):
-        prods = [{"titulo": f"P{i}", "ofertas": [{"tienda": f"t{j}.es", "precio": 10 + j, "url": f"{i}-{j}"} for j in range(8)]} for i in range(12)]
-        t0 = time.time()
-        r = cesta.calcula(prods, {})
-        self.assertLess(time.time() - t0, 10)
-        self.assertEqual(r["total"], 120)
 
 
 class Bot(unittest.TestCase):

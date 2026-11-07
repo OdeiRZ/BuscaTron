@@ -3,6 +3,11 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.11.1] - 2026-11-07
+
+### Eliminado
+- **Cesta más barata** (🧺): sin los gastos de envío de las tiendas configurados, su cálculo siempre coincidía con comprar cada producto en su tienda más barata, así que no aportaba nada. La fila de debajo de cada producto queda con «🎯 Avisarme a…» y «🚫 No me interesa». 3 pruebas menos (149).
+
 ## [0.11.0] - 2026-11-07
 
 ### Añadido

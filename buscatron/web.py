@@ -12,7 +12,7 @@ from hashlib import sha256
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from urllib.parse import parse_qs, urlparse
 
-from . import (ajustes, arranque, busquedas, cesta, extract, fetch, importar, motor, notifica, programador, seguimiento,
+from . import (ajustes, arranque, busquedas, extract, fetch, importar, motor, notifica, programador, seguimiento,
                telegram_bot, tiendas as cfg)
 
 TAILSCALE = ipaddress.ip_network("100.64.0.0/10")
@@ -278,8 +278,6 @@ class Handler(BaseHTTPRequestHandler):
             elif c.get("grupo"):
                 motor.pon_objetivo(c["grupo"], (c.get("titulo") or "").strip()[:200], _num(c.get("precio", "")))
             return list(motor.objetivos().values())
-        if ruta == "/api/cesta":              # 🧺 dónde comprar varios productos pagando menos (envíos incluidos)
-            return cesta.calcula(c.get("productos") or [], {t["host"]: t for t in cfg.carga()})
         if ruta == "/api/trabajo":
             return estado_trabajo(c.get("id", ""))
         if ruta == "/api/busquedas":
