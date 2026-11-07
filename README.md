@@ -6,11 +6,19 @@ Buscador y vigilante de precios **local** para tiendas online españolas. Pensad
 - **Datos en vivo**: no usa cachés ni comparadores intermedios, así que el precio es el que ves en la tienda.
 - **Tus datos se quedan en tu equipo**: lista de tiendas, historial y tokens se guardan en archivos locales que no se suben al repositorio.
 
-> Estado: **versión funcional** (v0.9.1). Consulta el [CHANGELOG](CHANGELOG.md).
+> Estado: **versión funcional** (v0.9.2). Consulta el [CHANGELOG](CHANGELOG.md).
 
 ## Inicio rápido
 
-Requiere Python 3.9 o superior (probado con 3.10). No hay nada que instalar para lo básico.
+Requiere Python 3.9 o superior (probado con 3.10 y 3.13). No hay nada que instalar para lo básico.
+
+En Windows se recomienda un entorno propio, que es lo que usan `BuscaTron.bat` y el arranque con Windows si existe:
+
+```
+py -3.13 -m venv .venv            # o la ruta completa de tu python.exe 3.13
+.venv\Scripts\python -m pip install playwright
+.venv\Scripts\python -m buscatron --arranque on
+```
 
 ```
 python -m buscatron --abrir              # interfaz web en http://127.0.0.1:8790
@@ -209,6 +217,7 @@ Se crean al usar la herramienta y no se suben al repositorio:
 | `config.json` | tokens de Telegram, PIN, ajustes de correo, de búsqueda y del navegador |
 | `navegador_perfil/` | sesión del navegador opcional |
 | `buscatron.log` | mensajes y errores cuando BuscaTron se inicia sin ventana |
+| `.venv/` | entorno de Python propio de BuscaTron (opcional) |
 
 ## Estructura
 

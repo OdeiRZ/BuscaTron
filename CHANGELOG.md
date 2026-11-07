@@ -3,6 +3,12 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.9.2] - 2026-11-07
+
+### Cambiado
+- **Python 3.13** (antes 3.10.0, cuya rama ya no recibe correcciones de seguridad): BuscaTron usa ahora un entorno propio (`.venv`, fuera del repositorio) con Python 3.13.17 y Playwright. `BuscaTron.bat` usa ese entorno si existe y, si no, el `python` del sistema; el arranque con Windows se recrea con `.venv\Scripts\python -m buscatron --arranque on`. Las 118 pruebas pasan con 3.13.
+- Instalación en paralelo, sin tocar los otros Python del equipo ni el `PATH`: `python` sigue siendo el de antes para el resto de proyectos.
+
 ## [0.9.1] - 2026-11-07
 
 ### Corregido
