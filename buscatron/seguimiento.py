@@ -8,7 +8,7 @@ from . import bd, motor, notifica
 
 CAMPOS = ("nombre", "consulta", "incluir", "excluir", "pmin", "pmax", "objetivo", "bajo_historico",
           "sin_agotados", "castellano", "opciones", "canales", "cada_horas", "activo")
-OPCIONES = {"preventas": False, "con_envio": False, "segunda_mano": False, "abierta": False, "region": "es", "paginas": None, "idioma": None}
+OPCIONES = {"preventas": False, "con_envio": False, "segunda_mano": False, "abierta": False, "region": "es", "paginas": None, "idioma": None, "resumen": False}
 MIN_OBSERVACIONES = 4      # mínimo de precios previos de un artículo para fiarse de su media
 REAVISO_DIAS = 30
 _cerrojo = threading.Lock()
@@ -45,7 +45,8 @@ def _opciones(o):
     paginas = _num(o.get("paginas", ""))
     return {"preventas": bool(o.get("preventas")), "con_envio": bool(o.get("con_envio")), "segunda_mano": bool(o.get("segunda_mano")),
             "abierta": bool(o.get("abierta")), "region": region, "paginas": int(min(max(paginas, 1), 6)) if paginas else None,
-            "idioma": o.get("idioma") if o.get("idioma") in ("castellano", "estricto", "todos") else None}
+            "idioma": o.get("idioma") if o.get("idioma") in ("castellano", "estricto", "todos") else None,
+            "resumen": bool(o.get("resumen"))}
 
 
 def guarda(d):
@@ -196,10 +197,27 @@ def revisa(seg_id, enviar=True):
             if len(nuevos) > 10:
                 lineas.append(f"… y {len(nuevos) - 10} más en la pestaña Avisos")
             envio = notifica.envia(canales, f"BuscaTron · {seg['nombre']}", "\n\n".join(lineas))
+        elif enviar and opc.get("resumen") and "telegram" in seg["canales"].split(","):
+            envio = notifica.envia(["telegram"], f"BuscaTron · {seg['nombre']} · resumen", resumen(seg, opc, modo, res, informe))
         return {"resultados": len(res), "avisos": nuevos, "envio": envio}
     finally:
         with _cerrojo:
             _en_curso.discard(seg_id)
+
+
+def resumen(seg, opc, modo, res, informe, n=5):
+    """Mensaje de una revisión sin avisos nuevos: los n más baratos que cumplen la búsqueda."""
+    validos = [x for x in res if not (x.get("agotado") and seg["sin_agotados"]) and not (x.get("preventa") and not opc.get("preventas"))
+               and (modo == "todos" or motor.permite(x.get("idioma", "?"), x.get("idioma_seguro", False), modo))]
+    validos.sort(key=lambda x: x["precio"])
+    caidas = sum(1 for i in informe.values() if i.get("error"))
+    lineas = [f"Sin avisos nuevos. Revisados {len(res)} resultados" + (f" ({caidas} tiendas sin respuesta)" if caidas else "") + "."]
+    if validos:
+        lineas.append(f"Los {min(n, len(validos))} más baratos ahora:")
+        lineas += [f"{x['precio']:.2f} € · {x['titulo']} ({x.get('tienda', '')})".replace(".", ",", 1) + f"\n{x['url']}" for x in validos[:n]]
+    else:
+        lineas.append("Ningún producto cumple ahora tu búsqueda.")
+    return "\n\n".join(lineas)
 
 
 def pendientes(ahora=None):

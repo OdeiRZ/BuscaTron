@@ -3,6 +3,16 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.9.5] - 2026-11-07
+
+### Añadido
+- **Ordenar los avisos**: selector «Ordenar por» en la pestaña Avisos, con más recientes, precio de menor a mayor, precio de mayor a menor, nombre (A-Z) y tienda (A-Z). Se recuerda la elección; con precios iguales desempata por nombre, y con nombres iguales por precio.
+- **Resumen por Telegram** (opción de cada búsqueda vigilada): si una revisión no trae avisos nuevos, manda igualmente un mensaje con los 5 más baratos que cumplen la búsqueda (sin agotados ni preventas, según la configuración) y cuántas tiendas no respondieron. Si hay avisos nuevos se manda el aviso, no el resumen.
+- 3 pruebas nuevas (126 en total).
+
+### Notas
+- Una revisión sin avisos nuevos no enviaba nada a Telegram, y una búsqueda vigilada con «Precio máximo» pero sin «Avisarme si cuesta como mucho» casi nunca avisa: el precio máximo solo filtra. Documentado en el README.
+
 ## [0.9.4] - 2026-11-07
 
 ### Cambiado

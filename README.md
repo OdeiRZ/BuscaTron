@@ -6,7 +6,7 @@ Buscador y vigilante de precios **local** para tiendas online españolas. Pensad
 - **Datos en vivo**: no usa cachés ni comparadores intermedios, así que el precio es el que ves en la tienda.
 - **Tus datos se quedan en tu equipo**: lista de tiendas, historial y tokens se guardan en archivos locales que no se suben al repositorio.
 
-> Estado: **versión funcional** (v0.9.4). Consulta el [CHANGELOG](CHANGELOG.md).
+> Estado: **versión funcional** (v0.9.5). Consulta el [CHANGELOG](CHANGELOG.md).
 
 ## Inicio rápido
 
@@ -57,11 +57,12 @@ Pulsa «Vigilar esta búsqueda» (o crea una en la pestaña Vigiladas) y deja qu
 - Cada seguimiento lleva las mismas opciones que la búsqueda: preventas, envío, segunda mano, otras webs y páginas por tienda.
 - **Comprueba la ficha del producto** antes de avisar: si su ficha dice que está agotado o en preventa (y no las incluyes), no avisa, aunque el listado de la tienda no lo diga. También el idioma (ver [Idioma de los juegos](#idioma-de-los-juegos)): un juego en francés no te avisa aunque su título esté en español.
 - No repite avisos: solo vuelve a avisar si el precio baja más, o pasados 30 días.
+- **Resumen por Telegram** (opcional, en cada búsqueda vigilada): si una revisión no trae avisos nuevos, te manda igualmente los 5 más baratos del momento, para saber que la vigilancia funciona. Ojo: «Precio máximo» solo filtra resultados; para que te avise hay que rellenar «Avisarme si cuesta como mucho» o el % de bajada.
 - **Revisión automática**: cada seguimiento se revisa solo cada X horas (por defecto 12) mientras BuscaTron esté en marcha, y la tarjeta muestra cuándo toca la próxima. Si el equipo estaba apagado, la revisión pendiente se lanza al encender, en menos de un minuto. Cada revisión actualiza los precios y el historial.
 - Revisar ahora, pausar, editar y borrar (al borrar un seguimiento se borran también sus avisos; el historial de precios se conserva).
 
 ### 🔔 Avisos
-Lista de todo lo que ha saltado, con el motivo, la tienda, el enlace y el historial (📈). Un contador rojo en la pestaña indica los nuevos.
+Lista de todo lo que ha saltado, con el motivo, la tienda, el enlace y el historial (📈). Se puede **ordenar** por fecha, por precio (de menor a mayor o al revés), por nombre o por tienda, y recuerda tu elección. Un contador rojo en la pestaña indica los nuevos.
 
 Cada revisión **retira los avisos que ya no cumplen tu búsqueda** (porque se agotó, es una preventa, está en otro idioma o salió de tu rango de precio), siempre que la tienda haya respondido: si una web falla, no se borra nada. Si un producto vuelve a estar disponible a un precio que cumple, avisa de nuevo. Con «Vaciar avisos» puedes limpiar la lista a mano, o quitar uno solo con la **✕** de su tarjeta: se oculta de la lista pero BuscaTron recuerda que ya te avisó, así que no vuelve a avisar de ese producto salvo que baje más de precio (o pasen 30 días).
 
@@ -254,7 +255,7 @@ permitir_acceso_movil.bat     abre el cortafuegos para tu red local (pide admini
 python -m unittest discover -s tests
 ```
 
-123 pruebas, sin red. Cubren las reglas de aviso (objetivo, media histórica, no repetir, reaviso, limpieza de obsoletos), el extractor (precios tachados, texto oculto, títulos recortados, preventas, estados de segunda mano, páginas siguientes, datos de producto, envío), el motor (paginación, filtros, total con envío, mínimo histórico, historial), la búsqueda abierta, el filtro de IP y el PIN, la importación a mano y las búsquedas guardadas.
+126 pruebas, sin red. Cubren las reglas de aviso (objetivo, media histórica, no repetir, reaviso, limpieza de obsoletos), el extractor (precios tachados, texto oculto, títulos recortados, preventas, estados de segunda mano, páginas siguientes, datos de producto, envío), el motor (paginación, filtros, total con envío, mínimo histórico, historial), la búsqueda abierta, el filtro de IP y el PIN, la importación a mano y las búsquedas guardadas.
 
 ## Limitaciones conocidas
 
