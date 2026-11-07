@@ -6,7 +6,7 @@ Buscador y vigilante de precios **local** para tiendas online españolas. Pensad
 - **Datos en vivo**: no usa cachés ni comparadores intermedios, así que el precio es el que ves en la tienda.
 - **Tus datos se quedan en tu equipo**: lista de tiendas, historial y tokens se guardan en archivos locales que no se suben al repositorio.
 
-> Estado: **versión funcional** (v0.9.6). Consulta el [CHANGELOG](CHANGELOG.md).
+> Estado: **versión funcional** (v0.10.0). Consulta el [CHANGELOG](CHANGELOG.md).
 
 ## Inicio rápido
 
@@ -36,6 +36,9 @@ Opciones: `--puerto N` (por defecto 8790) y `--host 127.0.0.1` para que solo sea
 La web está pensada para móvil (probada a 360 px) y escritorio. Arranca con el tema claro u oscuro de tu sistema y tiene un botón (🌙 / ☀️) en la cabecera para alternarlo; recuerda tu elección.
 
 ### 🔎 Buscar
+- **Agrupa el mismo producto de varias tiendas** (opción «Agrupar», activada por defecto): una tarjeta por producto con su mejor precio y, desplegables, las demás tiendas. El producto se reconoce por sus palabras significativas (sin editorial, «expansión», «castellano», referencias de la tienda…) o, si usas «al menos una de estas», por la frase que encaja.
+- **Descuento sobre el precio de mercado**: «−19 % sobre su precio de mercado (44,99 €)», donde el precio de mercado es el que más se repite entre al menos 3 tiendas (sin contar la segunda mano, y contando también las tiendas que tu filtro de precio deja fuera).
+- **🚫 Ya lo tengo / no me interesa**: oculta un producto para siempre, en todas las tiendas, en tus búsquedas y en los avisos. Se recupera en Ajustes → «Productos ocultos».
 - La búsqueda **sigue en BuscaTron aunque cierres o bloquees el móvil, cambies de app o recargues**: al volver se recoge sola el resultado.
 - Busca un producto en todas las tiendas activas y ve los **N más baratos**, con precio, tienda, enlace y etiquetas (preventa, segunda mano y su estado, mínimo histórico…).
 - Filtros: palabras que debe contener, **al menos una de varias** (separadas por comas; ideal para vigilar varias ediciones o expansiones con una sola búsqueda, p. ej. `tirania, galaxia, titan loco`; ignora espacios y puntos, así que `shield` encuentra «S.H.I.E.L.D.»), palabras a descartar, precio mínimo y máximo, y **páginas leídas por tienda** (1 a 6).
@@ -69,6 +72,8 @@ Cada revisión **retira los avisos que ya no cumplen tu búsqueda** (porque se a
 ### ⚙️ Ajustes
 - **Búsqueda**: páginas que se leen por tienda por defecto.
 - **Arranque con Windows**: interruptor para iniciar BuscaTron al encender el equipo.
+- **Estado de las tiendas**: cuántas de sus últimas 10 consultas dieron resultados, cuándo fue el último y su último problema, con un botón para desactivarla; avisa de las que nunca dan nada.
+- **Productos ocultos**, para volver a mostrarlos.
 - **Telegram** y **correo (SMTP)** para recibir los avisos, con botón de prueba.
 - **Acceso desde el móvil** y PIN opcional.
 - **Navegador**: usar tu Chrome para tiendas que cargan con JavaScript.
@@ -100,7 +105,7 @@ Para las tiendas que no se pueden consultar solas (por ejemplo **Ferretería Ib�
 2. En esa página selecciona todo (Ctrl+A) y copia (Ctrl+C). En el móvil: mantén pulsado, «Seleccionar todo» y «Copiar».
 3. Pulsa **📋 Pegar resultados**, pega el texto y pulsa **Añadir a los resultados**.
 
-Los avisos de productos importados lo indican («precio pegado a mano hace 5 h, sin comprobar en directo»), porque BuscaTron no puede comprobar esa tienda por su cuenta. Los productos y precios se mezclan **al instante** con el resto de la lista (y con el historial, las gráficas y los avisos de los seguimientos), con la etiqueta «Pegado a mano hace X h». Se recuerdan **72 horas** y se guardan también en la búsqueda reciente, así que no hace falta repetirlo al volver.
+Unas 12 horas antes de que caduquen, BuscaTron te lo **recuerda por Telegram** (una vez por pegado). Los avisos de productos importados lo indican («precio pegado a mano hace 5 h, sin comprobar en directo»), porque BuscaTron no puede comprobar esa tienda por su cuenta. Los productos y precios se mezclan **al instante** con el resto de la lista (y con el historial, las gráficas y los avisos de los seguimientos), con la etiqueta «Pegado a mano hace X h». Se recuerdan **72 horas** y se guardan también en la búsqueda reciente, así que no hace falta repetirlo al volver.
 
 - Acepta el texto de la página o su código HTML (en ese caso conserva los enlaces de cada producto). **No hace ninguna petición a la tienda.**
 - Se leen los productos cuyo título contiene tu búsqueda y que llevan un precio justo después; si hay dos precios seguidos (el anterior y el actual) se toma el menor. Las cabeceras («Resultados de búsqueda…»), los productos sin relación y los precios de lo que viene detrás no se cuentan. Reconoce «agotado» y «preventa» igual que en las demás tiendas. Probado con el texto real de Ferretería Ibérica: 47 productos leídos con sus precios.
@@ -160,7 +165,7 @@ BuscaTron escucha en tu red local, así que puedes abrirlo desde el móvil conec
 
 1. **Una sola vez**, haz doble clic en `permitir_acceso_movil.bat`. Pide permisos de administrador y abre el puerto 8790 del cortafuegos de Windows **solo para tu red local** (regla «BuscaTron (red local)»).
 2. Arranca BuscaTron con `BuscaTron.bat` o con el arranque con Windows. Las direcciones, por ejemplo `http://192.168.0.28:8790`, aparecen en la ventana y en Ajustes → «Acceso desde el móvil».
-3. Escribe la dirección de tu red local (suele empezar por 192.168) en el navegador del móvil. Puedes guardarla en favoritos o añadirla a la pantalla de inicio.
+3. Escribe la dirección de tu red local (suele empezar por 192.168) en el navegador del móvil. Para tenerla como una app, en Chrome: menú ⋮ → **«Añadir a pantalla de inicio»** (BuscaTron trae su nombre e icono). Para que se abra a pantalla completa, sin la barra del navegador, Chrome exige una conexión segura (HTTPS), que la red local no tiene; por ejemplo, `tailscale serve` da una dirección HTTPS.
 4. **Recomendado:** pon un **PIN** en Ajustes → «Acceso desde el móvil». El móvil lo pedirá una vez y lo recordará 30 días. Este equipo no lo necesita.
 
 Si el móvil no carga:
@@ -183,7 +188,7 @@ Seguridad:
 3. **Trata bien a las tiendas**: pausa de 0,6 s entre dos peticiones a la misma web, como mucho 4 direcciones de prueba cuando no conoce su buscador, parada inmediata si una tienda responde «429 demasiadas peticiones», y no vuelve a llamar durante 10 minutos a una web que no ha respondido a la conexión. Así evita que una tienda te bloquee la IP por parecer un ataque; si lo hiciera, te aparecería como «no responde».
 4. **Sigue las páginas siguientes** (enlace `rel="next"` o «Siguiente») hasta el número de páginas elegido, mientras aporten productos nuevos.
 5. **Si el método rápido no encuentra nada** y el navegador está activado, vuelve a intentarlo renderizando la página con tu Chrome (con Playwright). Si funciona, recuerda que esa tienda lo necesita.
-6. **Ordena por precio** (o por precio total) y guarda cada resultado en `buscatron.db` (SQLite). Ese historial alimenta la regla de «bajada respecto a la media», la etiqueta «Mínimo histórico» y las gráficas.
+6. **Ordena por precio** (o por precio total) y guarda cada resultado en `buscatron.db` (SQLite). Ese historial alimenta la regla de «bajada respecto a la media», la etiqueta «Mínimo histórico» y las gráficas. Una vez al día, lo de hace más de 6 meses se compacta a un precio por producto y día, para que no crezca sin control.
 
 ### Navegador opcional
 Para las tiendas que cargan sus resultados con JavaScript. Está activado por defecto, pero solo funciona si tienes instalado Playwright y Chrome o Edge:
@@ -255,7 +260,7 @@ permitir_acceso_movil.bat     abre el cortafuegos para tu red local (pide admini
 python -m unittest discover -s tests
 ```
 
-130 pruebas, sin red. Cubren las reglas de aviso (objetivo, media histórica, no repetir, reaviso, limpieza de obsoletos), el extractor (precios tachados, texto oculto, títulos recortados, preventas, estados de segunda mano, páginas siguientes, datos de producto, envío), el motor (paginación, filtros, total con envío, mínimo histórico, historial), la búsqueda abierta, el filtro de IP y el PIN, la importación a mano y las búsquedas guardadas.
+141 pruebas, sin red. Cubren las reglas de aviso (objetivo, media histórica, no repetir, reaviso, limpieza de obsoletos), el extractor (precios tachados, texto oculto, títulos recortados, preventas, estados de segunda mano, páginas siguientes, datos de producto, envío), el motor (paginación, filtros, total con envío, mínimo histórico, historial), la búsqueda abierta, el filtro de IP y el PIN, la importación a mano y las búsquedas guardadas.
 
 ## Limitaciones conocidas
 

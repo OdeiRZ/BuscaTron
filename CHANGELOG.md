@@ -3,6 +3,26 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.10.0] - 2026-11-07
+
+### Añadido
+- **Agrupar el mismo producto de varias tiendas** (opción «Agrupar», activada por defecto): una tarjeta por producto con su mejor precio y las demás tiendas en un desplegable; el contador dice cuántos productos y ofertas hay. Clave de producto independiente de la tienda (sin editorial, tipo de producto, idioma, referencias…) o la frase de «al menos una de estas». En una prueba real, 65 ofertas de campañas quedaron en 11 productos.
+- **Descuento sobre el precio de mercado** en cada producto: el precio (redondeado al euro) que más se repite entre al menos 3 tiendas, sin contar la segunda mano y antes de aplicar tu filtro de precio. Aparece en la web y en los avisos.
+- **Avisos y resumen de Telegram agrupados por producto**: un bloque por producto con su mejor precio, el descuento, el motivo, el enlace y «También: 38,21 € en Juegos de la Mesa Redonda, …», en vez de una línea por oferta.
+- **Recordatorio por Telegram** unas 12 horas antes de que caduquen los precios pegados a mano de una tienda (una vez por pegado), con el enlace a la tienda.
+- **Instalable en el móvil**: manifiesto, iconos PNG y service worker (sin caché, para que los precios sean siempre en directo). «Añadir a pantalla de inicio» pone el icono de BuscaTron; la pantalla completa requiere HTTPS.
+- **«Ya lo tengo / no me interesa» (🚫)**: oculta un producto para siempre, en todas las tiendas, en búsquedas y avisos; lista en Ajustes → «Productos ocultos» para recuperarlo.
+- **Estado de las tiendas** en Ajustes: consultas con resultados de las últimas 10, último resultado, último problema y botón para desactivar; sugiere desactivar las que nunca dan nada (con al menos 6 consultas).
+- **Limpieza diaria del historial**: los precios de hace más de 180 días se compactan a uno por producto y día (el más bajo), y se podan las fichas, idiomas, pegados viejos y el registro de tiendas (30 consultas por tienda).
+- 11 pruebas nuevas (141 en total).
+
+### Cambiado
+- El servidor devuelve hasta 300 resultados por búsqueda y la página enseña los N primeros productos (u ofertas, sin agrupar).
+- Una tienda con productos que no pasan tus filtros lo dice («tiene productos, pero ninguno pasa tus filtros») en vez de aparecer como si no tuviera nada.
+
+### Notas
+- La etiqueta `v0.10.0` apunta al commit del código; esta documentación va en el commit siguiente.
+
 ## [0.9.6] - 2026-11-07
 
 ### Añadido
