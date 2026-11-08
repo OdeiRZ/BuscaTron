@@ -6,7 +6,7 @@ Buscador y vigilante de precios **local** para tiendas online españolas. Pensad
 - **Datos en vivo**: no usa cachés ni comparadores intermedios, así que el precio es el que ves en la tienda.
 - **Tus datos se quedan en tu equipo**: lista de tiendas, historial y tokens se guardan en archivos locales que no se suben al repositorio.
 
-> Estado: **versión funcional** (v0.13.0). Consulta el [CHANGELOG](CHANGELOG.md).
+> Estado: **versión funcional** (v0.13.1). Consulta el [CHANGELOG](CHANGELOG.md).
 
 ## Inicio rápido
 
@@ -61,6 +61,7 @@ La web está pensada para móvil (probada a 360 px) y escritorio. Arranca con el
 
 ### 👁️ Vigiladas
 Pulsa «Vigilar esta búsqueda» (o crea una en la pestaña Vigiladas) y deja que BuscaTron la revise sola cada X horas mientras esté abierto (con el [arranque con Windows](#arranque-con-windows-y-bandeja), siempre).
+- **«Buscar ahora»** revisa una vigilada en ese momento. Mientras se revisa (también en las revisiones automáticas) sale «Buscando…», aunque recargues, la abras en el móvil o guardes otra. Si la editas mientras se revisa y cambias la búsqueda o sus filtros, al terminar se revisa otra vez con los cambios; si la borras, no quedan avisos suyos.
 - **Ordenar la lista**: en el orden en que las creaste (por defecto), las últimas creadas primero, por nombre, activas primero, la próxima en revisarse o las que llevan más sin revisarse; se recuerda. Encima, cuántas hay activas y cuántas en pausa.
 - **Aviso por precio objetivo** («menos de 39 €»), por **bajada respecto a la media histórica** del artículo («un 15 % menos de lo habitual»), o por ambos. Si un producto tiene **su propio objetivo (🎯)**, se usa ese en lugar del de la búsqueda («por debajo de tu objetivo para este producto de 30 €»); tiene que estar dentro del precio mínimo y máximo de la búsqueda. Un objetivo 🎯 **solo avisa si alguna búsqueda vigilada activa encuentra ese producto**: al ponerlo, BuscaTron te dice cuál lo cubre o, si ninguna, te ofrece vigilar la búsqueda en ese momento.
 - Cada seguimiento lleva las mismas opciones que la búsqueda: preventas, envío, segunda mano, otras webs y páginas por tienda.
@@ -292,7 +293,7 @@ permitir_acceso_movil.bat     abre el cortafuegos para tu red local (pide admini
 python -m unittest discover -s tests
 ```
 
-184 pruebas, sin red. Cubren las reglas de aviso (objetivo de la búsqueda y del producto, media histórica, no repetir, reaviso, limpieza de obsoletos, tienda caída frente a tienda sin el producto), qué vigilada cubre cada objetivo, el historial por producto, las órdenes del bot y los mensajes largos de Telegram, la escritura segura de los archivos y los cambios de tiendas durante una búsqueda, los errores del servidor, el tope de páginas y las revisiones que fallan, los precios con punto de miles, el extractor (precios tachados y con descuento, tarjetas que no se mezclan con la siguiente, texto oculto, títulos recortados, preventas, estados de segunda mano, páginas siguientes, datos de producto, envío), el motor (paginación, filtros, total con envío, mínimo histórico, historial), la búsqueda abierta, el filtro de IP y el PIN, la importación a mano y las búsquedas guardadas.
+190 pruebas, sin red. Cubren las reglas de aviso (objetivo de la búsqueda y del producto, media histórica, no repetir, reaviso, limpieza de obsoletos, tienda caída frente a tienda sin el producto), qué vigilada cubre cada objetivo, editar o borrar una vigilada mientras se revisa, el historial por producto, las órdenes del bot y los mensajes largos de Telegram, la escritura segura de los archivos y los cambios de tiendas durante una búsqueda, los errores del servidor, el tope de páginas y las revisiones que fallan, los precios con punto de miles, el extractor (precios tachados y con descuento, tarjetas que no se mezclan con la siguiente, texto oculto, títulos recortados, preventas, estados de segunda mano, páginas siguientes, datos de producto, envío), el motor (paginación, filtros, total con envío, mínimo histórico, historial), la búsqueda abierta, el filtro de IP y el PIN, la importación a mano y las búsquedas guardadas.
 
 ## Limitaciones conocidas
 

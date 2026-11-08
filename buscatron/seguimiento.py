@@ -9,7 +9,10 @@ from . import bd, motor, notifica
 CAMPOS = ("nombre", "consulta", "incluir", "excluir", "pmin", "pmax", "objetivo", "bajo_historico",
           "sin_agotados", "castellano", "opciones", "canales", "cada_horas", "activo")
 OPCIONES = {"preventas": False, "con_envio": False, "segunda_mano": False, "abierta": False, "region": "es", "paginas": None, "idioma": None, "resumen": False, "alguna": ""}
-NO_SON_DE_BUSQUEDA = ("resumen",)      # opciones del seguimiento que el motor no recibe
+NO_SON_DE_BUSQUEDA = ("resumen",)
+# Lo que cambia el resultado de una revisión: si lo editas mientras se revisa, se repite con lo nuevo al acabar
+# (el nombre, la frecuencia, los canales o pausarla no hacen falta).
+DE_LA_BUSQUEDA = ("consulta", "incluir", "excluir", "pmin", "pmax", "objetivo", "bajo_historico", "sin_agotados", "castellano", "opciones")      # opciones del seguimiento que el motor no recibe
 MIN_OBSERVACIONES = 4      # mínimo de precios previos de un artículo para fiarse de su media
 REAVISO_DIAS = 30
 _cerrojo = threading.Lock()
@@ -35,8 +38,11 @@ def opciones_de(seg):
 def lista():
     with bd.conecta() as c:
         filas = [dict(r) for r in c.execute("SELECT * FROM seguimientos ORDER BY id")]
+    with _cerrojo:
+        en_curso = set(_en_curso)
     for f in filas:
         f["opciones"] = opciones_de(f)      # para la web: un objeto, no un texto
+        f["revisando"] = f["id"] in en_curso
     return filas
 
 
@@ -145,6 +151,24 @@ def revisa(seg_id, enviar=True):
             return {"ocupado": True}
         _en_curso.add(seg_id)
     try:
+        for vuelta in range(3):
+            r, usada = _revisa(seg_id, enviar)
+            with bd.conecta() as c:
+                ahora = c.execute("SELECT * FROM seguimientos WHERE id=?", (seg_id,)).fetchone()
+                if ahora is None:              # la borraste mientras se revisaba: que no queden sus avisos
+                    c.execute("DELETE FROM avisos WHERE seg_id=?", (seg_id,))
+                    return r
+            if all(ahora[k] == usada[k] for k in DE_LA_BUSQUEDA):
+                return r
+        return r
+    finally:
+        with _cerrojo:
+            _en_curso.discard(seg_id)
+
+
+def _revisa(seg_id, enviar):
+    """Una revisión con la vigilada tal como está ahora. Devuelve (resultado, vigilada usada)."""
+    try:
         with bd.conecta() as c:
             seg = c.execute("SELECT * FROM seguimientos WHERE id=?", (seg_id,)).fetchone()
         if not seg:
@@ -206,7 +230,7 @@ def revisa(seg_id, enviar=True):
             envio = notifica.envia(canales, f"BuscaTron · {seg['nombre']}", "\n\n".join(lineas))
         elif enviar and opc.get("resumen") and "telegram" in seg["canales"].split(","):
             envio = notifica.envia(["telegram"], f"BuscaTron · {seg['nombre']} · resumen", resumen(seg, opc, modo, res, informe))
-        return {"resultados": len(res), "avisos": nuevos, "envio": envio}
+        return {"resultados": len(res), "avisos": nuevos, "envio": envio}, seg
     except Exception as e:
         # Se anota la revisión aunque falle: si no, el programador la repetiría cada minuto contra todas las tiendas
         # (una ráfaga así es lo que hace que una tienda bloquee tu conexión).
@@ -214,9 +238,6 @@ def revisa(seg_id, enviar=True):
             c.execute("UPDATE seguimientos SET ultima=?, estado=? WHERE id=?",
                       (time.time(), f"la revisión falló: {str(e)[:120] or e.__class__.__name__}", seg_id))
         raise
-    finally:
-        with _cerrojo:
-            _en_curso.discard(seg_id)
 
 
 def euros(v):

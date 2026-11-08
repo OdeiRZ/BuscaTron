@@ -3,6 +3,13 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.13.1] - 2026-11-08
+
+### Corregido
+- **«Buscando…» desaparecía** al guardar una vigilada (o pausarla, o recargar) mientras otra se revisaba: lo sabía solo el botón pulsado y la lista se volvía a pintar. Ahora el servidor dice cuáles se están revisando y la página lo muestra siempre, también en las revisiones automáticas y desde otro dispositivo; avisa al terminar sin repintar la lista mientras la usas.
+- **Editar una vigilada mientras se revisa**: la revisión seguía con la configuración de antes (resultados y avisos con los filtros viejos). Ahora, si cambias la búsqueda o sus filtros, al terminar se revisa otra vez con los cambios (como mucho tres vueltas). Cambiar el nombre, la frecuencia o pausarla no la repite.
+- **Borrar una vigilada mientras se revisa** podía dejar avisos suyos sin vigilada; ahora se borran.
+
 ## [0.13.0] - 2026-11-08
 
 ### Añadido

@@ -640,7 +640,9 @@ $('sf').onsubmit=async e=>{e.preventDefault();
     incluir:$('s-incluir').value,excluir:$('s-excluir').value,pmin:$('s-pmin').value,pmax:$('s-pmax').value,objetivo:$('s-objetivo').value,
     bajo_historico:$('s-hist').value,cada_horas:$('s-horas').value,sin_agotados:$('s-sinag').checked,castellano:$('s-idioma').value!=='todos',canales,
     opciones:{preventas:$('s-preventas').checked,con_envio:$('s-conenvio').checked,segunda_mano:$('s-segmano').checked,abierta:$('s-abierta').checked,region:$('s-region').value,paginas:$('s-paginas').value,idioma:$('s-idioma').value,resumen:$('s-resumen').checked,alguna:$('s-alguna').value}});
-  if(r.error){aviso(r.error);return;} limpiaSeg();$('sf-det').open=false;pintaSeg(r);aviso('Búsqueda vigilada guardada');};
+  if(r.error){aviso(r.error);return;}const id=+$('s-id').value,s=Array.isArray(r)&&r.find(x=>x.id===id);
+  limpiaSeg();$('sf-det').open=false;pintaSeg(r);
+  aviso(s&&s.revisando?'Guardada. Se está revisando: si has cambiado la búsqueda o sus filtros, al terminar se revisa otra vez con los cambios':'Búsqueda vigilada guardada');};
 async function cargaSeg(){pintaSeg(await api('seguimientos'));}
 const ORDEN_SEG={creacion:'Orden en que las creaste',recientes:'Las últimas creadas primero',nombre:'Nombre: de la A a la Z',activas:'Activas primero, luego en pausa',proxima:'La próxima en revisarse primero',revisada:'Las que llevan más sin revisarse primero'};
 let ordenSeg='creacion';try{const o=localStorage.getItem('bt-orden-seg');if(o in ORDEN_SEG)ordenSeg=o;}catch(e){}
@@ -661,13 +663,27 @@ function pintaSeg(l){segs=l;$('seg-lista').innerHTML=l.length?cabeceraSeg(l)+ord
   ${extrasSeg(s)}
   <div class="l">📬 Avisos en: ${esc(canales)}</div>
   <div class="l">🕘 Última revisión: ${fecha(s.ultima)}${s.estado?' — '+esc(s.estado):''}</div>
-  <div class="l">🔄 ${s.activo?`Se revisa sola cada ${s.cada_horas} h; la próxima, ${proxima(s)}`:'En pausa: no se revisa sola'}</div>
-  <div class="acciones"><button class="mini" onclick="revisa(${s.id},this)" title="Busca ya en tus tiendas y te avisa si hay algo">🔄 Buscar ahora</button>
+  <div class="l">🔄 ${revisando(s)?'Revisándose ahora mismo…':s.activo?`Se revisa sola cada ${s.cada_horas} h; la próxima, ${proxima(s)}`:'En pausa: no se revisa sola'}</div>
+  <div class="acciones">${revisando(s)?'<button class="mini" disabled>Buscando… (hasta 1 min)</button>':`<button class="mini" onclick="revisa(${s.id},this)" title="Busca ya en tus tiendas y te avisa si hay algo">🔄 Buscar ahora</button>`}
   <button class="sec mini" onclick="editaSeg(${s.id})">✏️ Editar</button>
   <button class="sec mini" onclick="pausa(${s.id})" title="${s.activo?'Deja de revisarse sola; no se borra nada':'Vuelve a revisarse sola'}">${s.activo?'⏸️ Pausar':'▶️ Reanudar'}</button>
   <button class="peli mini" onclick="borraSeg(${s.id})">🗑 Borrar</button></div></div>`}).join('')
   :'<div class="card vacio-msg"><span class="em">👁️</span>Todavía no vigilas ninguna búsqueda.<br>Haz una búsqueda y pulsa «Vigilar esta búsqueda», o crea una aquí arriba. BuscaTron la revisará sola y te avisará cuando baje de precio.</div>';
-  if($('seg-orden'))$('seg-orden').onchange=()=>{ordenSeg=$('seg-orden').value;try{localStorage.setItem('bt-orden-seg',ordenSeg)}catch(e){}pintaSeg(segs);};}
+  if($('seg-orden'))$('seg-orden').onchange=()=>{ordenSeg=$('seg-orden').value;try{localStorage.setItem('bt-orden-seg',ordenSeg)}catch(e){}pintaSeg(segs);};
+  if(Array.isArray(l)&&l.some(revisando))sigueRevisiones();}
+// «Buscando…» lo dice el servidor (s.revisando), así que no se pierde al guardar, recargar o abrirla en el móvil, y también
+// sale en las revisiones automáticas. esperando = las que pulsaste, hasta que acaban (id → su «última revisión» de antes).
+const esperando={};let sondeo=null;
+function revisando(s){return !!s.revisando||s.id in esperando;}
+function sigueRevisiones(){if(sondeo)return;let n=0,firma='';
+  sondeo=setInterval(async()=>{const l=await api('seguimientos');if(!Array.isArray(l))return;n++;
+    for(const s of l){if(!(s.id in esperando))continue;
+      if((s.ultima||0)>esperando[s.id]&&!s.revisando){delete esperando[s.id];cargaNavAv();aviso(`Revisión terminada («${s.nombre}»): ${s.estado}`);}}
+    for(const id of Object.keys(esperando))if(!l.some(s=>s.id===+id)||n>100)delete esperando[id];   // borrada, o tarda demasiado
+    const f=l.map(s=>`${s.id}:${s.revisando}:${s.ultima}:${s.id in esperando}`).join();
+    const sigue=l.some(revisando);
+    if(f!==firma||!sigue){firma=f;pintaSeg(l);}         // solo se repinta si algo cambia: no te mueve la lista mientras la usas
+    if(!sigue){clearInterval(sondeo);sondeo=null;}},3000);}
 function proxima(s){const t=(s.ultima||0)+s.cada_horas*3600,ahora=Date.now()/1000;
   if(!s.ultima||t<=ahora)return 'ahora mismo (en menos de un minuto, si BuscaTron está abierto)';
   const h=(t-ahora)/3600;return `dentro de ${h<1?Math.max(1,Math.round(h*60))+' min':String(Math.round(h*10)/10).replace('.',',')+' h'} (${fecha(t)})`;}
@@ -685,12 +701,10 @@ async function pausa(id){const s=segs.find(x=>x.id===id);const l=await api('segu
   aviso(s.activo?'En pausa: no se revisará sola hasta que la reanudes (no se borra nada)'
     :(Date.now()/1000-(s.ultima||0)>=s.cada_horas*3600?`Reanudada: se revisa ahora mismo y luego cada ${s.cada_horas} h`:`Reanudada: la próxima revisión, ${proxima(s)}`));}
 async function borraSeg(id){if(confirm('¿Dejar de vigilar esta búsqueda? Se borran también sus avisos; el historial de precios se conserva.'))pintaSeg(await api('seguimientos',{accion:'borrar',id}));}
-async function revisa(id,b){const antes=(segs.find(x=>x.id===id)||{}).ultima||0;
-  b.disabled=true;b.textContent='Buscando… (hasta 1 min)';await api('seguimientos',{accion:'revisar',id});
-  let n=0;const t=setInterval(async()=>{const l=await api('seguimientos');if(!Array.isArray(l))return;const s=l.find(x=>x.id===id);
-    const hecha=s&&s.ultima>antes;
-    if(hecha||++n>100){clearInterval(t);pintaSeg(l);cargaNavAv();
-      aviso(hecha?`Revisión terminada: ${s.estado}`:'Sigue buscando; el resultado saldrá aquí y en Avisos cuando acabe');}},3000);}
+async function revisa(id,b){esperando[id]=(segs.find(x=>x.id===id)||{}).ultima||0;
+  b.disabled=true;b.textContent='Buscando… (hasta 1 min)';
+  const r=await api('seguimientos',{accion:'revisar',id});if(r&&r.error){delete esperando[id];aviso(r.error);}
+  pintaSeg(Array.isArray(r)?r:segs);}
 
 /* avisos */
 const ORDEN_AV={reciente:'Más recientes primero',barato:'Precio: de menor a mayor',caro:'Precio: de mayor a menor',nombre:'Nombre: de la A a la Z',tienda:'Tienda: de la A a la Z'};
