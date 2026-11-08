@@ -17,7 +17,7 @@ def precio_texto(s):
     s = str(s).strip()
     return a_numero(s.replace(".", "") if MILES.fullmatch(s) else s)
 TACHADO_PARTES = {"old", "regular", "before", "compare", "was", "strike", "strikethrough", "through", "tachado", "tachada", "antes",
-                  "original", "msrp", "discount", "descuento", "saving", "savings", "ahorro", "ahorras", "reduction", "rebaja"}
+                  "original", "msrp", "saving", "savings", "ahorro", "ahorras", "reduction", "rebaja"}
 
 
 def es_tachado(attrs):
@@ -29,7 +29,7 @@ def es_tachado(attrs):
 OCULTO = re.compile(r"display\s*:\s*none|visibility\s*:\s*hidden", re.I)
 VACIAS = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "source", "track", "wbr"}
 RESERVA = re.compile(r"reserva|en reposici[oó]n", re.I)
-AGOTADO = re.compile(r"agotad|en reposici[oó]n|vuelva a estar disponible|sin existencias|no hay existencias|sin stock|no disponible|out of stock|sold.?out|fuera de stock", re.I)
+AGOTADO = re.compile(r"(?<!casi )agotad|en reposici[oó]n|vuelva a estar disponible|sin existencias|no hay existencias|sin stock|no disponible|out of stock|sold.?out|fuera de stock", re.I)
 PREVENTA = re.compile(r"pre-?venta|pre-?order|lanzamiento aproximado|pr[oó]ximamente|pr[oó]xima aparici[oó]n|fecha (?:de salida|prevista)|disponible a partir", re.I)
 ESTADO = re.compile(r"\b(precintado|sin abrir|sin estrenar|como nuevo|seminuevo|reacondicionado|nuevo|muy bueno|buen estado|bueno|aceptable|usado|segunda mano|para piezas|ha sido utilizado)\b", re.I)
 def normaliza_simple(t):
@@ -225,6 +225,13 @@ def es_otra_busqueda(url, base):
     return bool(claves_b) and u.netloc == b.netloc and u.path == b.path and claves_b <= {k for k, _ in parse_qsl(u.query)}
 
 
+def _forma(url):
+    """Forma de la dirección de una ficha: dominio, número de tramos de la ruta y extensión («/juego-123.html»)."""
+    u = urlparse(limpia_url(url))
+    tramos = [t for t in u.path.split("/") if t]
+    return u.netloc, len(tramos), tramos[-1].rpartition(".")[2] if tramos and "." in tramos[-1] else ""
+
+
 def analiza(html, base, consulta, ventana=40, con_estado=False):
     """Devuelve (productos, url_de_la_página_siguiente|None).
     Producto: {titulo, url, precio, agotado, preventa, estado}."""
@@ -234,10 +241,18 @@ def analiza(html, base, consulta, ventana=40, con_estado=False):
     ev = p.eventos
     encajan = [i for i, e in enumerate(ev) if e[0] == "a" and len(e[2]) >= 4 and all(encaja(normaliza(e[2]), w) for w in palabras)
                and not SUGERENCIA.match(e[2]) and not es_otra_busqueda(e[1], base)]
-    out, vistos = [], set()
+    # La tarjeta también acaba donde empieza la de otro producto que NO encaja (su enlace tiene la misma forma de ficha):
+    # si no, su «En reposición» se le atribuía al anterior (Dungeon Marvels: Mage Knight salía agotado por el de Krang).
+    formas = {_forma(ev[i][1]) for i in encajan}
+    out, vistos, previos = [], set(), {}
     for k, i in enumerate(encajan):
         e = ev[i]
         limite = ev[encajan[k + 1]][5] if k + 1 < len(encajan) else len(ev)   # el siguiente producto empieza ahí
+        propia = urlparse(limpia_url(e[1])).path
+        otro = next((j for j in range(i + 1, min(limite, i + 1 + ventana)) if ev[j][0] == "a" and _forma(ev[j][1]) in formas
+                     and urlparse(limpia_url(ev[j][1])).path != propia), None)
+        if otro is not None:
+            limite = ev[otro][5]
         titulo, textos, precio = e[2], list(e[4]), (e[3][0] if e[3] else None)
         pv = re.search(r"(\d+(?:[.,]\d{1,2})?)\s*€\s*,\s*\d+(?:[.,]\d{1,2})?\s*€\s*$", titulo) if "Estado:" in titulo else None
         if pv:                                   # Vinted: «..., Estado: Muy bueno, 1.00 €, 1.75 €» (artículo y con protección)
@@ -249,8 +264,11 @@ def analiza(html, base, consulta, ventana=40, con_estado=False):
             elif f[0] == "x":
                 textos.append(f[1])
         url = limpia_url(e[1])
+        if precio is None and url not in vistos:     # enlace de la imagen: lo que va hasta el del título («Agotado») es suyo
+            previos.setdefault(url, []).extend(textos)
         if precio is None or url in vistos or not url.startswith(("http://", "https://")):   # nunca «javascript:» y similares
             continue
+        textos = previos.pop(url, []) + textos
         vistos.add(url)
         if titulo.endswith(("...", "…")) and len(titulo_desde_url(e[1])) > len(titulo):
             titulo = titulo_desde_url(e[1])

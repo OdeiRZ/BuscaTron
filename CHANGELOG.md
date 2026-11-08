@@ -3,6 +3,17 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.12.1] - 2026-11-08
+
+### Añadido
+- **Amazon: página de repaso** para los juegos mal clasificados. Además de «Juguetes y juegos», se lee una página en todas las secciones y por relevancia, y de ella solo se toman los productos cuyo título dice que son un juego. Eternal Decks (que Amazon no tiene en «Juguetes y juegos») vuelve a salir; «Vantage» no trae relojes ni protectores.
+
+### Corregido
+- **Un producto se quedaba con el stock del siguiente**: tras un producto que coincide con la búsqueda, el extractor seguía leyendo hasta el siguiente que coincidiera, y se llevaba el aviso de los de en medio. En Dungeon Marvels, «Mage Knight: Edición Definitiva» (en preventa) salía agotado por el «En reposición» de *Krang Character*, y no aparecía. Ahora la tarjeta acaba donde empieza la de cualquier otro producto. En 36 páginas reales de 12 tiendas corrige 8 agotados falsos y no cambia nada más.
+- **Lo que va entre la imagen y el título** es del producto: en Jugamos Una el «Agotado» va ahí y se perdía (5 agotados que salían como disponibles; uno acertaba de casualidad con el aviso del siguiente).
+- **«Casi agotado» no es agotado** (Dracotienda: «Últimas unidades · Casi agotado»).
+- **Precios con descuento en Goblin Trader**: su precio vigente lleva la clase `price--discount`, que se tomaba por tachado, así que los productos con descuento no salían o se llevaban el precio del de al lado (Mage Knight a 27 € en vez de 121,45 €). Recupera 14 productos en tres búsquedas de prueba.
+
 ## [0.12.0] - 2026-11-08
 
 ### Añadido
