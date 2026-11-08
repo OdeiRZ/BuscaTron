@@ -135,7 +135,7 @@ nav.tabs button.on{color:var(--ac);background:var(--ac2)}
 .pt:empty{display:none}
 @media(min-width:800px){
   nav.tabs{position:static;max-width:760px;margin:12px auto 0;border:1px solid var(--bd);border-radius:14px;box-shadow:var(--sh)}
-  nav.tabs button{flex-direction:row;justify-content:center;gap:8px;font-size:14px;min-height:46px}
+  nav.tabs button{flex-direction:row;justify-content:center;gap:16px;font-size:14px;min-height:46px}
   main{padding-top:12px;padding-bottom:40px}
 }
 .oculto{display:none!important}
@@ -151,6 +151,58 @@ nav.tabs button.on{color:var(--ac);background:var(--ac2)}
 svg.graf-svg{width:100%;height:auto;display:block}
 #toast{position:fixed;left:50%;bottom:calc(76px + env(safe-area-inset-bottom));transform:translateX(-50%);max-width:92vw;background:#111827;color:#fff;padding:10px 16px;border-radius:12px;font-size:14px;z-index:20;opacity:0;pointer-events:none;transition:opacity .2s}
 #toast.v{opacity:1}
+/* desplegables: el contador va junto a la flecha, no flotando en medio */
+details>summary{justify-content:flex-start}
+details>summary::after{margin-left:auto}
+summary .n{margin-left:auto}
+summary:has(.n)::after{margin-left:6px}
+/* teclado y ratón (PC) */
+button:focus-visible,a:focus-visible,summary:focus-visible,select:focus-visible,input[type=checkbox]:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
+@media(hover:hover){button:not(:disabled):hover{filter:brightness(1.07)}.res .cuerpo:hover,.otras a:hover,.rec-abre:hover{background:var(--ac2)}
+  nav.tabs button:not(.on):hover{background:var(--bg);color:var(--tx)}.chip:hover{border-color:var(--ac)}}
+kbd{font:600 11px/1 system-ui,sans-serif;padding:2px 5px;border:1px solid var(--bd);border-bottom-width:2px;border-radius:5px;color:var(--mut)}
+.atajo{display:none}
+@media(hover:hover) and (min-width:800px){.atajo{display:inline}}
+/* vigiladas */
+.filtro-seg{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 10px}
+.filtro-seg .chip{min-height:36px}
+.seg-cab{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.seg-cab h2{margin:0;overflow-wrap:anywhere}
+.estado-seg{flex:0 0 auto;white-space:nowrap}
+.seg.pausa{background:transparent;box-shadow:none;border-style:dashed}
+.seg.pausa h2{color:var(--mut)}
+.seg .l b{color:var(--tx);font-weight:600}
+.seg details{margin-top:6px}
+.seg details>summary{min-height:34px;font-size:13px;color:var(--ac)}
+.seg .acciones{margin-top:10px}
+.seg .acciones{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.seg .acciones button{white-space:nowrap;padding:0 8px}
+@media(min-width:560px){.seg .acciones{grid-template-columns:repeat(4,1fr)}}
+.tag.run{background:var(--wa2);color:var(--wa)}
+/* avisos */
+.motivo{margin-top:6px;font-size:13px;font-weight:600;color:var(--ok);line-height:1.35}
+.av .t{font-weight:600}
+.tag.nuevo{background:var(--ac);color:#fff}
+/* estado de las tiendas */
+#estado-t details>summary{font-size:13px;color:var(--ac)}
+/* PC ancho: dos columnas en Buscar y rejillas en el resto */
+@media(min-width:1100px){
+  .cab,main,nav.tabs{max-width:1180px}
+  nav.tabs{position:sticky;top:0;z-index:15}
+  #t-buscar:not(.oculto){display:grid;grid-template-columns:410px minmax(0,1fr);grid-template-rows:auto 1fr;gap:0 18px;align-items:start}
+  #t-buscar>#f,#t-buscar>#rec{grid-column:1}
+  #t-buscar>#out{grid-column:2;grid-row:1/span 2}
+  .solo-movil{display:none}
+  #seg-lista,#av-lista{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start}
+  #seg-lista>.cuenta,#seg-lista>.orden-res,#seg-lista>.filtro-seg,#seg-lista>.vacio-msg,#av-lista>.cuenta,#av-lista>.orden-av,#av-lista>.vacio-msg{grid-column:1/-1}
+  #seg-lista>.card,#av-lista>.gr{margin-bottom:0}
+  #seg-lista>.orden-res,#av-lista>.orden-av{max-width:420px;margin-bottom:0}
+  #t-ajustes:not(.oculto){columns:2;column-gap:16px}
+  #t-ajustes .card{break-inside:avoid;display:inline-block;width:100%}
+  #t-ajustes>#a-guardar,#t-ajustes>#a-msg{column-span:all}
+  #sf-det{max-width:none}
+}
+@media(max-width:1099px){.solo-pc{display:none}}
 </style>
 </head>
 <body>
@@ -167,7 +219,7 @@ svg.graf-svg{width:100%;height:auto;display:block}
 <main>
 <section id="t-buscar">
   <form id="f" class="card">
-    <label for="q">¿Qué quieres comprar?</label>
+    <label for="q">¿Qué quieres comprar? <span class="atajo mut" style="font-weight:500">· tecla <kbd>/</kbd> para escribir aquí</span></label>
     <div class="buscador">
       <input type="search" id="q" placeholder="Ej.: marvel champions" required autofocus enterkeyhint="search">
       <button id="go">Buscar</button>
@@ -176,7 +228,7 @@ svg.graf-svg{width:100%;height:auto;display:block}
     <label class="sw"><input type="checkbox" id="agrupar" checked> Agrupar el mismo producto de varias tiendas</label>
     <div style="margin-top:10px"><label for="idioma">Idioma del juego</label>
       <select id="idioma"><option value="castellano">En castellano (incluye los dudosos)</option><option value="estricto">Solo castellano confirmado</option><option value="todos">Cualquier idioma</option></select>
-      <p class="ayuda" style="margin-top:4px"><b>En castellano</b> oculta lo que dice estar en otro idioma, pero deja lo dudoso. <b>Solo castellano confirmado</b> oculta también lo dudoso. Cada resultado lleva una etiqueta con su idioma, y antes de avisarte BuscaTron lo comprueba en la ficha del producto.</p></div>
+      <p class="ayuda" style="margin-top:4px" id="idioma-ayuda"></p></div>
 
     <details id="mas">
       <summary>Más opciones: preventas, envío, segunda mano, otras webs <span class="n" id="n-mas"></span></summary>
@@ -227,7 +279,7 @@ svg.graf-svg{width:100%;height:auto;display:block}
     <p class="ayuda">Se guardan con sus resultados (las 12 últimas). Toca una para volver a verla al instante, sin repetir la búsqueda.</p>
     <div class="acciones"><button type="button" class="peli mini" id="rec-vaciar">Borrar todas</button></div>
   </details>
-  <div id="out"></div>
+  <div id="out"><div class="card vacio-msg solo-pc"><span class="em">🔎</span>Los resultados aparecerán aquí.<br>Escribe qué buscas a la izquierda, o abre una de tus búsquedas recientes.</div></div>
 </section>
 
 <section id="t-seguir" class="oculto">
@@ -249,7 +301,8 @@ svg.graf-svg{width:100%;height:auto;display:block}
       </div>
       <label class="sw"><input type="checkbox" id="s-sinag" checked> Ocultar los agotados</label>
       <div style="margin-top:6px"><label for="s-idioma">Idioma del juego</label>
-        <select id="s-idioma"><option value="castellano">En castellano (incluye los dudosos)</option><option value="estricto">Solo castellano confirmado</option><option value="todos">Cualquier idioma</option></select></div>
+        <select id="s-idioma"><option value="castellano">En castellano (incluye los dudosos)</option><option value="estricto">Solo castellano confirmado</option><option value="todos">Cualquier idioma</option></select>
+        <p class="ayuda" style="margin-top:4px" id="s-idioma-ayuda"></p></div>
       <details>
         <summary>Más opciones: preventas, envío, segunda mano, otras webs</summary>
         <label class="sw"><input type="checkbox" id="s-preventas"> Contar también las preventas</label>
@@ -368,12 +421,31 @@ $('tema').onclick=()=>{const n=temaActual()==='dark'?'light':'dark';document.doc
   try{localStorage.setItem('bt-tema',n)}catch(e){}pintaTema();};
 pintaTema();
 
-/* pestañas */
-function ir(t){document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));
-  ['buscar','seguir','avisos','ajustes'].forEach(x=>$('t-'+x).classList.toggle('oculto',x!==t));
+/* pestañas: cada una es una entrada del historial, así el «atrás» del móvil vuelve a la anterior en vez de salir de la app */
+const TABS=['buscar','seguir','avisos','ajustes'];
+let tabActual='buscar';
+function ir(t,historial=true){if(!TABS.includes(t))t='buscar';
+  document.querySelectorAll('#nav button').forEach(b=>{b.classList.toggle('on',b.dataset.t===t);b.toggleAttribute('aria-current',b.dataset.t===t);});
+  TABS.forEach(x=>$('t-'+x).classList.toggle('oculto',x!==t));
   if(t==='seguir')cargaSeg(); if(t==='avisos')cargaAvisos(); if(t==='ajustes')cargaAjustes();
-  scrollTo(0,0);try{localStorage.setItem('bt-tab',t)}catch(e){}}
+  if(historial&&t!==tabActual)history.pushState({t},'','#'+t);
+  tabActual=t;scrollTo(0,0);try{localStorage.setItem('bt-tab',t)}catch(e){}}
 document.querySelectorAll('#nav button').forEach(b=>b.onclick=()=>ir(b.dataset.t));
+// Las hojas (historial de precios, pegar resultados) también: «atrás» las cierra.
+const hojaAbierta=()=>['hist','pegar'].find(id=>$(id).classList.contains('v'));
+function abreHoja(id){if(!hojaAbierta())history.pushState({t:tabActual,hoja:id},'',location.hash||'#'+tabActual);$(id).classList.add('v');}
+function cierraHoja(id){if(!$(id).classList.contains('v'))return;$(id).classList.remove('v');if(history.state&&history.state.hoja)history.back();}
+addEventListener('popstate',e=>{const h=hojaAbierta();if(h){$(h).classList.remove('v');return;}
+  const t=(location.hash||'#buscar').slice(1);if(t!==tabActual)ir(t,false);});
+// «/» lleva a la caja de búsqueda (en PC), como en muchas webs
+document.addEventListener('keydown',e=>{if(e.key!=='/'||e.ctrlKey||e.metaKey||e.altKey)return;const el=document.activeElement;
+  if(el&&(/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)||el.isContentEditable)||hojaAbierta())return;
+  e.preventDefault();if(tabActual!=='buscar')ir('buscar');$('q').focus();$('q').select();});
+/* ayuda del idioma: solo la de la opción elegida */
+const AYUDA_IDIOMA={castellano:'Oculta lo que dice estar en otro idioma y deja lo dudoso. Antes de avisarte, BuscaTron lo comprueba en la ficha del producto.',
+  estricto:'Solo lo que consta que está en castellano: oculta también lo dudoso.',todos:'No filtra por idioma. Cada resultado lleva una etiqueta con el suyo.'};
+function ayudaIdioma(){$('idioma-ayuda').textContent=AYUDA_IDIOMA[$('idioma').value]||'';$('s-idioma-ayuda').textContent=AYUDA_IDIOMA[$('s-idioma').value]||'';}
+$('s-idioma').addEventListener('change',ayudaIdioma);
 
 /* tiendas */
 function pintaT(){
@@ -413,7 +485,7 @@ let ultimos=[],ultimoBody={},ultimoId=null,recientes=[];
 function filtrosN(){const n=['incluir','alguna','excluir','pmin','pmax'].filter(i=>$(i).value.trim()).length;$('n-filtros').textContent=n?`${n} en uso`:'';}
 ['incluir','alguna','excluir','pmin','pmax'].forEach(i=>$(i).oninput=filtrosN);
 const OPC=['preventas','conenvio','segmano','abierta'];
-function opcionesN(){const n=OPC.filter(i=>$(i).checked).length;$('n-mas').textContent=n?`${n} en uso`:'';
+function opcionesN(){const n=OPC.filter(i=>$(i).checked).length;$('n-mas').textContent=n?`${n} en uso`:'';ayudaIdioma();
   $('region').disabled=!$('abierta').checked;
   try{localStorage.setItem('bt-opc',JSON.stringify({...Object.fromEntries(OPC.map(i=>[i,$(i).checked])),region:$('region').value,paginas:$('paginas').value,sinag:$('sinag').checked,idioma:$('idioma').value,agrupar:$('agrupar').checked}))}catch(e){}}
 [...OPC,'region','paginas','sinag','idioma'].forEach(i=>$(i).onchange=opcionesN);
@@ -426,6 +498,7 @@ function idiomaTag(x){
   return n?`<span class="tag ${x.idioma==='es'?'ok':'ko'}">${n}</span>`:'';}
 function relativo(ts){const h=(Date.now()/1000-ts)/3600;return h<1?'hace menos de 1 h':h<48?`hace ${Math.round(h)} h`:`hace ${Math.round(h/24)} días`;}
 let ultimoTotal=0;
+const ofertas=n=>`${n} oferta${n===1?'':'s'}`;
 function agrupa(items){const m=new Map();items.forEach(x=>{const k=x.grupo||x.url;if(!m.has(k))m.set(k,[]);m.get(k).push(x);});return [...m.values()];}
 let pintados=[],idxBarato=0;
 const ORDEN_RES={barato:'Precio: de menor a mayor',caro:'Precio: de mayor a menor',nombre:'Nombre: de la A a la Z',tienda:'Tienda: de la A a la Z'};
@@ -438,8 +511,9 @@ function masBarato(conE){let k=-1,m=Infinity;   // la tarjeta más barata (con s
 function pintaLista(){const c=$('lista-res');if(!c)return;const N=Number($('top').value)||10,conE=ultimoBody.con_envio;
   let cuenta;const que={barato:'más barato',caro:'más caro',nombre:'por nombre',tienda:'por tienda'}[ordenRes];
   if($('agrupar').checked){pintados=ordenaGrupos(agrupa(ultimos),conE).slice(0,N);idxBarato=masBarato(conE);c.innerHTML=pintados.map((g,i)=>tarjeta(g[0],i,conE,g.slice(1))).join('');
-    cuenta=`${pintados.length} producto${pintados.length===1?'':'s'}${ordenRes==='barato'||ordenRes==='caro'?' '+que+(pintados.length===1?'':'s'):', '+que}, con ${ultimos.length} ofertas de ${ultimoTotal} encontradas${conE?' (precio con envío)':''}`;}
-  else{pintados=ordenaGrupos(ultimos.map(x=>[x]),conE).slice(0,N);idxBarato=masBarato(conE);c.innerHTML=pintados.map((g,i)=>tarjeta(g[0],i,conE)).join('');cuenta=`${pintados.length} ofertas${ordenRes==='barato'?' más baratas':ordenRes==='caro'?' más caras':', '+que} de ${ultimoTotal} encontradas${conE?' (precio con envío)':''}`;}
+    cuenta=`${pintados.length} producto${pintados.length===1?'':'s'}${ordenRes==='barato'||ordenRes==='caro'?' '+que+(pintados.length===1?'':'s'):', '+que}, con ${ofertas(ultimos.length)} de ${ultimoTotal} encontrada${ultimoTotal===1?'':'s'}${conE?' (precio con envío)':''}`;}
+  else{pintados=ordenaGrupos(ultimos.map(x=>[x]),conE).slice(0,N);idxBarato=masBarato(conE);c.innerHTML=pintados.map((g,i)=>tarjeta(g[0],i,conE)).join('');const u=pintados.length===1;
+    cuenta=`${ofertas(pintados.length)}${ordenRes==='barato'?(u?' más barata':' más baratas'):ordenRes==='caro'?(u?' más cara':' más caras'):', '+que} de ${ultimoTotal} encontrada${ultimoTotal===1?'':'s'}${conE?' (precio con envío)':''}`;}
   const cu=$('cuenta-res');if(cu)cu.textContent=cuenta;
   c.querySelectorAll('.graf').forEach(g=>g.onclick=()=>{const x=pintados[+g.dataset.g][0];abreHist(x.url,x.titulo,x.tienda,$('agrupar').checked?x.grupo:null);});
   c.querySelectorAll('[data-ign]').forEach(g=>g.onclick=async()=>{const t=pintados[+g.dataset.ign][0].titulo;
@@ -554,7 +628,8 @@ async function cargaRec(restaurar){
   if(restaurar&&recientes.length)abreGuardada(recientes[0].id,true);}
 async function abreGuardada(id,alAbrir){const r=await api('busquedas?id='+id);if(r.error){if(!alAbrir)aviso(r.error);return;}
   aplicaParams(r.params);muestra(r,cuerpoForm(),r.ts);if(!alAbrir){scrollTo(0,0);$('rec').open=false;}}
-function limpiaPantalla(){ultimoId=null;ultimos=[];$('out').innerHTML='';}
+const OUT_VACIO=$('out').innerHTML;      // en PC: «Los resultados aparecerán aquí»
+function limpiaPantalla(){ultimoId=null;ultimos=[];$('out').innerHTML=OUT_VACIO;}
 async function borraRec(id){await api('busquedas',{accion:'borrar',id});if(ultimoId===id)limpiaPantalla();cargaRec();aviso('Búsqueda guardada borrada');}
 $('rec-vaciar').onclick=async()=>{if(confirm('¿Borrar todas tus búsquedas recientes? Sus precios seguirán en el historial.')){await api('busquedas',{accion:'vaciar'});limpiaPantalla();cargaRec();aviso('Búsquedas recientes borradas');}};
 
@@ -563,13 +638,13 @@ function vigilar(){limpiaSeg();$('s-consulta').value=$('q').value;$('s-nombre').
   $('s-sinag').checked=$('sinag').checked;$('s-idioma').value=$('idioma').value;
   $('s-preventas').checked=$('preventas').checked;$('s-conenvio').checked=$('conenvio').checked;$('s-segmano').checked=$('segmano').checked;
   $('s-abierta').checked=$('abierta').checked;$('s-region').value=$('region').value;$('s-paginas').value=$('paginas').value;
-  ir('seguir');$('sf-det').open=true;}
+  ayudaIdioma();ir('seguir');muestraFormSeg();}
 
 /* historial de precios */
-function cierraHist(){$('hist').classList.remove('v');}
+function cierraHist(){cierraHoja('hist');}
 $('hist').onclick=e=>{if(e.target===$('hist'))cierraHist();};
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){cierraHist();cierraPegar();}});
-function cierraPegar(){$('pegar').classList.remove('v');}
+function cierraPegar(){cierraHoja('pegar');}
 $('pegar').onclick=e=>{if(e.target===$('pegar'))cierraPegar();};
 function abrePegar(host,enlace){
   const consulta=(ultimoBody.q||$('q').value).trim();     // la de los resultados en pantalla, aunque hayas tocado la caja
@@ -582,7 +657,7 @@ function abrePegar(host,enlace){
     <textarea id="pegar-txt" placeholder="Pega aquí lo que has copiado"></textarea>
     <p class="ayuda">Se toman los productos cuyo nombre contiene «${esc(consulta)}» y que llevan precio. Se mezclan con el resto de resultados y cuentan para los avisos durante 3 días; después hay que volver a pegarlos.</p>
     <div class="acciones"><button type="button" id="pegar-ok">Añadir a los resultados</button></div><div id="pegar-msg" class="mut" style="margin-top:8px"></div>`;
-  $('pegar').classList.add('v');$('hoja2').querySelector('.cierra').onclick=cierraPegar;$('pegar-txt').focus();
+  abreHoja('pegar');$('hoja2').querySelector('.cierra').onclick=cierraPegar;$('pegar-txt').focus();
   $('pegar-ok').onclick=async()=>{const b=$('pegar-ok');b.disabled=true;
     const r=await api('importar',{host,consulta,texto:$('pegar-txt').value});b.disabled=false;
     if(r.error){$('pegar-msg').className='err';$('pegar-msg').textContent=r.error;return;}
@@ -615,7 +690,7 @@ async function abreHist(url,titulo,tienda,grupo,todas=true){
   const porProducto=!!(grupo&&todas),yo=++histPedido;
   $('hoja').innerHTML=`<button type="button" class="cierra" aria-label="Cerrar">✕</button><h3>${esc(titulo)}</h3><div class="mut">${porProducto?'Mejor precio en todas tus tiendas':esc(nombreT(tienda))}</div>
     <div class="carga" style="margin:22px 0"><div class="spin"></div>Cargando historial…</div>`;
-  $('hist').classList.add('v');$('hoja').querySelector('.cierra').onclick=cierraHist;
+  if(!$('hist').classList.contains('v'))abreHoja('hist');$('hoja').querySelector('.cierra').onclick=cierraHist;
   const h=await api(porProducto?'historial?grupo='+encodeURIComponent(grupo):'historial?url='+encodeURIComponent(url)),p=h.puntos||[];
   if(yo!==histPedido)return;
   const cambio=grupo?`<button type="button" class="sec mini" id="hist-cambia" style="margin-top:8px">${porProducto?'Ver solo '+esc(nombreT(tienda)):'Ver el mejor precio en todas las tiendas'}</button>`:'';
@@ -632,7 +707,7 @@ async function abreHist(url,titulo,tienda,grupo,todas=true){
   if($('hist-cambia'))$('hist-cambia').onclick=()=>abreHist(url,titulo,tienda,grupo,!porProducto);}
 
 /* seguimiento */
-function limpiaSeg(){$('sf').reset();$('s-id').value='';$('sf-tit').textContent='＋ Vigilar una búsqueda nueva';}
+function limpiaSeg(){$('sf').reset();$('s-id').value='';$('sf-tit').textContent='＋ Vigilar una búsqueda nueva';ayudaIdioma();}
 $('s-cancel').onclick=limpiaSeg;
 $('sf').onsubmit=async e=>{e.preventDefault();
   const canales=['app',$('c-telegram').checked&&'telegram',$('c-correo').checked&&'correo'].filter(Boolean).join(',');
@@ -651,24 +726,37 @@ function ordenaSegs(l,modo){const az=(a,b)=>a.nombre.localeCompare(b.nombre,'es'
   const f={creacion:(a,b)=>a.id-b.id,recientes:(a,b)=>b.id-a.id,nombre:az,activas:(a,b)=>(b.activo-a.activo)||az(a,b),
     proxima:(a,b)=>(prox(a)-prox(b))||az(a,b),revisada:(a,b)=>((a.ultima||0)-(b.ultima||0))||az(a,b)}[modo]||((a,b)=>a.id-b.id);
   return c.sort(f);}
-function cabeceraSeg(l){const act=l.filter(s=>s.activo).length,pau=l.length-act;
+const FILTRO_SEG={todas:'Todas',activas:'Activas',pausa:'En pausa'};
+let filtroSeg='todas';try{const o=localStorage.getItem('bt-filtro-seg');if(o in FILTRO_SEG)filtroSeg=o;}catch(e){}
+function cabeceraSeg(l){const act=l.filter(s=>s.activo).length,pau=l.length-act,n={todas:l.length,activas:act,pausa:pau};
   return `<div class="cuenta">${l.length} búsqueda${l.length===1?'':'s'} vigilada${l.length===1?'':'s'}: ${act} activa${act===1?'':'s'}${pau?`, ${pau} en pausa`:''}</div>
+  ${pau&&act?`<div class="filtro-seg" role="group" aria-label="Mostrar">${Object.entries(FILTRO_SEG).map(([k,v])=>`<button type="button" class="chip ${k===filtroSeg?'on':''}" data-fseg="${k}" aria-pressed="${k===filtroSeg}">${v} · ${n[k]}</button>`).join('')}</div>`:''}
   <div class="orden-res"><label for="seg-orden">Ordenar por</label><select id="seg-orden">${Object.entries(ORDEN_SEG).map(([k,v])=>`<option value="${k}" ${k===ordenSeg?'selected':''}>${v}</option>`).join('')}</select></div>`;}
-function pintaSeg(l){segs=l;$('seg-lista').innerHTML=l.length?cabeceraSeg(l)+ordenaSegs(l,ordenSeg).map(s=>{
-  const reglas=[s.objetivo!=null&&`cuesta ${euro(s.objetivo)} o menos`,s.bajo_historico&&`está un ${s.bajo_historico} % por debajo de su precio habitual`].filter(Boolean).join(' o ')||'nunca (no tiene condición de aviso: solo guarda el historial de precios)';
+function tarjetaSeg(s){
+  const reglas=[s.objetivo!=null&&`cuesta <b>${euro(s.objetivo)}</b> o menos`,s.bajo_historico&&`está un <b>${s.bajo_historico} %</b> por debajo de su precio habitual`].filter(Boolean).join(' o ')||'nunca (no tiene condición de aviso: solo guarda el historial de precios)';
   const canales=s.canales.split(',').map(c=>({app:'pestaña Avisos',telegram:'Telegram',correo:'correo'}[c]||c)).join(' y ');
-  return `<div class="card seg"><h2>${esc(s.nombre)} ${s.activo?'':'<span class="tag">En pausa</span>'}</h2>
-  <div class="l">🔎 «${esc(s.consulta)}»${s.incluir?` · contiene ${esc(s.incluir)}`:''}${s.excluir?` · sin ${esc(s.excluir)}`:''}${s.pmin!=null?` · desde ${euro(s.pmin)}`:''}${s.pmax!=null?` · hasta ${euro(s.pmax)}`:''}</div>
+  const est=revisando(s)?'<span class="tag run estado-seg">Revisándose…</span>':s.activo?'<span class="tag ok estado-seg">Activa</span>':'<span class="tag estado-seg">En pausa</span>';
+  const rango=`${s.pmin!=null?` · desde ${euro(s.pmin)}`:''}${s.pmax!=null?` · hasta ${euro(s.pmax)}`:''}`;
+  const filtros=[s.incluir&&`<div class="l">Solo títulos con: ${esc(s.incluir)}</div>`,s.excluir&&`<div class="l">Descarta: ${esc(s.excluir)}</div>`].filter(Boolean).join('');
+  return `<div class="card seg ${s.activo?'':'pausa'}"><div class="seg-cab"><h2>${esc(s.nombre)}</h2>${est}</div>
+  <div class="l">🔎 «${esc(s.consulta)}»${rango}</div>
   <div class="l">🎯 Te avisa si ${reglas}</div>
-  ${extrasSeg(s)}
-  <div class="l">📬 Avisos en: ${esc(canales)}</div>
-  <div class="l">🕘 Última revisión: ${fecha(s.ultima)}${s.estado?' — '+esc(s.estado):''}</div>
-  <div class="l">🔄 ${revisando(s)?'Revisándose ahora mismo…':s.activo?`Se revisa sola cada ${s.cada_horas} h; la próxima, ${proxima(s)}`:'En pausa: no se revisa sola'}</div>
+  <div class="l">🕘 ${s.ultima?`Revisada ${relativo(s.ultima)}`:'Todavía sin revisar'}${s.estado?`: ${esc(s.estado)}`:''}</div>
+  ${revisando(s)?'<div class="l">🔄 Revisándose ahora mismo…</div>':s.activo?`<div class="l">🔄 Próxima revisión ${proxima(s)}</div>`:''}
+  <details><summary>Más detalles</summary>${filtros}${extrasSeg(s)}<div class="l">📬 Avisos en: ${esc(canales)}</div>
+    <div class="l">⏱️ ${s.activo?`Se revisa sola cada ${String(s.cada_horas).replace('.',',')} h`:'En pausa: no se revisa sola'} · última revisión: ${fecha(s.ultima)}</div></details>
   <div class="acciones">${revisando(s)?'<button class="mini" disabled>Buscando… (hasta 1 min)</button>':`<button class="mini" onclick="revisa(${s.id},this)" title="Busca ya en tus tiendas y te avisa si hay algo">🔄 Buscar ahora</button>`}
   <button class="sec mini" onclick="editaSeg(${s.id})">✏️ Editar</button>
   <button class="sec mini" onclick="pausa(${s.id})" title="${s.activo?'Deja de revisarse sola; no se borra nada':'Vuelve a revisarse sola'}">${s.activo?'⏸️ Pausar':'▶️ Reanudar'}</button>
-  <button class="peli mini" onclick="borraSeg(${s.id})">🗑 Borrar</button></div></div>`}).join('')
+  <button class="peli mini" onclick="borraSeg(${s.id})">🗑 Borrar</button></div></div>`;}
+function pintaSeg(l){segs=l;
+  const abiertos=new Set([...document.querySelectorAll('#seg-lista .seg details[open]')].map(d=>d.dataset.id));   // que repintar no los cierre
+  const act=l.filter(s=>s.activo).length,filtro=act&&act<l.length?filtroSeg:'todas';
+  const vis=ordenaSegs(l,ordenSeg).filter(s=>filtro==='todas'||(filtro==='activas')===!!s.activo);
+  $('seg-lista').innerHTML=l.length?cabeceraSeg(l)+vis.map(tarjetaSeg).join('')
   :'<div class="card vacio-msg"><span class="em">👁️</span>Todavía no vigilas ninguna búsqueda.<br>Haz una búsqueda y pulsa «Vigilar esta búsqueda», o crea una aquí arriba. BuscaTron la revisará sola y te avisará cuando baje de precio.</div>';
+  $('seg-lista').querySelectorAll('.seg details').forEach((d,i)=>{d.dataset.id=vis[i].id;if(abiertos.has(String(vis[i].id)))d.open=true;});
+  $('seg-lista').querySelectorAll('[data-fseg]').forEach(b=>b.onclick=()=>{filtroSeg=b.dataset.fseg;try{localStorage.setItem('bt-filtro-seg',filtroSeg)}catch(e){}pintaSeg(segs);});
   if($('seg-orden'))$('seg-orden').onchange=()=>{ordenSeg=$('seg-orden').value;try{localStorage.setItem('bt-orden-seg',ordenSeg)}catch(e){}pintaSeg(segs);};
   if(Array.isArray(l)&&l.some(revisando))sigueRevisiones();}
 // «Buscando…» lo dice el servidor (s.revisando), así que no se pierde al guardar, recargar o abrirla en el móvil, y también
@@ -686,16 +774,18 @@ function sigueRevisiones(){if(sondeo)return;let n=0,firma='';
     if(!sigue){clearInterval(sondeo);sondeo=null;}},3000);}
 function proxima(s){const t=(s.ultima||0)+s.cada_horas*3600,ahora=Date.now()/1000;
   if(!s.ultima||t<=ahora)return 'ahora mismo (en menos de un minuto, si BuscaTron está abierto)';
-  const h=(t-ahora)/3600;return `dentro de ${h<1?Math.max(1,Math.round(h*60))+' min':String(Math.round(h*10)/10).replace('.',',')+' h'} (${fecha(t)})`;}
+  const h=(t-ahora)/3600;return `dentro de ${h<1?Math.max(1,Math.round(h*60))+' min':String(Math.round(h*10)/10).replace('.',',')+' h'} (${new Date(t*1000).toLocaleString('es-ES',{weekday:'short',hour:'2-digit',minute:'2-digit'})})`;}
 function extrasSeg(s){const o=s.opciones||{};
   const e=[o.alguna&&`con alguna de: ${o.alguna}`,o.idioma==='estricto'&&'solo castellano confirmado',o.idioma==='todos'&&'cualquier idioma',o.preventas&&'cuenta las preventas',o.con_envio&&'con envío incluido',o.segunda_mano&&'también segunda mano',o.abierta&&`también webs fuera de tu lista (${{es:'España',ue:'UE',mundo:'cualquier país'}[o.region]||'España'})`,o.paginas&&`${o.paginas} páginas por tienda`,o.resumen&&'resumen por Telegram en cada revisión'].filter(Boolean);
   return e.length?`<div class="l">➕ ${esc(e.join(' · '))}</div>`:'';}
+/* el formulario de vigilar: al abrirlo para editar, que se vea (en el móvil queda arriba del todo) */
+function muestraFormSeg(){$('sf-det').open=true;$('sf-det').scrollIntoView({block:'start',behavior:'smooth'});setTimeout(()=>$('s-nombre').focus({preventScroll:true}),350);}
 function editaSeg(id){const s=segs.find(x=>x.id===id);$('sf-tit').textContent='✏️ Editar la búsqueda vigilada';$('s-id').value=s.id;
   $('s-nombre').value=s.nombre;$('s-consulta').value=s.consulta;$('s-incluir').value=s.incluir;$('s-excluir').value=s.excluir;
   $('s-pmin').value=s.pmin??'';$('s-pmax').value=s.pmax??'';$('s-objetivo').value=s.objetivo??'';$('s-hist').value=s.bajo_historico||'';
   $('s-horas').value=s.cada_horas;$('s-sinag').checked=!!s.sin_agotados;$('s-idioma').value=(s.opciones&&s.opciones.idioma)||(s.castellano?'castellano':'todos');
   const o=s.opciones||{};$('s-preventas').checked=!!o.preventas;$('s-conenvio').checked=!!o.con_envio;$('s-segmano').checked=!!o.segunda_mano;$('s-abierta').checked=!!o.abierta;$('s-region').value=o.region||'es';$('s-paginas').value=o.paginas||'';$('s-resumen').checked=!!o.resumen;$('s-alguna').value=o.alguna||'';
-  $('c-telegram').checked=s.canales.includes('telegram');$('c-correo').checked=s.canales.includes('correo');$('sf-det').open=true;scrollTo(0,0);}
+  $('c-telegram').checked=s.canales.includes('telegram');$('c-correo').checked=s.canales.includes('correo');ayudaIdioma();muestraFormSeg();}
 async function pausa(id){const s=segs.find(x=>x.id===id);const l=await api('seguimientos',{accion:'guardar',...s,activo:!s.activo,sin_agotados:!!s.sin_agotados});
   if(l.error){aviso(l.error);return;}pintaSeg(l);
   aviso(s.activo?'En pausa: no se revisará sola hasta que la reanudes (no se borra nada)'
@@ -713,14 +803,20 @@ function ordenaAvisos(l,modo){const az=(a,b)=>a.localeCompare(b,'es',{sensitivit
   const f={reciente:(a,b)=>b.ts-a.ts,barato:(a,b)=>a.precio-b.precio||az(a.titulo,b.titulo),caro:(a,b)=>b.precio-a.precio||az(a.titulo,b.titulo),
     nombre:(a,b)=>az(a.titulo,b.titulo)||a.precio-b.precio,tienda:(a,b)=>az(nombreT(a.tienda),nombreT(b.tienda))||a.precio-b.precio}[modo]||((a,b)=>b.ts-a.ts);
   return c.sort(f);}
-async function cargaAvisos(){const todos=await api('avisos');try{localStorage.setItem('bt-vistos',String(todos.length?todos[0].id:0))}catch(e){}
+let vistosAntes=null;      // el último aviso que ya habías visto al entrar: los posteriores llevan «Nuevo»
+async function cargaAvisos(){const [todos,vig]=await Promise.all([api('avisos'),segs.length?segs:api('seguimientos')]);if(!Array.isArray(todos))return;
+  if(Array.isArray(vig))segs=vig;
+  if(vistosAntes===null)try{vistosAntes=Number(localStorage.getItem('bt-vistos')||0)}catch(e){vistosAntes=0}
+  try{localStorage.setItem('bt-vistos',String(todos.length?Math.max(...todos.map(a=>a.id)):0))}catch(e){}
   $('nav-av').textContent='';
-  const l=ordenaAvisos(todos,ordenAv);
-  $('av-lista').innerHTML=l.length?`<div class="cuenta" style="display:flex;justify-content:space-between;align-items:center;gap:8px">${l.length} aviso${l.length>1?'s':''}
+  const l=ordenaAvisos(todos,ordenAv),nuevos=l.filter(a=>a.id>vistosAntes).length,deSeg=id=>(segs.find(s=>s.id===id)||{}).nombre;
+  $('av-lista').innerHTML=l.length?`<div class="cuenta" style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span>${l.length} aviso${l.length>1?'s':''}${nuevos?` · <b style="color:var(--ac)">${nuevos} nuevo${nuevos>1?'s':''}</b>`:''}</span>
     <button type="button" class="peli mini" id="av-vaciar">Borrar todos</button></div>
-    <div style="margin:0 0 10px"><label for="av-orden">Ordenar por</label><select id="av-orden">${Object.entries(ORDEN_AV).map(([k,v])=>`<option value="${k}" ${k===ordenAv?'selected':''}>${v}</option>`).join('')}</select></div>`+l.map((a,i)=>`<div class="res"><a class="cuerpo" href="${esc(a.url)}" target="_blank" rel="noopener"><div class="pr">${euro(a.precio)}</div>
-    <div class="info"><div class="t">${esc(a.titulo)}</div><div class="meta"><span class="tag">${esc(nombreT(a.tienda))}</span><span class="tag ok">${esc(a.motivo)}</span></div>
-    <div class="mut" style="margin-top:4px">${fecha(a.ts)}</div></div></a><button type="button" class="graf" data-i="${i}" title="Historial de precios" aria-label="Ver historial de precios">📈<small>Precio</small></button><button type="button" class="quita" data-id="${a.id}" title="Quitar este aviso (no se repetirá salvo que baje más)" aria-label="Quitar este aviso">✕<small>Quitar</small></button></div>`).join('')
+    <div class="orden-av" style="margin:0 0 10px"><label for="av-orden">Ordenar por</label><select id="av-orden">${Object.entries(ORDEN_AV).map(([k,v])=>`<option value="${k}" ${k===ordenAv?'selected':''}>${v}</option>`).join('')}</select></div>`+l.map((a,i)=>`<div class="gr av"><div class="res con-acc"><a class="cuerpo" href="${esc(a.url)}" target="_blank" rel="noopener"><div class="pr">${euro(a.precio)}</div>
+    <div class="info"><div class="t">${esc(a.titulo)}</div><div class="meta">${a.id>vistosAntes?'<span class="tag nuevo">Nuevo</span>':''}<span class="tag">${esc(nombreT(a.tienda))}</span></div>
+    <div class="motivo">${esc(a.motivo)}</div>
+    <div class="mut" style="margin-top:4px">${fecha(a.ts)}${deSeg(a.seg_id)?` · ${esc(deSeg(a.seg_id))}`:''}</div></div></a></div>
+    <div class="accs"><button type="button" class="graf" data-i="${i}" title="Historial de precios">📈 Historial de precio</button><button type="button" class="quita no" data-id="${a.id}" title="Quitar este aviso (no se repetirá salvo que baje más)">✕ Quitar aviso</button></div></div>`).join('')
     :'<div class="card vacio-msg"><span class="em">🔔</span>No tienes avisos.<br>Cuando un producto de una búsqueda vigilada llegue a tu precio, aparecerá aquí.</div>';
   document.querySelectorAll('#av-lista .graf').forEach(g=>g.onclick=()=>{const a=l[+g.dataset.i];abreHist(a.url,a.titulo,a.tienda);});
   document.querySelectorAll('#av-lista .quita').forEach(g=>g.onclick=async()=>{await api('avisos',{accion:'borrar',id:+g.dataset.id});cargaAvisos();aviso('Aviso quitado. No se repetirá salvo que baje más de precio');});
@@ -736,11 +832,16 @@ async function cargaAjustes(){const a=await api('ajustes');$('a-token').value=a.
   if(!a.navegador_disponible)$('a-nav-info').textContent='No disponible: hace falta Chrome o Edge instalado y el complemento Playwright (pip install playwright).';
   $('a-pin').value=a.pin;$('a-pag').value=a.paginas||3;cargaRed();cargaArranque();cargaEstado();cargaOcultos();cargaObjetivos();}
 async function cargaEstado(){const l=await api('estado_tiendas',{});if(!Array.isArray(l))return;
-  $('estado-t').innerHTML=l.map(e=>`<div class="est"><b>${esc(e.nombre)}${e.activa?'':' <span class="tag">desactivada</span>'}</b>
+  // arriba solo las que piden atención; las que van bien (o las miras tú), plegadas
+  const bien=e=>e.manual||(e.activa&&e.consultas&&e.con_resultados&&!e.sugerir_desactivar);
+  const fila=e=>`<div class="est"><b>${esc(e.nombre)}${e.activa?'':' <span class="tag">desactivada</span>'}</b>
     <span class="mut">${e.manual?'La miras tú: no se consulta sola':e.consultas?`${e.con_resultados} de ${e.consultas} consultas con resultados${e.ultimo_ok?' · último resultado '+relativo(e.ultimo_ok):''}`:'Todavía sin consultas'}${e.sugerir_desactivar?(/^(no tiene nada|tiene productos)/.test(e.ultimo_error||'')
       ?' · <span class="mut">responde bien, pero no ha tenido nada de lo que buscas; desactívala solo si no suele tener tus juegos (acelera las búsquedas)</span>'
       :' · <span class="err">no ha respondido en sus últimas consultas: conviene desactivarla</span>'):''}${e.ultimo_error&&!e.con_resultados&&!e.manual?`<br>Último problema: ${esc(e.ultimo_error)}`:''}</span>
-    ${e.manual?'':`<button type="button" class="${e.activa?'peli':'sec'} mini" data-act="${esc(e.host)}">${e.activa?'Desactivar':'Activar'}</button>`}</div>`).join('');
+    ${e.manual?'':`<button type="button" class="${e.activa?'peli':'sec'} mini" data-act="${esc(e.host)}">${e.activa?'Desactivar':'Activar'}</button>`}</div>`;
+  const atencion=l.filter(e=>!bien(e)),ok=l.filter(bien),abierto=$('estado-ok')&&$('estado-ok').open;
+  $('estado-t').innerHTML=(atencion.length?atencion.map(fila).join(''):'<p class="ok">Todas tus tiendas responden bien.</p>')
+    +(ok.length?`<details id="estado-ok" ${abierto?'open':''}><summary>${ok.length} tienda${ok.length===1?'':'s'} sin problemas</summary>${ok.map(fila).join('')}</details>`:'');
   document.querySelectorAll('#estado-t [data-act]').forEach(b=>b.onclick=async()=>{const t=tiendas.find(x=>x.host===b.dataset.act);if(!t)return;
     t.activa=!t.activa;await guardaActivas();cargaEstado();aviso(t.activa?'Tienda activada: entra en tus búsquedas':'Tienda desactivada: ya no se consulta');});}
 async function cargaOcultos(){const r=await api('ignorar',{});const l=r.ignorados||[];
@@ -775,7 +876,9 @@ $('a-prueba-tg').onclick=()=>prueba('telegram');$('a-prueba-co').onclick=()=>pru
 cargaT().then(()=>{if(!retomaBusqueda())cargaRec(true);});cargaNavAv();
 if('serviceWorker' in navigator&&window.isSecureContext)navigator.serviceWorker.register('/sw.js').catch(()=>{});
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&!buscando)retomaBusqueda();});
-try{const t=localStorage.getItem('bt-tab');if(t&&t!=='buscar')ir(t);}catch(e){}
+{const h=location.hash.slice(1);let t=TABS.includes(h)?h:null;     // la de la dirección (#avisos) o la última que usaste
+  if(!t)try{t=localStorage.getItem('bt-tab')}catch(e){}
+  if(!TABS.includes(t))t='buscar';history.replaceState({t},'','#'+t);if(t!=='buscar')ir(t,false);}
 </script>
 </body>
 </html>

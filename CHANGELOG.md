@@ -3,6 +3,27 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.14.0] - 2026-11-08
+
+### Añadido
+- **PC a pantalla ancha**: Buscar a dos columnas (formulario a la izquierda, resultados a la derecha), Vigiladas y Avisos en rejilla de dos, Ajustes a dos columnas y las pestañas fijas arriba al bajar. Antes todo iba en una columna de 760 px.
+- **Botón «atrás» del móvil**: vuelve a la pestaña anterior y cierra el historial de precios o «Pegar resultados», en vez de salir de la app. Cada pestaña tiene su dirección (`#avisos`…).
+- **Tecla «/»** para ir a la caja de búsqueda; contorno visible al moverse con el teclado y efecto al pasar el ratón.
+- **Vigiladas, filtro rápido** Todas / Activas / En pausa (con su número).
+- **Avisos**: marca «Nuevo» en los que no habías visto y de qué vigilada viene cada uno.
+
+### Cambiado
+- **Tarjetas de vigiladas** más cortas: estado claro (Activa, En pausa, Revisándose…), lo esencial a la vista y los filtros largos, canales y frecuencia en «Más detalles» (no se cierra al repintar). Las pausadas, con borde discontinuo. Botones en 2×2 en el móvil, sin cortes.
+- **Avisos**: el motivo ocupa todo el ancho bajo el título y los botones («Historial de precio», «Quitar aviso») van debajo, como en los resultados; antes el motivo quedaba apretado entre dos botones laterales.
+- **Idioma**: en vez de un párrafo fijo, una línea que explica solo la opción elegida (también al vigilar).
+- **Estado de las tiendas**: arriba solo las que piden atención; las que van bien, plegadas («21 tiendas sin problemas»).
+- **Editar una vigilada** abre el formulario, lo lleva a la vista y pone el cursor en el nombre.
+- Los contadores de los desplegables («3 en uso») van junto a la flecha, no flotando en medio.
+
+### Corregido
+- **Títulos de Zacatrus** con el nombre dos veces y sus precios («Hulk Hulk 16,95 € Club -10% 15,26 € ?»): ahora «Hulk». Como los números entraban en la clave del producto, tampoco se agrupaban con el mismo juego de otras tiendas. Se corrigieron los 102 precios guardados y las búsquedas recientes.
+- Plurales: «1 oferta», «1 aviso nuevo», «1 tienda sin respuesta».
+
 ## [0.13.3] - 2026-11-08
 
 ### Corregido

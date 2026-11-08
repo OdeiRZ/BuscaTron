@@ -6,7 +6,13 @@ Buscador y vigilante de precios **local** para tiendas online españolas. Pensad
 - **Datos en vivo**: no usa cachés ni comparadores intermedios, así que el precio es el que ves en la tienda.
 - **Tus datos se quedan en tu equipo**: lista de tiendas, historial y tokens se guardan en archivos locales que no se suben al repositorio.
 
-> Estado: **versión funcional** (v0.13.3). Consulta el [CHANGELOG](CHANGELOG.md).
+> Estado: **versión funcional** (v0.14.0). Consulta el [CHANGELOG](CHANGELOG.md).
+
+## En el móvil y en el PC
+
+- **Móvil**: pestañas abajo; el botón «atrás» vuelve a la pestaña anterior y cierra el historial de precios o «Pegar resultados» en vez de salir de la app.
+- **PC (pantallas anchas)**: Buscar a dos columnas (el formulario a la izquierda, los resultados a la derecha), Vigiladas y Avisos en rejilla, Ajustes a dos columnas y las pestañas fijas arriba al bajar. La tecla <kbd>/</kbd> lleva a la caja de búsqueda desde cualquier pestaña.
+- Cada pestaña tiene su dirección (`#buscar`, `#seguir`, `#avisos`, `#ajustes`), así que se puede guardar como marcador.
 
 ## Inicio rápido
 
@@ -293,7 +299,7 @@ permitir_acceso_movil.bat     abre el cortafuegos para tu red local (pide admini
 python -m unittest discover -s tests
 ```
 
-198 pruebas, sin red. Cubren las reglas de aviso (objetivo de la búsqueda y del producto, media histórica, no repetir, reaviso, limpieza de obsoletos, tienda caída frente a tienda sin el producto), qué vigilada cubre cada objetivo, editar o borrar una vigilada mientras se revisa, el historial por producto, las órdenes del bot y los mensajes largos de Telegram, la escritura segura de los archivos y los cambios de tiendas durante una búsqueda, los errores del servidor, el tope de páginas y las revisiones que fallan, los precios con punto de miles, el extractor (precios tachados y con descuento, tarjetas que no se mezclan con la siguiente, texto oculto, títulos recortados, preventas, estados de segunda mano, páginas siguientes, datos de producto, envío), el motor (paginación, filtros, total con envío, mínimo histórico, historial), la búsqueda abierta, el filtro de IP y el PIN, la importación a mano y las búsquedas guardadas.
+200 pruebas, sin red. Cubren las reglas de aviso (objetivo de la búsqueda y del producto, media histórica, no repetir, reaviso, limpieza de obsoletos, tienda caída frente a tienda sin el producto), qué vigilada cubre cada objetivo, editar o borrar una vigilada mientras se revisa, el historial por producto, las órdenes del bot y los mensajes largos de Telegram, la escritura segura de los archivos y los cambios de tiendas durante una búsqueda, los errores del servidor, el tope de páginas y las revisiones que fallan, los precios con punto de miles, el extractor (precios tachados y con descuento, tarjetas que no se mezclan con la siguiente, texto oculto, títulos recortados, preventas, estados de segunda mano, páginas siguientes, datos de producto, envío), el motor (paginación, filtros, total con envío, mínimo histórico, historial), la búsqueda abierta, el filtro de IP y el PIN, la importación a mano y las búsquedas guardadas.
 
 ## Limitaciones conocidas
 

@@ -86,6 +86,15 @@ def titulo_desde_url(url):
     return t[:1].upper() + t[1:]
 
 
+def limpia_titulo(t):
+    """Zacatrus mete en el enlace el nombre dos veces y sus precios: «Hulk Hulk 16,95 € Club -10% 15,26 € ?» → «Hulk».
+    Solo si el nombre se repite y detrás no hay nada o empieza un precio: cualquier otro título queda igual."""
+    m = re.match(r"^(.{4,}?)\s+\1(?:\s+(?=\d)|\s*$)", t)
+    if m and (not t[m.end():].strip() or PRECIO.match(t[m.end():].strip())):
+        return m.group(1)
+    return t
+
+
 def a_numero(s):
     s = str(s).strip()
     if "," in s:
@@ -273,7 +282,7 @@ def analiza(html, base, consulta, ventana=40, con_estado=False):
         if titulo.endswith(("...", "…")) and len(titulo_desde_url(e[1])) > len(titulo):
             titulo = titulo_desde_url(e[1])
         detalle = re.search(r"Estado:\s*([^,]+)", titulo)         # Vinted: «Título, Marca: X, Estado: Muy bueno, 1.00 €»
-        titulo = re.split(r",\s*(?:Marca|Estado|Tama[ñn]o):", titulo)[0].strip()
+        titulo = limpia_titulo(re.split(r",\s*(?:Marca|Estado|Tama[ñn]o):", titulo)[0].strip())
         marca = re.match(r"\s*(producto agotado|agotado|sin stock|fuera de stock)\s*[:\-–]?\s*", titulo, re.I)
         if marca:                                    # Turol Games: «Producto agotado Marvel Champions…» dentro del título
             titulo = titulo[marca.end():]

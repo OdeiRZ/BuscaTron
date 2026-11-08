@@ -218,7 +218,9 @@ def _revisa(seg_id, enviar):
                           (ts, seg_id, x["titulo"], x["tienda"], x["url"], x["precio"], motivo))
                 nuevos.append({**x, "motivo": motivo})
             caidas = sum(1 for i in informe.values() if i.get("caida"))
-            estado = f"{productos(res)}, {len(nuevos)} avisos nuevos" + (f", {caidas} tiendas sin respuesta" if caidas else "")
+            n = len(nuevos)
+            estado = (f"{productos(res)}, {n} aviso{'' if n == 1 else 's'} nuevo{'' if n == 1 else 's'}"
+                      + (f", {caidas} tienda{'' if caidas == 1 else 's'} sin respuesta" if caidas else ""))
             c.execute("UPDATE seguimientos SET ultima=?, estado=? WHERE id=?", (ts, estado, seg_id))
         envio = {}
         if nuevos and enviar:

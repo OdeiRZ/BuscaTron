@@ -129,5 +129,15 @@ class StockDeLaFicha(unittest.TestCase):
         self.assertTrue(f["agotado"])
 
 
+class TituloDeZacatrus(unittest.TestCase):
+    def test_nombre_repetido_y_precios_fuera(self):
+        self.assertEqual(extract.limpia_titulo("Marvel Champions: Hulk Marvel Champions: Hulk 16,95 € Club -10% 15,26 € ?"), "Marvel Champions: Hulk")
+        self.assertEqual(extract.limpia_titulo("Dune Imperium: Insurrección Dune Imperium: Insurrección 55,99 €"), "Dune Imperium: Insurrección")
+
+    def test_los_demas_titulos_no_cambian(self):
+        for t in ("Marvel Champions: Hulk", "Pack Pack 2", "Dune Dune Imperium", "Marvel Champions Promo Card 4,5€/u", "Juego 2 2 jugadores"):
+            self.assertEqual(extract.limpia_titulo(t), t)
+
+
 if __name__ == "__main__":
     unittest.main()
