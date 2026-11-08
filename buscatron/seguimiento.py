@@ -207,6 +207,13 @@ def revisa(seg_id, enviar=True):
         elif enviar and opc.get("resumen") and "telegram" in seg["canales"].split(","):
             envio = notifica.envia(["telegram"], f"BuscaTron · {seg['nombre']} · resumen", resumen(seg, opc, modo, res, informe))
         return {"resultados": len(res), "avisos": nuevos, "envio": envio}
+    except Exception as e:
+        # Se anota la revisión aunque falle: si no, el programador la repetiría cada minuto contra todas las tiendas
+        # (una ráfaga así es lo que hace que una tienda bloquee tu conexión).
+        with bd.conecta() as c:
+            c.execute("UPDATE seguimientos SET ultima=?, estado=? WHERE id=?",
+                      (time.time(), f"la revisión falló: {str(e)[:120] or e.__class__.__name__}", seg_id))
+        raise
     finally:
         with _cerrojo:
             _en_curso.discard(seg_id)

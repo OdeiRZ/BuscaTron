@@ -66,6 +66,67 @@ class EscriturasSeguras(ConArchivos):
         self.assertEqual(len(cfg.carga()), 30)
 
 
+class RevisionQueFalla(ConArchivos):
+    def test_se_anota_para_no_repetirla_cada_minuto(self):
+        from buscatron import seguimiento
+        sid = seguimiento.guarda({"consulta": "civil war", "objetivo": "30"})
+        with mock.patch.object(motor, "buscar", side_effect=RuntimeError("se rompió")):
+            with self.assertRaises(RuntimeError):
+                seguimiento.revisa(sid)
+        s = seguimiento.lista()[0]
+        self.assertIn("la revisión falló: se rompió", s["estado"])
+        self.assertEqual(seguimiento.pendientes(), [])          # no le vuelve a tocar hasta dentro de 12 h
+
+
+class PaginasLimitadas(ConArchivos):
+    def test_nunca_mas_de_6_paginas_por_tienda(self):
+        vistas = []
+        ajustes.guarda({"paginas": 50})
+        with mock.patch.object(motor, "_tienda", lambda t, c, nav, paginas: (vistas.append(paginas), (t["host"], [], None))[1]), \
+                mock.patch.object(motor.navegador, "disponible", lambda: False):
+            motor.buscar("algo")
+            motor.buscar("algo", paginas="abc")
+        self.assertEqual(set(vistas[:2]), {6})
+        self.assertEqual(set(vistas[2:]), {1})
+
+
+class Recordatorio(ConArchivos):
+    def test_si_telegram_falla_se_reintenta(self):
+        from buscatron import importar, programador
+        ajustes.guarda({"telegram_token": "t", "telegram_chat": "1"})
+        cfg.guarda([{"host": "f.es", "activa": True, "plantilla": "https://f.es/?q={q}", "manual": True}])
+        importar.guarda("f.es", "civil war", [{"titulo": "Civil War", "precio": 30}], "https://f.es/?q=civil+war")
+        with bd.conecta() as c:
+            c.execute("UPDATE importados SET ts = ts - 65 * 3600")         # caduca dentro de 7 h
+        with mock.patch.object(programador.notifica, "envia", lambda *a: {"telegram": "sin conexión"}):
+            programador.recordatorios()
+        self.assertEqual(len(importar.por_caducar()), 1)                   # no se da por avisado
+        with mock.patch.object(programador.notifica, "envia", lambda *a: {"telegram": None}):
+            programador.recordatorios()
+        self.assertEqual(importar.por_caducar(), [])
+
+
+class EnlacesSeguros(unittest.TestCase):
+    def test_solo_direcciones_web(self):
+        from buscatron import extract
+        html = ('<a href="javascript:alert(1)">Civil War malicioso</a><span>10,00 €</span>'
+                '<a href="/p/civil-war">Civil War</a><span>20,00 €</span>')
+        self.assertEqual([x["url"] for x in extract.extrae(html, "https://t.es/buscar", "civil war")], ["https://t.es/p/civil-war"])
+
+
+class MinimoHistorico(ConArchivos):
+    def test_si_el_precio_nunca_cambia_no_es_minimo_historico(self):
+        import time
+        for i, url in enumerate(("https://t.es/fijo", "https://t.es/baja")):
+            for k, p in enumerate((20, 20, 20) if i == 0 else (25, 22, 20)):
+                with bd.conecta() as c:
+                    c.execute("INSERT INTO precios(ts,consulta,tienda,titulo,url,precio,agotado) VALUES(?,?,?,?,?,?,0)",
+                              (time.time() - 100 + k, "x", "a.es", "x", url, p))
+        previo = motor.historial_previo({"https://t.es/fijo", "https://t.es/baja"})
+        self.assertEqual(previo["https://t.es/fijo"], (20, 3, 20))
+        self.assertEqual(previo["https://t.es/baja"], (20, 3, 25))
+
+
 class DireccionHttps(unittest.TestCase):
     def test_lee_la_de_tailscale_serve(self):
         salida = json.dumps({"Web": {"pc.tail1.ts.net:443": {"Handlers": {"/": {"Proxy": "http://127.0.0.1:8790"}}}}})

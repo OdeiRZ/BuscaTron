@@ -242,14 +242,14 @@ def envio_de(t, precio):
 
 
 def historial_previo(urls):
-    """{url: (precio_mínimo, observaciones)} de lo ya guardado para esos artículos."""
+    """{url: (precio_mínimo, observaciones, precio_máximo)} de lo ya guardado para esos artículos."""
     urls, out = list(urls), {}
     with bd.conecta() as c:
         for i in range(0, len(urls), 500):
             trozo = urls[i:i + 500]
-            q = "SELECT url, MIN(precio) mn, COUNT(*) n FROM precios WHERE agotado=0 AND url IN (%s) GROUP BY url" % ",".join("?" * len(trozo))
+            q = "SELECT url, MIN(precio) mn, COUNT(*) n, MAX(precio) mx FROM precios WHERE agotado=0 AND url IN (%s) GROUP BY url" % ",".join("?" * len(trozo))
             for r in c.execute(q, trozo):
-                out[r["url"]] = (r["mn"], r["n"])
+                out[r["url"]] = (r["mn"], r["n"], r["mx"])
     return out
 
 
@@ -431,7 +431,10 @@ def buscar(consulta, incluir="", excluir="", ocultar_agotados=True, hosts=None, 
     lista = cfg.carga()
     aprendido = {t["host"]: (t.get("plantilla"), bool(t.get("js"))) for t in lista}    # para guardar luego solo lo que cambie
     aj = ajustes.carga()
-    paginas = paginas or int(aj.get("paginas") or 1)
+    try:
+        paginas = min(max(int(paginas or aj.get("paginas") or 1), 1), 6)    # nunca más de 6: muchas páginas seguidas parecen un ataque
+    except (TypeError, ValueError):
+        paginas = 1
     modo = modo_idioma(castellano, idioma)
     activas = [t for t in lista if (t["host"] in hosts if hosts is not None else t.get("activa", True))]
     if not segunda_mano:
@@ -530,8 +533,9 @@ def buscar(consulta, incluir="", excluir="", ocultar_agotados=True, hosts=None, 
         t = por_host.get(x["tienda"], {})
         x["envio"] = envio_de(t, x["precio"])
         x["total"] = round(x["precio"] + (x["envio"] or 0), 2)
-        mn, n = previo.get(x["url"], (None, 0))
-        x["n_hist"], x["minimo"] = n, bool(n >= MIN_HISTORIAL and x["precio"] <= mn)
+        mn, n, mx = previo.get(x["url"], (None, 0, None))
+        # Mínimo histórico: lo más barato que se le ha visto Y alguna vez estuvo más caro (si nunca cambia, no es noticia)
+        x["n_hist"], x["minimo"] = n, bool(n >= MIN_HISTORIAL and x["precio"] <= mn and mx > x["precio"] + 0.005)
     res.sort(key=lambda x: (x["agotado"], x["total"] if con_envio else x["precio"]))
     ts = time.time()
     with bd.conecta() as c:

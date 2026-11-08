@@ -3,6 +3,15 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.11.5] - 2026-11-08
+
+### Corregido
+- **Sin ráfagas de consultas por un fallo**: si una revisión vigilada fallaba, no se anotaba y el programador la repetía cada minuto contra todas tus tiendas (justo lo que hace que una tienda bloquee tu conexión). Ahora se anota con «la revisión falló: …» y espera a su hora.
+- **Máximo de 6 páginas por tienda** en cualquier búsqueda: el valor de Ajustes no tenía tope y un número alto hacía decenas de peticiones seguidas a cada tienda.
+- **«Mínimo histórico»** salía aunque el precio no hubiera cambiado nunca; ahora solo si es lo más barato visto y antes estuvo más caro.
+- El recordatorio de que caducan los precios pegados a mano se daba por enviado aunque Telegram fallara; ahora se reintenta.
+- Los enlaces de producto que no son direcciones web (`javascript:`…) se descartan.
+
 ## [0.11.4] - 2026-11-08
 
 ### Corregido

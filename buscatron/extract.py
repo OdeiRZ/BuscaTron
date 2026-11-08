@@ -213,7 +213,7 @@ def analiza(html, base, consulta, ventana=40, con_estado=False):
             elif f[0] == "x":
                 textos.append(f[1])
         url = limpia_url(e[1])
-        if precio is None or url in vistos:
+        if precio is None or url in vistos or not url.startswith(("http://", "https://")):   # nunca «javascript:» y similares
             continue
         vistos.add(url)
         if titulo.endswith(("...", "…")) and len(titulo_desde_url(e[1])) > len(titulo):

@@ -19,11 +19,12 @@ def recordatorios():
         nombre = t.get("nombre") or host
         enlace = cfg.url_busqueda(t["plantilla"], consulta) if t.get("plantilla") else ""
         horas = max(1, round(queda / 3600))
-        notifica.envia(["telegram"], f"BuscaTron · {nombre}",
+        envio = notifica.envia(["telegram"], f"BuscaTron · {nombre}",
                        f"Los precios que pegaste a mano de {nombre} caducan dentro de {horas} h. Si quieres que sigan contando en tus "
                        f"búsquedas y avisos, vuelve a pegarlos («Tiendas que tienes que mirar tú» → «Pegar resultados»)."
                        + (f"\n{enlace}" if enlace else ""))
-        importar.marca_recordado(host, ts)
+        if envio.get("telegram") is None:          # si no llegó (sin conexión…), se reintenta en la siguiente vuelta
+            importar.marca_recordado(host, ts)
 
 
 def limpieza():
