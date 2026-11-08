@@ -642,7 +642,17 @@ $('sf').onsubmit=async e=>{e.preventDefault();
     opciones:{preventas:$('s-preventas').checked,con_envio:$('s-conenvio').checked,segunda_mano:$('s-segmano').checked,abierta:$('s-abierta').checked,region:$('s-region').value,paginas:$('s-paginas').value,idioma:$('s-idioma').value,resumen:$('s-resumen').checked,alguna:$('s-alguna').value}});
   if(r.error){aviso(r.error);return;} limpiaSeg();$('sf-det').open=false;pintaSeg(r);aviso('Búsqueda vigilada guardada');};
 async function cargaSeg(){pintaSeg(await api('seguimientos'));}
-function pintaSeg(l){segs=l;$('seg-lista').innerHTML=l.length?l.map(s=>{
+const ORDEN_SEG={creacion:'Orden en que las creaste',recientes:'Las últimas creadas primero',nombre:'Nombre: de la A a la Z',activas:'Activas primero, luego en pausa',proxima:'La próxima en revisarse primero',revisada:'Las que llevan más sin revisarse primero'};
+let ordenSeg='creacion';try{const o=localStorage.getItem('bt-orden-seg');if(o in ORDEN_SEG)ordenSeg=o;}catch(e){}
+function ordenaSegs(l,modo){const az=(a,b)=>a.nombre.localeCompare(b.nombre,'es',{sensitivity:'base',numeric:true}),c=[...l];
+  const prox=s=>s.activo?(s.ultima||0)+s.cada_horas*3600:Infinity;      // las pausadas no se revisan solas: al final
+  const f={creacion:(a,b)=>a.id-b.id,recientes:(a,b)=>b.id-a.id,nombre:az,activas:(a,b)=>(b.activo-a.activo)||az(a,b),
+    proxima:(a,b)=>(prox(a)-prox(b))||az(a,b),revisada:(a,b)=>((a.ultima||0)-(b.ultima||0))||az(a,b)}[modo]||((a,b)=>a.id-b.id);
+  return c.sort(f);}
+function cabeceraSeg(l){const act=l.filter(s=>s.activo).length,pau=l.length-act;
+  return `<div class="cuenta">${l.length} búsqueda${l.length===1?'':'s'} vigilada${l.length===1?'':'s'}: ${act} activa${act===1?'':'s'}${pau?`, ${pau} en pausa`:''}</div>
+  <div class="orden-res"><label for="seg-orden">Ordenar por</label><select id="seg-orden">${Object.entries(ORDEN_SEG).map(([k,v])=>`<option value="${k}" ${k===ordenSeg?'selected':''}>${v}</option>`).join('')}</select></div>`;}
+function pintaSeg(l){segs=l;$('seg-lista').innerHTML=l.length?cabeceraSeg(l)+ordenaSegs(l,ordenSeg).map(s=>{
   const reglas=[s.objetivo!=null&&`cuesta ${euro(s.objetivo)} o menos`,s.bajo_historico&&`está un ${s.bajo_historico} % por debajo de su precio habitual`].filter(Boolean).join(' o ')||'nunca (no tiene condición de aviso: solo guarda el historial de precios)';
   const canales=s.canales.split(',').map(c=>({app:'pestaña Avisos',telegram:'Telegram',correo:'correo'}[c]||c)).join(' y ');
   return `<div class="card seg"><h2>${esc(s.nombre)} ${s.activo?'':'<span class="tag">En pausa</span>'}</h2>
@@ -656,7 +666,8 @@ function pintaSeg(l){segs=l;$('seg-lista').innerHTML=l.length?l.map(s=>{
   <button class="sec mini" onclick="editaSeg(${s.id})">✏️ Editar</button>
   <button class="sec mini" onclick="pausa(${s.id})" title="${s.activo?'Deja de revisarse sola; no se borra nada':'Vuelve a revisarse sola'}">${s.activo?'⏸️ Pausar':'▶️ Reanudar'}</button>
   <button class="peli mini" onclick="borraSeg(${s.id})">🗑 Borrar</button></div></div>`}).join('')
-  :'<div class="card vacio-msg"><span class="em">👁️</span>Todavía no vigilas ninguna búsqueda.<br>Haz una búsqueda y pulsa «Vigilar esta búsqueda», o crea una aquí arriba. BuscaTron la revisará sola y te avisará cuando baje de precio.</div>';}
+  :'<div class="card vacio-msg"><span class="em">👁️</span>Todavía no vigilas ninguna búsqueda.<br>Haz una búsqueda y pulsa «Vigilar esta búsqueda», o crea una aquí arriba. BuscaTron la revisará sola y te avisará cuando baje de precio.</div>';
+  if($('seg-orden'))$('seg-orden').onchange=()=>{ordenSeg=$('seg-orden').value;try{localStorage.setItem('bt-orden-seg',ordenSeg)}catch(e){}pintaSeg(segs);};}
 function proxima(s){const t=(s.ultima||0)+s.cada_horas*3600,ahora=Date.now()/1000;
   if(!s.ultima||t<=ahora)return 'ahora mismo (en menos de un minuto, si BuscaTron está abierto)';
   const h=(t-ahora)/3600;return `dentro de ${h<1?Math.max(1,Math.round(h*60))+' min':String(Math.round(h*10)/10).replace('.',',')+' h'} (${fecha(t)})`;}

@@ -3,6 +3,11 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.13.0] - 2026-11-08
+
+### Añadido
+- **Ordenar las vigiladas**: en el orden en que las creaste, las últimas creadas primero, por nombre, activas primero, la próxima en revisarse o las que llevan más sin revisarse. Se recuerda y se mantiene al pausar, reanudar o revisar. Encima de la lista, cuántas hay activas y cuántas en pausa.
+
 ## [0.12.2] - 2026-11-08
 
 ### Corregido

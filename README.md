@@ -6,7 +6,7 @@ Buscador y vigilante de precios **local** para tiendas online españolas. Pensad
 - **Datos en vivo**: no usa cachés ni comparadores intermedios, así que el precio es el que ves en la tienda.
 - **Tus datos se quedan en tu equipo**: lista de tiendas, historial y tokens se guardan en archivos locales que no se suben al repositorio.
 
-> Estado: **versión funcional** (v0.12.2). Consulta el [CHANGELOG](CHANGELOG.md).
+> Estado: **versión funcional** (v0.13.0). Consulta el [CHANGELOG](CHANGELOG.md).
 
 ## Inicio rápido
 
@@ -61,6 +61,7 @@ La web está pensada para móvil (probada a 360 px) y escritorio. Arranca con el
 
 ### 👁️ Vigiladas
 Pulsa «Vigilar esta búsqueda» (o crea una en la pestaña Vigiladas) y deja que BuscaTron la revise sola cada X horas mientras esté abierto (con el [arranque con Windows](#arranque-con-windows-y-bandeja), siempre).
+- **Ordenar la lista**: en el orden en que las creaste (por defecto), las últimas creadas primero, por nombre, activas primero, la próxima en revisarse o las que llevan más sin revisarse; se recuerda. Encima, cuántas hay activas y cuántas en pausa.
 - **Aviso por precio objetivo** («menos de 39 €»), por **bajada respecto a la media histórica** del artículo («un 15 % menos de lo habitual»), o por ambos. Si un producto tiene **su propio objetivo (🎯)**, se usa ese en lugar del de la búsqueda («por debajo de tu objetivo para este producto de 30 €»); tiene que estar dentro del precio mínimo y máximo de la búsqueda. Un objetivo 🎯 **solo avisa si alguna búsqueda vigilada activa encuentra ese producto**: al ponerlo, BuscaTron te dice cuál lo cubre o, si ninguna, te ofrece vigilar la búsqueda en ese momento.
 - Cada seguimiento lleva las mismas opciones que la búsqueda: preventas, envío, segunda mano, otras webs y páginas por tienda.
 - **Comprueba la ficha del producto** antes de avisar: si su ficha dice que está agotado o en preventa (y no las incluyes), no avisa, aunque el listado de la tienda no lo diga. También el idioma (ver [Idioma de los juegos](#idioma-de-los-juegos)): un juego en francés no te avisa aunque su título esté en español.
