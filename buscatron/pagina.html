@@ -451,8 +451,9 @@ async function pideObjetivo(g){const x=g[0],k=x.grupo||('c:'+(x.clave||''));
   const r=await api('objetivos',v.trim()?{grupo:k,titulo:x.titulo,precio:n}:{quitar:k});if(r.error){aviso(r.error);return;}
   ultimos.forEach(y=>{if((y.grupo||('c:'+y.clave))===k)y.objetivo_producto=v.trim()?n:null;});guardaUltimos();pintaLista();
   if(!v.trim()){aviso('Objetivo quitado: se usa el de cada búsqueda vigilada');return;}
-  const vig=await api('vigilan?titulo='+encodeURIComponent(x.titulo)+'&precio='+n);
-  if(Array.isArray(vig)&&vig.length){aviso(`Te avisará «${vig[0]}» cuando lo encuentre a ${euro(n)} o menos`);return;}
+  const vig=await api('vigilan?titulo='+encodeURIComponent(x.titulo)+'&precio='+n).catch(()=>null);
+  if(!Array.isArray(vig)){aviso(`Te avisaré cuando una búsqueda vigilada lo encuentre a ${euro(n)} o menos`);return;}
+  if(vig.length){aviso(`Te avisará «${vig[0]}» cuando lo encuentre a ${euro(n)} o menos`);return;}
   if(confirm(`Objetivo guardado, pero ninguna búsqueda vigilada activa busca este producto, así que todavía no te avisará.\n\n¿Vigilar ahora la búsqueda «${$('q').value}»? Se revisará sola y te avisará cuando llegue a ${euro(n)}.`))vigilar();}
 async function cargaObjetivos(){const l=await api('objetivos');if(!Array.isArray(l))return;
   $('objetivos').innerHTML=l.length?l.map(o=>`<div class="ign"><span>${esc(o.titulo)} · <b>${euro(o.precio)}</b><br><small class="${o.vigilan&&o.vigilan.length?'mut':'err'}">${o.vigilan&&o.vigilan.length?'Lo vigila: '+esc(o.vigilan.join(', ')):'⚠️ Ninguna búsqueda vigilada activa lo busca: no avisará'}</small></span><button type="button" class="sec mini" data-qobj="${esc(o.grupo)}">Quitar</button></div>`).join('')
