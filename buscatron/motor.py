@@ -11,7 +11,7 @@ MIN_HISTORIAL = 3
 PAUSA = 0.6                 # segundos entre dos peticiones seguidas a la misma tienda (para no parecer un ataque)
 MAX_INTENTOS = 4            # direcciones de búsqueda que se prueban en una tienda cuyo buscador no se conoce
 REINTENTO_CAIDA = 600       # segundos sin volver a llamar a una tienda que no ha respondido a la conexión
-_caidas = {}     # observaciones previas necesarias para hablar de «mínimo histórico»
+_caidas = {}     # {host: cuándo dejó de responder}: no se le vuelve a llamar hasta pasado REINTENTO_CAIDA
 
 
 def _candidatas(t, consulta, get):
@@ -429,6 +429,7 @@ def buscar(consulta, incluir="", excluir="", ocultar_agotados=True, hosts=None, 
     preventas: incluir productos en preventa · con_envio: ordenar por precio + envío · segunda_mano: incluir
     Vinted, Milanuncios… · abierta: buscar también en webs que no están en la lista (region: es | ue | mundo)."""
     lista = cfg.carga()
+    aprendido = {t["host"]: (t.get("plantilla"), bool(t.get("js"))) for t in lista}    # para guardar luego solo lo que cambie
     aj = ajustes.carga()
     paginas = paginas or int(aj.get("paginas") or 1)
     modo = modo_idioma(castellano, idioma)
@@ -492,8 +493,10 @@ def buscar(consulta, incluir="", excluir="", ocultar_agotados=True, hosts=None, 
                 x["origen"] = "web"
                 res.append(x)
                 kept += 1
-        informe["Búsqueda abierta"] = {"encontrados": kept, "error": info if not kept else None, "caida": es_caida(info) and not kept}
-    cfg.guarda(lista)  # persiste las plantillas descubiertas
+        informe["Búsqueda abierta"] = {"encontrados": kept, "error": info if not kept else None,
+                                       "caida": bool(info) and info.startswith("no se pudo") and not kept}   # «no encontré precios» sí respondió
+    cfg.aplica_descubiertas({t["host"]: (t.get("plantilla"), bool(t.get("js"))) for t in lista       # plantillas descubiertas
+                             if (t.get("plantilla"), bool(t.get("js"))) != aprendido[t["host"]]})
     registra_estado({h: {"brutos": i.get("brutos", 0), "error": i.get("error_tienda")} for h, i in informe.items() if "brutos" in i}, consulta)
 
     # producto (grupo) y PVP aproximado, con todas las tiendas; después, el filtro de precio

@@ -10,7 +10,13 @@ import sys
 from . import motor, tiendas as cfg, web
 
 if sys.stdout is None or sys.stderr is None:      # pythonw (arranque con Windows): sin consola, los mensajes van a un archivo
-    _log = open(os.path.join(cfg.RAIZ, "buscatron.log"), "a", encoding="utf-8", buffering=1)
+    _ruta_log = os.path.join(cfg.RAIZ, "buscatron.log")
+    try:
+        if os.path.getsize(_ruta_log) > 2_000_000:   # se guarda el anterior como .log.1 y se empieza otro
+            os.replace(_ruta_log, _ruta_log + ".1")
+    except OSError:
+        pass
+    _log = open(_ruta_log, "a", encoding="utf-8", buffering=1)
     sys.stdout = sys.stdout or _log
     sys.stderr = sys.stderr or _log
 

@@ -103,12 +103,12 @@ def _bucle():
     global ultimo_chat
     offset, menu_puesto = None, None
     while True:
-        a = ajustes.carga()
-        token = a.get("telegram_token")
-        if not token:
-            time.sleep(30)
-            continue
         try:
+            a = ajustes.carga()
+            token = a.get("telegram_token")
+            if not token:
+                time.sleep(30)
+                continue
             if menu_puesto != token:                     # el menú «/» de Telegram con las órdenes
                 _api(token, "setMyCommands", {"commands": json.dumps([{"command": c, "description": d} for c, d in ORDENES])})
                 menu_puesto, offset = token, None        # otro bot: su numeración de mensajes empieza de nuevo

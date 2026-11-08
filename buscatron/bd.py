@@ -52,9 +52,21 @@ def limpia(dias=180, ahora=None):
     return borradas
 
 
+_preparadas = set()        # bases a las que ya se aplicó el esquema en esta ejecución
+
+
 def conecta(ruta=None):
-    c = sqlite3.connect(ruta or RUTA, timeout=30)
+    ruta = ruta or RUTA
+    c = sqlite3.connect(ruta, timeout=30)
     c.row_factory = sqlite3.Row
+    if ruta not in _preparadas:
+        _prepara(c)
+        _preparadas.add(ruta)
+    return c
+
+
+def _prepara(c):
+    """Crea las tablas que falten y añade las columnas nuevas a las bases de versiones anteriores."""
     c.executescript(ESQUEMA)
     try:
         c.execute("ALTER TABLE precios ADD COLUMN seg_id INTEGER")  # bases creadas por el prototipo
@@ -68,4 +80,4 @@ def conecta(ruta=None):
         except sqlite3.OperationalError:
             pass
     c.execute("CREATE INDEX IF NOT EXISTS ix_precios_clave ON precios(clave, ts)")
-    return c
+    c.commit()

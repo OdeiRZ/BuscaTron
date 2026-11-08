@@ -3,10 +3,13 @@ import hmac
 import ipaddress
 import json
 import os
+import shutil
 import socket
+import subprocess
 import sys
 import threading
 import time
+import traceback
 import urllib.request
 import webbrowser
 from hashlib import sha256
@@ -172,6 +175,31 @@ def direcciones_red():
     return [{"ip": i, "tipo": "Tailscale" if ipaddress.ip_address(i) in TAILSCALE else "red local"} for i in vistas]
 
 
+_https = {"ts": 0, "url": None}
+
+
+def direccion_https(puerto):
+    """La dirección HTTPS de Tailscale que lleva a BuscaTron (si se publicó con «tailscale serve»), o None.
+    Se consulta como mucho una vez cada 10 minutos."""
+    if time.time() - _https["ts"] < 600:
+        return _https["url"]
+    url = None
+    exe = shutil.which("tailscale") or os.path.expandvars(r"%ProgramFiles%\Tailscale\tailscale.exe")
+    if os.path.exists(exe):
+        try:
+            r = subprocess.run([exe, "serve", "status", "--json"], capture_output=True, text=True, timeout=5,
+                               creationflags=0x08000000 if os.name == "nt" else 0)      # sin ventana
+            for host, w in (json.loads(r.stdout or "{}").get("Web") or {}).items():
+                if any(h.get("Proxy", "").rstrip("/") in (f"http://127.0.0.1:{puerto}", f"http://localhost:{puerto}")
+                       for h in (w.get("Handlers") or {}).values()):
+                    url = "https://" + host.removesuffix(":443")
+                    break
+        except (OSError, ValueError, subprocess.SubprocessError):
+            pass
+    _https.update(ts=time.time(), url=url)
+    return url
+
+
 class Handler(BaseHTTPRequestHandler):
     def _enviar(self, cuerpo, tipo, codigo=200, cabeceras=None):
         self.send_response(codigo)
@@ -228,6 +256,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(rutas[url.path]())
             except (ValueError, KeyError) as e:
                 return self._json({"error": str(e) or "datos no válidos"}, 400)
+            except Exception as e:              # noqa: BLE001
+                return self._fallo(e)
         self._enviar(_pagina().encode(), "text/html; charset=utf-8")
 
     def do_POST(self):
@@ -243,10 +273,16 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(self._post(self.path, cuerpo))
         except (ValueError, KeyError) as e:
             return self._json({"error": str(e) or "datos no válidos"}, 400)
+        except Exception as e:                  # noqa: BLE001  (p. ej. una web que no responde: se cuenta en vez de colgar la página)
+            return self._fallo(e)
+
+    def _fallo(self, e):
+        traceback.print_exc()
+        return self._json({"error": f"algo ha fallado: {str(e)[:150] or e.__class__.__name__}"}, 500)
 
     def _red(self):
         return {"escucha_red": _servidor["host"] not in ("127.0.0.1", "localhost"), "puerto": _servidor["puerto"],
-                "direcciones": direcciones_red(), "pin": bool(ajustes.carga()["pin"])}
+                "direcciones": direcciones_red(), "pin": bool(ajustes.carga()["pin"]), "https": direccion_https(_servidor["puerto"])}
 
     def _login(self, c):
         ip, ahora = self.client_address[0], time.time()
@@ -351,6 +387,10 @@ class Handler(BaseHTTPRequestHandler):
         raise KeyError("no encontrado")
 
     def _tiendas(self, c):
+        with cfg.cerrojo:                       # sin pisar lo que guarde a la vez una búsqueda en marcha
+            return self._cambia_tiendas(c)
+
+    def _cambia_tiendas(self, c):
         lista = cfg.carga()
         if c.get("anadir"):
             host, plantilla = analiza_direccion(c["anadir"])

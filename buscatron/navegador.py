@@ -150,7 +150,10 @@ def get(url, visible=False, timeout=120, esperar_humano=0):
     espera = esperar_humano if visible else 0
     sal = queue.Queue()
     h.cola.put((url, sal, espera))
-    r = sal.get(timeout=timeout + espera)
+    try:
+        r = sal.get(timeout=timeout + espera)
+    except queue.Empty:
+        raise TimeoutError("el navegador no respondió a tiempo") from None
     if isinstance(r, Exception):
         raise r
     estado, html = r

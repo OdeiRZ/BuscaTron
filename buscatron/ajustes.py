@@ -1,10 +1,11 @@
 """Ajustes locales (config.json): canales de aviso. No se sube al repositorio."""
-import json
 import os
+import threading
 
 from . import tiendas as cfg
 
 RUTA = os.path.join(cfg.RAIZ, "config.json")
+_cerrojo = threading.RLock()
 SECRETOS = ("telegram_token", "smtp_clave", "pin")
 DEFECTO = {"telegram_token": "", "telegram_chat": "", "smtp_servidor": "", "smtp_puerto": 587,
            "smtp_usuario": "", "smtp_clave": "", "correo_destino": "",
@@ -14,29 +15,28 @@ DEFECTO = {"telegram_token": "", "telegram_chat": "", "smtp_servidor": "", "smtp
 def carga():
     d = dict(DEFECTO)
     if os.path.exists(RUTA):
-        with open(RUTA, encoding="utf-8") as f:
-            d.update(json.load(f))
+        d.update(cfg.lee_json(RUTA))
     return d
 
 
 def secreto():
     """Clave interna (se crea una vez) para firmar las sesiones del PIN."""
-    d = carga()
-    if not d["secreto"]:
-        import secrets
-        d["secreto"] = secrets.token_hex(32)
-        with open(RUTA, "w", encoding="utf-8") as f:
-            json.dump(d, f, ensure_ascii=False, indent=2)
+    with _cerrojo:
+        d = carga()
+        if not d["secreto"]:
+            import secrets
+            d["secreto"] = secrets.token_hex(32)
+            cfg.escribe_json(RUTA, d)
     return d["secreto"]
 
 
 def guarda(nuevos):
-    d = carga()
-    for k, v in nuevos.items():
-        if k in DEFECTO and k != "secreto" and not (k in SECRETOS and v == "********"):
-            d[k] = v
-    with open(RUTA, "w", encoding="utf-8") as f:
-        json.dump(d, f, ensure_ascii=False, indent=2)
+    with _cerrojo:
+        d = carga()
+        for k, v in nuevos.items():
+            if k in DEFECTO and k != "secreto" and not (k in SECRETOS and v == "********"):
+                d[k] = v
+        cfg.escribe_json(RUTA, d)
     return d
 
 

@@ -1,10 +1,13 @@
 """Lista de tiendas (tiendas.json, editable desde la interfaz) y plantillas de reserva."""
 import json
 import os
+import threading
+import time
 from urllib.parse import quote_plus
 
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 RUTA = os.path.join(RAIZ, "tiendas.json")
+cerrojo = threading.RLock()     # leer-cambiar-guardar la lista, de uno en uno
 
 # Se prueban solo si la tienda no tiene formulario de búsqueda detectable.
 PLANTILLAS = [
@@ -54,8 +57,7 @@ def url_busqueda(plantilla, consulta):
 
 def carga():
     if os.path.exists(RUTA):
-        with open(RUTA, encoding="utf-8") as f:
-            lista = json.load(f)
+        lista = lee_json(RUTA)
     else:
         lista = [{"host": h, "activa": True, "plantilla": None} for h in INICIALES]
     from . import ajustes
@@ -82,6 +84,50 @@ def carga():
     return lista
 
 
+def lee_json(ruta):
+    """Lee un JSON; en Windows, si justo se está reemplazando (escribe_json), se reintenta un momento después."""
+    for intento in range(20):
+        try:
+            with open(ruta, encoding="utf-8") as f:
+                return json.load(f)
+        except PermissionError:
+            time.sleep(0.05)
+    with open(ruta, encoding="utf-8") as f:
+        return json.load(f)
+
+
+def escribe_json(ruta, datos):
+    """Escribe en un archivo temporal y lo cambia por el bueno de una vez: quien lo lea a la vez ve el viejo o el nuevo,
+    nunca uno a medias."""
+    tmp = f"{ruta}.{threading.get_ident()}.tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(datos, f, ensure_ascii=False, indent=2)
+    for intento in range(20):
+        try:
+            os.replace(tmp, ruta)
+            return
+        except PermissionError:          # Windows: otro hilo lo tiene abierto justo ahora para leerlo
+            time.sleep(0.05)
+    os.replace(tmp, ruta)
+
+
 def guarda(tiendas):
-    with open(RUTA, "w", encoding="utf-8") as f:
-        json.dump(tiendas, f, ensure_ascii=False, indent=2)
+    with cerrojo:
+        escribe_json(RUTA, tiendas)
+
+
+def aplica_descubiertas(cambios):
+    """Guarda lo que una búsqueda ha aprendido de cada tienda ({host: (plantilla, js)}) sobre la lista ACTUAL, no sobre
+    la que había al empezar: así no se pierde lo que cambiaste mientras buscaba."""
+    if not cambios:
+        return
+    with cerrojo:
+        lista = carga()
+        for t in lista:
+            if t["host"] in cambios:
+                t["plantilla"], js = cambios[t["host"]]
+                if js:
+                    t["js"] = True
+                else:
+                    t.pop("js", None)
+        guarda(lista)

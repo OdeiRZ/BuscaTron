@@ -3,6 +3,26 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.11.4] - 2026-11-08
+
+### Corregido
+- **Cambios de tiendas que se perdían**: cada búsqueda guardaba al terminar la lista de tiendas tal como estaba al empezar, así que lo que activabas, desactivabas o editabas mientras buscaba (hasta un minuto) se deshacía. Ahora solo guarda lo que ha aprendido (el buscador de cada tienda), sobre la lista actual.
+- **`config.json` y `tiendas.json` a medias**: se reescribían en el sitio, y quien los leyera a la vez (el bot, el programador, otra petición) podía encontrarlos vacíos y fallar; el bot de Telegram incluso dejaba de escuchar para siempre. Ahora se escriben en un temporal y se cambian de una vez, con cerrojo y reintentos.
+- **Peticiones sin respuesta**: un fallo inesperado del servidor (p. ej. «Detectar envío» con una web que no responde) cortaba la conexión y el botón se quedaba bloqueado. Ahora se responde con el error y queda anotado en el log.
+- **Pegar resultados** con «Buscar también en webs que no están en tu lista» repetía la búsqueda por internet entera (lenta) y duplicaba sus resultados; y usaba lo escrito en la caja de búsqueda aunque lo hubieras cambiado después de buscar.
+- **«Buscar ahora»** decía «Revisión terminada» al instante si la vigilada se acababa de revisar sola, o a los 3 minutos aunque siguiera buscando. Ahora espera a la revisión de verdad y enseña su resultado.
+- **«Guardar ajustes»** decía «Ajustes guardados» aunque el guardado fallara.
+- **Búsqueda abierta**: «no encontré precios» ya no cuenta como tienda caída; y Bixoto y Ferretería Ibérica no se consultan nunca de forma automática, aunque las quites de tu lista.
+- Un navegador que no responde se cuenta como tienda caída, con su mensaje (antes salía vacío).
+
+### Añadido
+- **Dirección HTTPS en Ajustes → Acceso desde el móvil**: si BuscaTron está publicado con `tailscale serve`, su dirección 🔒 sale la primera; es la única con la que Chrome instala BuscaTron como app.
+
+### Cambiado
+- La base de datos prepara sus tablas una vez por arranque, no en cada consulta.
+- `buscatron.log` se archiva como `buscatron.log.1` al pasar de 2 MB.
+- `.gitignore` cubre los temporales de SQLite y el log archivado, para que nunca se suban datos locales.
+
 ## [0.11.3] - 2026-11-08
 
 ### Cambiado

@@ -352,7 +352,8 @@ const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&g
 const euro=n=>Number(n).toFixed(2).replace('.',',')+' €';
 const fecha=t=>t?new Date(t*1000).toLocaleString('es-ES',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'nunca';
 const api=async(ruta,cuerpo)=>{const pide=()=>fetch('/api/'+ruta,cuerpo===undefined?{}:{method:'POST',body:JSON.stringify(cuerpo)});
-  let r;try{r=await pide();}catch(e){await new Promise(z=>setTimeout(z,1200));r=await pide();}return r.json();};
+  let r;try{r=await pide();}catch(e){await new Promise(z=>setTimeout(z,1200));r=await pide();}
+  try{return await r.json();}catch(e){return {error:`BuscaTron respondió algo inesperado (error ${r.status})`};}};
 let tiendas=[],segs=[],tt;
 function aviso(t){const e=$('toast');e.textContent=t;e.classList.add('v');clearTimeout(tt);tt=setTimeout(()=>e.classList.remove('v'),2600);}
 const nombreT=h=>{const t=tiendas.find(x=>x.host===h);return (t&&t.nombre)||h.replace(/^www\./,'');};
@@ -560,7 +561,7 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'){cierraHist();cierra
 function cierraPegar(){$('pegar').classList.remove('v');}
 $('pegar').onclick=e=>{if(e.target===$('pegar'))cierraPegar();};
 function abrePegar(host,enlace){
-  const consulta=$('q').value.trim();
+  const consulta=(ultimoBody.q||$('q').value).trim();     // la de los resultados en pantalla, aunque hayas tocado la caja
   $('hoja2').innerHTML=`<button type="button" class="cierra" aria-label="Cerrar">✕</button><h3>Pegar resultados de ${esc(nombreT(host))}</h3>
     <p class="ayuda" style="margin-top:4px">Esta tienda bloquea a BuscaTron, así que miras tú en tu navegador y BuscaTron lee lo que copies.</p>
     <ol class="ayuda" style="padding-left:18px;margin:6px 0 10px">
@@ -577,7 +578,7 @@ function abrePegar(host,enlace){
     if(!r.importados){$('pegar-msg').className='err';$('pegar-msg').textContent=`No encontré ningún producto con «${consulta}» y su precio en lo que has pegado. Comprueba que copiaste la página de resultados de esa búsqueda, no otra.`;return;}
     cierraPegar();aviso(`${r.importados} producto${r.importados>1?'s':''} añadido${r.importados>1?'s':''} a los resultados`);
     // se mezcla al instante: solo se consulta esa tienda (es «solo enlace», no hace ninguna petición) y se fusiona con la lista en pantalla
-    const r2=await api('buscar',{...ultimoBody,tiendas:[host],top:200,guardar:false});
+    const r2=await api('buscar',{...ultimoBody,tiendas:[host],top:200,guardar:false,abierta:false});   // sin repetir la búsqueda por internet
     if(r2.error||!$('lista-res'))return;
     ultimos=ultimos.filter(x=>x.tienda!==host).concat(r2.resultados);
     ultimos.sort((a,b)=>(a.agotado-b.agotado)||(ultimoBody.con_envio?a.total-b.total:a.precio-b.precio));
@@ -660,9 +661,12 @@ async function pausa(id){const s=segs.find(x=>x.id===id);const l=await api('segu
   aviso(s.activo?'En pausa: no se revisará sola hasta que la reanudes (no se borra nada)'
     :(Date.now()/1000-(s.ultima||0)>=s.cada_horas*3600?`Reanudada: se revisa ahora mismo y luego cada ${s.cada_horas} h`:`Reanudada: la próxima revisión, ${proxima(s)}`));}
 async function borraSeg(id){if(confirm('¿Dejar de vigilar esta búsqueda? Se borran también sus avisos; el historial de precios se conserva.'))pintaSeg(await api('seguimientos',{accion:'borrar',id}));}
-async function revisa(id,b){b.disabled=true;b.textContent='Buscando… (hasta 1 min)';await api('seguimientos',{accion:'revisar',id});
-  let n=0;const t=setInterval(async()=>{const l=await api('seguimientos');const s=l.find(x=>x.id===id);
-    if(++n>60||(s&&Date.now()/1000-s.ultima<20)){clearInterval(t);pintaSeg(l);cargaNavAv();aviso('Revisión terminada: mira la pestaña Avisos');}},3000);}
+async function revisa(id,b){const antes=(segs.find(x=>x.id===id)||{}).ultima||0;
+  b.disabled=true;b.textContent='Buscando… (hasta 1 min)';await api('seguimientos',{accion:'revisar',id});
+  let n=0;const t=setInterval(async()=>{const l=await api('seguimientos');if(!Array.isArray(l))return;const s=l.find(x=>x.id===id);
+    const hecha=s&&s.ultima>antes;
+    if(hecha||++n>100){clearInterval(t);pintaSeg(l);cargaNavAv();
+      aviso(hecha?`Revisión terminada: ${s.estado}`:'Sigue buscando; el resultado saldrá aquí y en Avisos cuando acabe');}},3000);}
 
 /* avisos */
 const ORDEN_AV={reciente:'Más recientes primero',barato:'Precio: de menor a mayor',caro:'Precio: de mayor a menor',nombre:'Nombre: de la A a la Z',tienda:'Tienda: de la A a la Z'};
@@ -709,8 +713,11 @@ async function cargaArranque(){const r=await api('arranque');if(r.error||r.dispo
 $('a-arr').onchange=async()=>{const r=await api('arranque',{activar:$('a-arr').checked});
   if(r.error){aviso(r.error);}else{aviso(r.activo?'BuscaTron se abrirá al encender el ordenador':'BuscaTron ya no se abrirá al encender el ordenador');}cargaArranque();};
 async function cargaRed(){const r=await api('red');if(r.error)return;
-  $('red-urls').innerHTML=r.direcciones.map(d=>`<a href="http://${esc(d.ip)}:${r.puerto}" target="_blank" rel="noopener">${esc(d.ip)}:${r.puerto} · ${esc(d.tipo)}</a>`).join('');
-  $('red-info').textContent=r.escucha_red
+  $('red-urls').innerHTML=(r.https?`<a href="${esc(r.https)}" target="_blank" rel="noopener">🔒 ${esc(r.https.replace('https://',''))} · desde cualquier sitio</a>`:'')
+    +r.direcciones.map(d=>`<a href="http://${esc(d.ip)}:${r.puerto}" target="_blank" rel="noopener">${esc(d.ip)}:${r.puerto} · ${esc(d.tipo)}</a>`).join('');
+  $('red-info').textContent=r.https
+    ?'La mejor es la dirección 🔒 (HTTPS por Tailscale): funciona en casa y fuera con Tailscale activo en el móvil, y es la única con la que Chrome instala BuscaTron como app. Las demás sirven en la misma Wi-Fi.'
+    :r.escucha_red
     ?'En el móvil, conectado a la misma Wi-Fi, abre la dirección de «red local» (suele empezar por 192.168). Si no carga, ejecuta una vez permitir_acceso_movil.bat como administrador.'
     :'BuscaTron está abierto solo para este equipo. Ábrelo con BuscaTron.bat (o sin --host 127.0.0.1) para usarlo desde el móvil.';
   $('red-pin').textContent=r.pin?'El móvil pedirá el PIN una vez (se recuerda 30 días). Este equipo no lo necesita.':'Sin PIN, cualquier dispositivo de tu red local podría usar BuscaTron. Se recomienda ponerlo.';}
@@ -718,10 +725,10 @@ const ajustesForm=()=>({telegram_token:$('a-token').value,telegram_chat:$('a-cha
   smtp_puerto:Number($('a-pto').value)||587,smtp_usuario:$('a-usr').value,smtp_clave:$('a-clv').value,correo_destino:$('a-dst').value,
   usar_navegador:$('a-nav').checked,navegador_visible:$('a-navvis').checked,pin:$('a-pin').value,paginas:Number($('a-pag').value)||3});
 const msg=(t,ok)=>{$('a-msg').className=ok?'ok':'err';$('a-msg').textContent=t;};
-$('a-guardar').onclick=async()=>{await api('ajustes',ajustesForm());msg('Ajustes guardados.',true);aviso('Ajustes guardados');};
+$('a-guardar').onclick=async()=>{const r=await api('ajustes',ajustesForm());if(r.error)return msg(r.error,false);msg('Ajustes guardados.',true);aviso('Ajustes guardados');};
 $('a-det').onclick=async()=>{const r=await api('detectar_chat',{telegram_token:$('a-token').value});
   if(r.error)return msg(r.error,false);$('a-chat').value=r.telegram_chat;msg('Chat encontrado y guardado. Pulsa «Enviar prueba» para comprobarlo.',true);};
-async function prueba(canal){await api('ajustes',ajustesForm());const r=await api('prueba_aviso',{canales:[canal]});
+async function prueba(canal){const g=await api('ajustes',ajustesForm());if(g.error)return msg(g.error,false);const r=await api('prueba_aviso',{canales:[canal]});
   const e=r.error||r[canal];msg(e?e:'Mensaje de prueba enviado: debería llegarte en unos segundos.',!e);}
 $('a-prueba-tg').onclick=()=>prueba('telegram');$('a-prueba-co').onclick=()=>prueba('correo');
 

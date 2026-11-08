@@ -221,8 +221,11 @@ __marimo__/
 
 # BuscaTron: datos locales
 buscatron.db
+buscatron.db-*
+*.tmp
 tiendas.json
 config.json
 navegador_perfil/
 buscatron.log
+buscatron.log.*
 .venv/

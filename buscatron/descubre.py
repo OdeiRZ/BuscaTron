@@ -1,5 +1,4 @@
 """Descubre la URL de búsqueda de una tienda leyendo el formulario de su portada."""
-import re
 from html.parser import HTMLParser
 from urllib.parse import urljoin, urlencode
 
@@ -39,5 +38,4 @@ def plantilla(html, base):
         url = urljoin(base, f["action"] or "/")
         sep = "&" if "?" in url else "?"
         return url + sep + urlencode(extra + [(nombre, "\0")]).replace("%00", "{q}")
-    m = re.search(r'<link[^>]+rel=["\']search["\'][^>]+href=["\']([^"\']+)', html, re.I)
     return None

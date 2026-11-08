@@ -14,7 +14,8 @@ DESCARTADAS = {"youtube.com", "facebook.com", "instagram.com", "pinterest.com", 
                "tiktok.com", "wikipedia.org", "fandom.com", "boardgamegeek.com", "google.com", "google.es", "bing.com", "microsoft.com",
                "duckduckgo.com", "yahoo.com", "linkedin.com", "tripadvisor.es", "trustpilot.com", "twitch.tv", "wikia.com", "ludonauta.es"}
 # Ya se ofrecen como «solo enlace»: bloquean cualquier acceso automático.
-BLOQUEADAS = {"amazon.es", "amazon.com", "ebay.es", "ebay.com", "wallapop.com", "idealo.es", "milanuncios.com", "vinted.es", "pccomponentes.com"}
+BLOQUEADAS = {"amazon.es", "amazon.com", "ebay.es", "ebay.com", "wallapop.com", "idealo.es", "milanuncios.com", "vinted.es", "pccomponentes.com",
+              "bixoto.com", "ferreteriaibermadrid.es"}    # estas dos, nunca de forma automática (aunque las quites de tu lista)
 TLD_UE = {"es", "fr", "de", "it", "pt", "nl", "be", "at", "ie", "pl", "se", "dk", "fi", "gr", "cz", "hu", "ro", "bg", "hr", "sk", "si", "lt",
           "lv", "ee", "lu", "mt", "cy", "eu", "cat", "eus", "gal"}
 TLD_ES = {"es", "cat", "eus", "gal"}
@@ -121,7 +122,7 @@ def busca(consulta, region="es", excluir_hosts=(), castellano=True, nav=None, ma
     elegidas, por_dominio = [], {}
     for u in urls:
         d = _dominio(u)
-        if (not d or d in excluir_hosts or d in BLOQUEADAS or any(d == x or d.endswith("." + x) for x in DESCARTADAS)
+        if (not d or d in excluir_hosts or any(d == x or d.endswith("." + x) for x in BLOQUEADAS) or any(d == x or d.endswith("." + x) for x in DESCARTADAS)
                 or not _region_ok(d, region) or por_dominio.get(d, 0) >= POR_DOMINIO):
             continue
         por_dominio[d] = por_dominio.get(d, 0) + 1

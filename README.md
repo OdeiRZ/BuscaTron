@@ -6,7 +6,7 @@ Buscador y vigilante de precios **local** para tiendas online españolas. Pensad
 - **Datos en vivo**: no usa cachés ni comparadores intermedios, así que el precio es el que ves en la tienda.
 - **Tus datos se quedan en tu equipo**: lista de tiendas, historial y tokens se guardan en archivos locales que no se suben al repositorio.
 
-> Estado: **versión funcional** (v0.11.3). Consulta el [CHANGELOG](CHANGELOG.md).
+> Estado: **versión funcional** (v0.11.4). Consulta el [CHANGELOG](CHANGELOG.md).
 
 ## Inicio rápido
 
@@ -188,7 +188,7 @@ Con [Tailscale](https://tailscale.com) en el PC y en el móvil, BuscaTron funcio
 
 1. En la consola de Tailscale, **DNS → HTTPS Certificates → Enable** (una vez por red; MagicDNS tiene que estar activado).
 2. En el PC: `tailscale serve --bg 8790`. Publica `https://<nombre-del-pc>.<tu-red>.ts.net` **solo dentro de tu red de Tailscale** (no es Funnel: nadie de fuera la ve) y lo reenvía a BuscaTron.
-3. En el móvil, con Tailscale conectado, abre esa dirección y «Añadir a pantalla de inicio».
+3. En el móvil, con Tailscale conectado, abre esa dirección y «Añadir a pantalla de inicio». BuscaTron la detecta sola y la enseña la primera, con un 🔒, en **Ajustes → Acceso desde el móvil**.
 
 Las peticiones que llegan por `tailscale serve` no cuentan como «este equipo»: el arranque con Windows sigue sin poder cambiarse desde el móvil. Para quitarlo: `tailscale serve --https=443 off`.
 
@@ -285,7 +285,7 @@ permitir_acceso_movil.bat     abre el cortafuegos para tu red local (pide admini
 python -m unittest discover -s tests
 ```
 
-158 pruebas, sin red. Cubren las reglas de aviso (incluida la diferencia entre una tienda caída y una que no tiene el producto) (objetivo de la búsqueda y del producto, media histórica, no repetir, reaviso, limpieza de obsoletos), el historial por producto, las órdenes del bot, el extractor (precios tachados, texto oculto, títulos recortados, preventas, estados de segunda mano, páginas siguientes, datos de producto, envío), el motor (paginación, filtros, total con envío, mínimo histórico, historial), la búsqueda abierta, el filtro de IP y el PIN, la importación a mano y las búsquedas guardadas.
+164 pruebas, sin red. Cubren las reglas de aviso (incluida la diferencia entre una tienda caída y una que no tiene el producto) (objetivo de la búsqueda y del producto, media histórica, no repetir, reaviso, limpieza de obsoletos), el historial por producto, las órdenes del bot, el extractor (precios tachados, texto oculto, títulos recortados, preventas, estados de segunda mano, páginas siguientes, datos de producto, envío), el motor (paginación, filtros, total con envío, mínimo histórico, historial), la búsqueda abierta, el filtro de IP y el PIN, la importación a mano y las búsquedas guardadas.
 
 ## Limitaciones conocidas
 
