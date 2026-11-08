@@ -233,6 +233,8 @@ def ficha(x, lista=None):
     datos = extract.datos_producto(html, x["url"]) or {}
     r = {"idioma": extract.codigo_idioma(extract.idioma_pagina(html)),
          "agotado": datos.get("agotado") if datos else None, "preventa": datos.get("preventa") if datos else None}
+    if r["agotado"] is None and not r["preventa"]:     # los datos no lo dicen: lo que pone la ficha («Avisadme cuando…»)
+        r["agotado"] = extract.sin_stock_pagina(html)
     with bd.conecta() as c:
         c.execute("INSERT OR REPLACE INTO fichas(url, idioma, agotado, preventa, ts) VALUES(?,?,?,?,?)",
                   (x["url"], r["idioma"] or "", None if r["agotado"] is None else int(r["agotado"]),

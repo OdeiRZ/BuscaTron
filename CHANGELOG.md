@@ -3,6 +3,11 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.13.3] - 2026-11-08
+
+### Corregido
+- **Avisos de productos agotados (Zacatrus)**: si la ficha no publica la disponibilidad en sus datos, se daba por «hay stock». Avisó de Mage Knight Edición Definitiva a 108 € en Zacatrus, que dice «No está disponible · Avisadme cuando esté disponible». Ahora falta de datos es «no se sabe» y, en ese caso, se lee el botón de «Avísame/Avisadme cuando esté disponible» de la ficha. No cuenta el texto fijo de Zacatrus sobre el envío 24 h («este producto está fuera de stock en nuestro almacén»), que sale en todas sus fichas. Comprobado con fichas reales de 9 tiendas: ningún producto con stock pasa a agotado. Se borró el aviso falso.
+
 ## [0.13.2] - 2026-11-08
 
 ### Corregido

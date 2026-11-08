@@ -105,5 +105,29 @@ class IdiomaDeLaFicha(unittest.TestCase):
         self.assertIsNone(extract.idioma_pagina("<p>Idiomas:</p><a>+ Detalles del producto</a><p>Juegos de Tablero</p>"))
 
 
+class StockDeLaFicha(unittest.TestCase):
+    def test_sin_disponibilidad_en_los_datos_es_no_se_sabe(self):
+        h = '<meta property="og:title" content="Mage Knight"><meta property="product:price:amount" content="108">'
+        d = extract.datos_producto(h)
+        self.assertEqual((d["precio"], d["agotado"], d["preventa"]), (108.0, None, None))
+
+    def test_boton_de_avisadme_es_agotado(self):
+        # Zacatrus: «No está disponible … Avisadme cuando esté disponible»
+        self.assertTrue(extract.sin_stock_pagina("<h1>Mage Knight</h1><p>108,00 €</p><button>Avisadme cuando esté disponible</button>"))
+
+    def test_el_texto_fijo_del_envio_no_es_agotado(self):
+        # Zacatrus lo pone en todas las fichas, también en las que tienen stock
+        h = ("<h1>Vantage</h1><button>Añadir al carrito</button><div>¡Ouch! El envío 24 horas no está disponible. "
+             "Lamentablemente este producto está fuera de stock en nuestro almacén.</div>")
+        self.assertIsNone(extract.sin_stock_pagina(h))
+
+    def test_la_ficha_usa_el_texto_si_los_datos_no_lo_dicen(self):
+        h = '<meta property="product:price:amount" content="108"><button>Avisadme cuando esté disponible</button>'
+        with mock.patch.object(motor.fetch, "get", return_value=(200, h)), mock.patch.object(motor.bd, "conecta") as con:
+            con.return_value.__enter__.return_value.execute.return_value.fetchone.return_value = None
+            f = motor.ficha({"url": "https://zacatrus.es/mk.html", "tienda": "zacatrus.es"}, [{"host": "zacatrus.es"}])
+        self.assertTrue(f["agotado"])
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -326,7 +326,8 @@ def _meta(html):
 
 def datos_producto(html, url=""):
     """Lee un producto de una página individual: JSON-LD (schema.org), Open Graph o microdatos.
-    Devuelve {titulo, precio, moneda, agotado, preventa, url} o None."""
+    Devuelve {titulo, precio, moneda, agotado, preventa, url} o None. agotado/preventa son None si la página no dice
+    la disponibilidad (Zacatrus no la pone): «no se sabe», no «hay stock»."""
     for bloque in _LD.findall(html):
         try:
             datos = json.loads(bloque.strip())
@@ -342,8 +343,8 @@ def datos_producto(html, url=""):
                 if precio:
                     disp = str(o.get("availability", "")).lower()
                     return {"titulo": str(n.get("name", "")).strip(), "precio": precio, "moneda": o.get("priceCurrency", "EUR"),
-                            "agotado": any(s in disp for s in ("outofstock", "soldout", "discontinued")),
-                            "preventa": any(s in disp for s in ("preorder", "presale")), "url": n.get("url") or url}
+                            "agotado": any(s in disp for s in ("outofstock", "soldout", "discontinued")) if disp else None,
+                            "preventa": any(s in disp for s in ("preorder", "presale")) if disp else None, "url": n.get("url") or url}
     m = _meta(html)
     for clave in ("product:price:amount", "og:price:amount", "price"):
         precio = a_numero(m.get(clave, "")) if m.get(clave) else None
@@ -351,8 +352,24 @@ def datos_producto(html, url=""):
             disp = (m.get("product:availability") or m.get("og:availability") or "").lower()
             return {"titulo": (m.get("og:title") or "").strip(), "precio": precio,
                     "moneda": m.get("product:price:currency") or m.get("og:price:currency") or "EUR",
-                    "agotado": "out of stock" in disp or "oos" in disp, "preventa": "preorder" in disp, "url": url}
+                    "agotado": ("out of stock" in disp or "oos" in disp) if disp else None,
+                    "preventa": ("preorder" in disp) if disp else None, "url": url}
     return None
+
+
+# Lo que dice la ficha de un producto agotado cuando no lo pone en sus datos: el botón para que te avisen. No vale un mensaje
+# de stock genérico (Zacatrus pone «este producto está fuera de stock en nuestro almacén» en todas, del envío 24 h) ni
+# «Agotado» a secas, que puede ser de los relacionados de abajo.
+SIN_STOCK_FICHA = re.compile(r"av[ií]s(?:ame|adme|enme|arme)\s+cuando\s+(?:est[eé]|vuelva\s+a\s+estar|haya)\s+(?:disponible|stock)|"
+                             r"notif[ií]c(?:ame|adme|arme)\s+cuando|"
+                             r"no est[aá] disponible (?:para la venta|en este momento|actualmente)", re.I)
+
+
+def sin_stock_pagina(html):
+    """True si el texto visible de la ficha dice que el producto no se puede comprar ahora; None si no lo dice."""
+    p = _Parser("")
+    p.feed(html)
+    return True if SIN_STOCK_FICHA.search(" ".join(e[1] for e in p.eventos if e[0] == "x")) else None
 
 
 # ---- idioma real de un producto (ficha) --------------------------------------------------------------
