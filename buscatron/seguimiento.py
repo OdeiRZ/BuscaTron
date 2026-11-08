@@ -194,7 +194,7 @@ def revisa(seg_id, enviar=True):
                           (ts, seg_id, x["titulo"], x["tienda"], x["url"], x["precio"], motivo))
                 nuevos.append({**x, "motivo": motivo})
             caidas = sum(1 for i in informe.values() if i.get("caida"))
-            estado = f"{len(res)} resultados, {len(nuevos)} avisos nuevos" + (f", {caidas} tiendas sin respuesta" if caidas else "")
+            estado = f"{productos(res)}, {len(nuevos)} avisos nuevos" + (f", {caidas} tiendas sin respuesta" if caidas else "")
             c.execute("UPDATE seguimientos SET ultima=?, estado=? WHERE id=?", (ts, estado, seg_id))
         envio = {}
         if nuevos and enviar:
@@ -218,6 +218,12 @@ def euros(v):
 
 def _nombres():
     return {t["host"]: t.get("nombre") or t["host"].replace("www.", "") for t in motor.cfg.carga()}
+
+
+def productos(res):
+    """«3 productos (10 ofertas)»: las mismas palabras que la página y el bot."""
+    p, o = len(agrupa(res)), len(res)
+    return f"{p} producto{'' if p == 1 else 's'} ({o} oferta{'' if o == 1 else 's'})"
 
 
 def agrupa(items):
@@ -250,7 +256,7 @@ def resumen(seg, opc, modo, res, informe, n=5):
                and (modo == "todos" or motor.permite(x.get("idioma", "?"), x.get("idioma_seguro", False), modo))]
     grupos = agrupa(validos)
     caidas = sum(1 for i in informe.values() if i.get("caida"))
-    lineas = [f"Sin avisos nuevos. Revisados {len(res)} resultados" + (f" ({caidas} tiendas sin respuesta)" if caidas else "") + "."]
+    lineas = [f"Sin avisos nuevos. Revisados {productos(res)}" + (f" ({caidas} tiendas sin respuesta)" if caidas else "") + "."]
     if grupos:
         nombres = _nombres()
         lineas.append(f"Los {min(n, len(grupos))} productos más baratos ahora:")
@@ -258,6 +264,23 @@ def resumen(seg, opc, modo, res, informe, n=5):
     else:
         lineas.append("Ningún producto cumple ahora tu búsqueda.")
     return "\n\n".join(lineas)
+
+
+def cubren(titulo, precio=None):
+    """Nombres de las vigiladas activas que encontrarían este producto (aproximado: por las palabras de su búsqueda y sus
+    filtros). Sirve para avisar de que un objetivo 🎯 no avisará si ninguna vigilada busca ese producto."""
+    n = motor.extract.normaliza(titulo)
+    nombres = []
+    for s in lista():
+        if not s["activo"]:
+            continue
+        palabras = motor.extract.normaliza(f"{s['consulta']} {s['incluir'] or ''}").split()
+        frases = [f for f in (motor.extract.normaliza(x).strip() for x in s["opciones"]["alguna"].split(",")) if f]
+        if (all(w in n for w in palabras) and not any(w in n for w in motor.extract.normaliza(s["excluir"] or "").split())
+                and (not frases or any(f in n or f.replace(" ", "") in n.replace(" ", "") for f in frases))
+                and not (precio is not None and s["pmin"] is not None and precio < s["pmin"])):
+            nombres.append(s["nombre"])
+    return nombres
 
 
 def pendientes(ahora=None):

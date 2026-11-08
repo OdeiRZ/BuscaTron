@@ -98,6 +98,7 @@ summary .n{font-weight:500;color:var(--mut);font-size:13px;white-space:nowrap;fl
 .res .graf,.res .quita{flex:0 0 auto;min-height:0;width:46px;padding:0;border-radius:0;background:transparent;color:var(--mut);border-left:1px solid var(--bd);font-size:18px}
 .res .graf:active,.res .quita:active{background:var(--ac2)}
 .res .quita{color:var(--ko);font-size:16px}
+.res .graf small,.res .quita small{display:block;font-size:10px;font-weight:600;margin-top:1px}
 .res.best{border-color:var(--ok);background:linear-gradient(0deg,var(--card),var(--card)) padding-box}
 .pr small{display:block;font-size:11px;font-weight:600;color:var(--mut);margin-top:1px}
 .pr{flex:0 0 auto;min-width:74px;font-size:18px;font-weight:800;color:var(--ac);text-align:right;white-space:nowrap}
@@ -173,8 +174,8 @@ svg.graf-svg{width:100%;height:auto;display:block}
     <label class="sw"><input type="checkbox" id="sinag" checked> Ocultar los agotados</label>
     <label class="sw"><input type="checkbox" id="agrupar" checked> Agrupar el mismo producto de varias tiendas</label>
     <div style="margin-top:10px"><label for="idioma">Idioma del juego</label>
-      <select id="idioma"><option value="castellano">En castellano</option><option value="estricto">Solo castellano seguro</option><option value="todos">Cualquier idioma</option></select>
-      <p class="ayuda" style="margin-top:4px"><b>En castellano</b> oculta lo que dice estar en otro idioma. <b>Solo castellano seguro</b> oculta también lo dudoso. Cada resultado lleva una etiqueta con su idioma, y antes de avisarte BuscaTron lo comprueba en la ficha del producto.</p></div>
+      <select id="idioma"><option value="castellano">En castellano (incluye los dudosos)</option><option value="estricto">Solo castellano confirmado</option><option value="todos">Cualquier idioma</option></select>
+      <p class="ayuda" style="margin-top:4px"><b>En castellano</b> oculta lo que dice estar en otro idioma, pero deja lo dudoso. <b>Solo castellano confirmado</b> oculta también lo dudoso. Cada resultado lleva una etiqueta con su idioma, y antes de avisarte BuscaTron lo comprueba en la ficha del producto.</p></div>
 
     <details id="mas">
       <summary>Más opciones: preventas, envío, segunda mano, otras webs <span class="n" id="n-mas"></span></summary>
@@ -185,7 +186,7 @@ svg.graf-svg{width:100%;height:auto;display:block}
       <div class="grid">
         <div><label for="region">País de esas webs</label>
           <select id="region"><option value="es">España</option><option value="ue">Unión Europea</option><option value="mundo">Cualquier país</option></select></div>
-        <div><label for="paginas">Páginas de resultados por tienda</label><input type="number" id="paginas" inputmode="numeric" min="1" max="6" value="3"></div>
+        <div><label for="paginas">Páginas a mirar en cada tienda</label><input type="number" id="paginas" inputmode="numeric" min="1" max="6" value="3"></div>
       </div>
       <p class="ayuda">Más páginas encuentran más productos, pero tardan más. Buscar en webs fuera de tu lista es más lento y menos preciso: sirve para descubrir tiendas nuevas, que luego puedes añadir a tu lista.</p>
     </details>
@@ -247,7 +248,7 @@ svg.graf-svg{width:100%;height:auto;display:block}
       </div>
       <label class="sw"><input type="checkbox" id="s-sinag" checked> Ocultar los agotados</label>
       <div style="margin-top:6px"><label for="s-idioma">Idioma del juego</label>
-        <select id="s-idioma"><option value="castellano">En castellano</option><option value="estricto">Solo castellano seguro</option><option value="todos">Cualquier idioma</option></select></div>
+        <select id="s-idioma"><option value="castellano">En castellano (incluye los dudosos)</option><option value="estricto">Solo castellano confirmado</option><option value="todos">Cualquier idioma</option></select></div>
       <details>
         <summary>Más opciones: preventas, envío, segunda mano, otras webs</summary>
         <label class="sw"><input type="checkbox" id="s-preventas"> Contar también las preventas</label>
@@ -257,7 +258,7 @@ svg.graf-svg{width:100%;height:auto;display:block}
         <div class="grid">
           <div><label for="s-region">País de esas webs</label>
             <select id="s-region"><option value="es">España</option><option value="ue">Unión Europea</option><option value="mundo">Cualquier país</option></select></div>
-          <div><label for="s-paginas">Páginas de resultados por tienda</label><input type="number" id="s-paginas" inputmode="numeric" min="1" max="6" placeholder="Las de Ajustes"></div>
+          <div><label for="s-paginas">Páginas a mirar en cada tienda</label><input type="number" id="s-paginas" inputmode="numeric" min="1" max="6" placeholder="Las de Ajustes"></div>
         </div>
       </details>
       <label class="sw"><input type="checkbox" id="c-telegram"> Avisarme por Telegram</label>
@@ -296,7 +297,7 @@ svg.graf-svg{width:100%;height:auto;display:block}
   </div>
   <div class="card">
     <h2>🔎 Búsquedas</h2>
-    <div class="grid"><div class="full"><label for="a-pag">Páginas de resultados por tienda, por defecto (1 a 6)</label>
+    <div class="grid"><div class="full"><label for="a-pag">Páginas a mirar en cada tienda, por defecto (1 a 6)</label>
       <input type="number" id="a-pag" inputmode="numeric" min="1" max="6" value="3"></div></div>
     <p class="ayuda">Más páginas encuentran más productos, pero cada búsqueda tarda más. Puedes cambiarlo en cada búsqueda, en «Más opciones».</p>
   </div>
@@ -312,7 +313,7 @@ svg.graf-svg{width:100%;height:auto;display:block}
   </div>
   <div class="card">
     <h2>🎯 Objetivos por producto</h2>
-    <p class="ayuda" style="margin-top:0">Los que pusiste con «🎯 Avisarme a…» en un resultado. Cuando una búsqueda vigilada encuentra ese producto, te avisa si llega a su objetivo, en lugar de usar el objetivo de la búsqueda. Tiene que estar dentro del precio mínimo y máximo de la búsqueda vigilada.</p>
+    <p class="ayuda" style="margin-top:0">Los que pusiste con «🎯 Avisarme a…» en un resultado. Solo avisan si alguna búsqueda vigilada activa encuentra ese producto: entonces te avisa al llegar a su objetivo, en lugar de usar el objetivo de la búsqueda (y dentro de su precio mínimo y máximo).</p>
     <div id="objetivos"></div>
   </div>
   <div class="card" id="c-arranque">
@@ -385,7 +386,7 @@ function pintaT(){
       <input type="number" class="tg" inputmode="decimal" step="0.01" min="0" value="${t.envio_gratis??''}" placeholder="Gratis desde €" aria-label="Envío gratis desde (euros)">
       <button type="button" class="sec mini td" title="Buscar en la web de la tienda cuánto cuesta el envío">Detectar envío</button></div>
     <label class="sw"><input type="checkbox" class="tm" ${t.manual?'checked':''}> No consultar automáticamente${t.tipo==='segunda_mano'?' · segunda mano':''}</label>
-    <button type="button" class="peli mini" data-del="${esc(t.host)}" aria-label="Quitar de la lista" title="Quitar de la lista">🗑</button></div>`).join('');
+    <button type="button" class="peli mini" data-del="${esc(t.host)}" aria-label="Quitar de la lista" title="Quitar de la lista">🗑 Quitar</button></div>`).join('');
   document.querySelectorAll('#gestion .trow').forEach(f=>{const guarda=async()=>{
     const r=await api('tiendas',{editar:f.dataset.h,nombre:f.querySelector('.tn').value,url:f.querySelector('.tu').value,manual:f.querySelector('.tm').checked,
       envio:f.querySelector('.te').value,envio_gratis:f.querySelector('.tg').value});
@@ -449,9 +450,12 @@ async function pideObjetivo(g){const x=g[0],k=x.grupo||('c:'+(x.clave||''));
   if(v.trim()&&!(n>0)){aviso('Escribe un precio, por ejemplo 25 o 24,50');return;}
   const r=await api('objetivos',v.trim()?{grupo:k,titulo:x.titulo,precio:n}:{quitar:k});if(r.error){aviso(r.error);return;}
   ultimos.forEach(y=>{if((y.grupo||('c:'+y.clave))===k)y.objetivo_producto=v.trim()?n:null;});guardaUltimos();pintaLista();
-  aviso(v.trim()?`Te avisaré cuando una búsqueda vigilada lo encuentre a ${euro(n)} o menos`:'Objetivo quitado: se usa el de cada búsqueda vigilada');}
+  if(!v.trim()){aviso('Objetivo quitado: se usa el de cada búsqueda vigilada');return;}
+  const vig=await api('vigilan?titulo='+encodeURIComponent(x.titulo)+'&precio='+n);
+  if(Array.isArray(vig)&&vig.length){aviso(`Te avisará «${vig[0]}» cuando lo encuentre a ${euro(n)} o menos`);return;}
+  if(confirm(`Objetivo guardado, pero ninguna búsqueda vigilada activa busca este producto, así que todavía no te avisará.\n\n¿Vigilar ahora la búsqueda «${$('q').value}»? Se revisará sola y te avisará cuando llegue a ${euro(n)}.`))vigilar();}
 async function cargaObjetivos(){const l=await api('objetivos');if(!Array.isArray(l))return;
-  $('objetivos').innerHTML=l.length?l.map(o=>`<div class="ign"><span>${esc(o.titulo)} · <b>${euro(o.precio)}</b></span><button type="button" class="sec mini" data-qobj="${esc(o.grupo)}">Quitar</button></div>`).join('')
+  $('objetivos').innerHTML=l.length?l.map(o=>`<div class="ign"><span>${esc(o.titulo)} · <b>${euro(o.precio)}</b><br><small class="${o.vigilan&&o.vigilan.length?'mut':'err'}">${o.vigilan&&o.vigilan.length?'Lo vigila: '+esc(o.vigilan.join(', ')):'⚠️ Ninguna búsqueda vigilada activa lo busca: no avisará'}</small></span><button type="button" class="sec mini" data-qobj="${esc(o.grupo)}">Quitar</button></div>`).join('')
     :'<p class="mut">No has puesto ninguno. Usa «🎯 Avisarme a…» debajo de un resultado.</p>';
   document.querySelectorAll('#objetivos [data-qobj]').forEach(b=>b.onclick=async()=>{const k=b.dataset.qobj;await api('objetivos',{quitar:k});
     ultimos.forEach(y=>{if((y.grupo||('c:'+y.clave))===k)y.objetivo_producto=null;});cargaObjetivos();aviso('Objetivo quitado');});}
@@ -463,7 +467,7 @@ function tarjeta(x,i,conEnvio,otros=[]){
     <div class="pr">${euro(usaTotal?x.total:x.precio)}${sub}</div>
     <div class="info"><div class="t">${esc(x.titulo)}</div>
     <div class="meta"><span class="tag">${esc(nombreT(x.tienda))}</span>${idiomaTag(x)}${i===0?'<span class="tag ok">Más barato</span>':''}${x.descuento?`<span class="tag ok">−${x.descuento} % sobre su precio de mercado (${euro(x.pvp)})</span>`:''}${x.minimo?'<span class="tag ok">Mínimo histórico</span>':''}${sm?'<span class="tag">Segunda mano</span>':''}${x.estado?`<span class="tag">${esc(x.estado)}</span>`:''}${x.importado?`<span class="tag pre">Pegado a mano ${relativo(x.importado)}</span>`:''}${x.preventa?'<span class="tag pre">Preventa</span>':''}${x.agotado?'<span class="tag ko">Agotado</span>':''}${web?'<span class="tag pre">Web fuera de tu lista</span>':''}${x.objetivo_producto!=null?`<span class="tag ${x.precio<=x.objetivo_producto?'ok':''}">🎯 Tu objetivo: ${euro(x.objetivo_producto)}</span>`:''}</div></div></a>
-    <button type="button" class="graf" data-g="${i}" title="Historial de precios" aria-label="Ver historial de precios">📈</button></div>
+    <button type="button" class="graf" data-g="${i}" title="Historial de precios" aria-label="Ver historial de precios">📈<small>Precio</small></button></div>
     <div class="accs"><button type="button" data-obj="${i}" class="${x.objetivo_producto!=null?'on':''}" title="Avisarme cuando baje a un precio">🎯 ${x.objetivo_producto!=null?euro(x.objetivo_producto):'Avisarme a…'}</button>
     <button type="button" data-ign="${i}" class="no" title="Ya lo tengo / no me interesa: ocultarlo siempre">🚫 No me interesa</button></div>`;
   const mas=otros.length?`<details class="otras"><summary>${otros.length} tienda${otros.length===1?'':'s'} más, desde ${euro(Math.min(...otros.map(o=>conEnvio&&o.envio!=null?o.total:o.precio)))}</summary>${otros.map(o=>`<a href="${esc(o.url)}" target="_blank" rel="noopener"><b>${euro(conEnvio&&o.envio!=null?o.total:o.precio)}</b><span>${esc(nombreT(o.tienda))}${o.agotado?' · agotado':''}${o.preventa?' · preventa':''}${o.importado?' · pegado a mano':''}${o.estado?' · '+esc(o.estado):''}</span></a>`).join('')}</details>`:'';
@@ -484,7 +488,7 @@ function muestra(r,body,guardada){
   $('out').innerHTML=guard+(ultimos.length?`<div class="cuenta" id="cuenta-res"></div><div id="lista-res"></div>
     <div class="acciones"><button type="button" class="sec" id="vigilar">👁️ Vigilar esta búsqueda</button></div>`
     :`<div class="card vacio-msg"><span class="em">🤷</span>Ningún resultado con esos filtros.<br>Prueba a quitar palabras de «Descartar», a ampliar el precio o a mostrar los agotados.</div>`)+
-    (nuevas.length?`<div class="card"><h2>🆕 Webs nuevas encontradas</h2><p class="ayuda" style="margin-top:0">No están en tu lista de tiendas. Añádelas para que se consulten en todas tus búsquedas.</p><div class="manuales">${nuevas.map(h=>`<button type="button" class="sec mini" data-add="${esc(h)}">＋ ${esc(h)}</button>`).join('')}</div></div>`:'')+
+    (nuevas.length?`<div class="card"><h2>🆕 Tiendas que no tienes en tu lista</h2><p class="ayuda" style="margin-top:0">No están en tu lista de tiendas. Añádelas para que se consulten en todas tus búsquedas.</p><div class="manuales">${nuevas.map(h=>`<button type="button" class="sec mini" data-add="${esc(h)}">＋ ${esc(h)}</button>`).join('')}</div></div>`:'')+
     (manuales.length?`<div class="card"><h2>🔗 Tiendas que tienes que mirar tú</h2><p class="ayuda" style="margin-top:0">Bloquean a BuscaTron, así que no se consultan solas. Abre su enlace (ya lleva tu búsqueda) y, si quieres comparar sus precios aquí, copia sus resultados y pégalos:</p><div class="manuales">${manuales.map(([h,i])=>`<div class="manual-fila"><a href="${esc(i.manual)}" target="_blank" rel="noopener">${esc(nombreT(h))} ↗</a><button type="button" class="sec mini" data-pegar="${esc(h)}" data-enlace="${esc(i.manual)}">📋 Pegar resultados</button><span class="mut" id="imp-${esc(h)}">${i.importados?`${i.importados} pegado${i.importados>1?'s':''} ${relativo(i.importado_ts)}`:''}</span></div>`).join('')}</div></div>`:'')+
     (fallos.length?`<details class="card"><summary>Tiendas sin resultados o con problemas <span class="n">${fallos.length}</span></summary>${fallos.join('')}</details>`:'');
   if($('vigilar'))$('vigilar').onclick=vigilar;
@@ -633,16 +637,16 @@ function pintaSeg(l){segs=l;$('seg-lista').innerHTML=l.length?l.map(s=>{
   <div class="l">📬 Avisos en: ${esc(canales)}</div>
   <div class="l">🕘 Última revisión: ${fecha(s.ultima)}${s.estado?' — '+esc(s.estado):''}</div>
   <div class="l">🔄 ${s.activo?`Se revisa sola cada ${s.cada_horas} h; la próxima, ${proxima(s)}`:'En pausa: no se revisa sola'}</div>
-  <div class="acciones"><button class="mini" onclick="revisa(${s.id},this)">Revisar ahora</button>
-  <button class="sec mini" onclick="editaSeg(${s.id})">Editar</button>
-  <button class="sec mini" onclick="pausa(${s.id})">${s.activo?'Pausar':'Reanudar'}</button>
-  <button class="peli mini" onclick="borraSeg(${s.id})">Borrar</button></div></div>`}).join('')
+  <div class="acciones"><button class="mini" onclick="revisa(${s.id},this)" title="Busca ya en tus tiendas y te avisa si hay algo">🔄 Buscar ahora</button>
+  <button class="sec mini" onclick="editaSeg(${s.id})">✏️ Editar</button>
+  <button class="sec mini" onclick="pausa(${s.id})" title="${s.activo?'Deja de revisarse sola; no se borra nada':'Vuelve a revisarse sola'}">${s.activo?'⏸️ Pausar':'▶️ Reanudar'}</button>
+  <button class="peli mini" onclick="borraSeg(${s.id})">🗑 Borrar</button></div></div>`}).join('')
   :'<div class="card vacio-msg"><span class="em">👁️</span>Todavía no vigilas ninguna búsqueda.<br>Haz una búsqueda y pulsa «Vigilar esta búsqueda», o crea una aquí arriba. BuscaTron la revisará sola y te avisará cuando baje de precio.</div>';}
 function proxima(s){const t=(s.ultima||0)+s.cada_horas*3600,ahora=Date.now()/1000;
   if(!s.ultima||t<=ahora)return 'ahora mismo (en menos de un minuto, si BuscaTron está abierto)';
   const h=(t-ahora)/3600;return `dentro de ${h<1?Math.max(1,Math.round(h*60))+' min':String(Math.round(h*10)/10).replace('.',',')+' h'} (${fecha(t)})`;}
 function extrasSeg(s){const o=s.opciones||{};
-  const e=[o.alguna&&`con alguna de: ${o.alguna}`,o.idioma==='estricto'&&'solo castellano seguro',o.idioma==='todos'&&'cualquier idioma',o.preventas&&'cuenta las preventas',o.con_envio&&'con envío incluido',o.segunda_mano&&'también segunda mano',o.abierta&&`también webs fuera de tu lista (${{es:'España',ue:'UE',mundo:'cualquier país'}[o.region]||'España'})`,o.paginas&&`${o.paginas} páginas por tienda`,o.resumen&&'resumen por Telegram en cada revisión'].filter(Boolean);
+  const e=[o.alguna&&`con alguna de: ${o.alguna}`,o.idioma==='estricto'&&'solo castellano confirmado',o.idioma==='todos'&&'cualquier idioma',o.preventas&&'cuenta las preventas',o.con_envio&&'con envío incluido',o.segunda_mano&&'también segunda mano',o.abierta&&`también webs fuera de tu lista (${{es:'España',ue:'UE',mundo:'cualquier país'}[o.region]||'España'})`,o.paginas&&`${o.paginas} páginas por tienda`,o.resumen&&'resumen por Telegram en cada revisión'].filter(Boolean);
   return e.length?`<div class="l">➕ ${esc(e.join(' · '))}</div>`:'';}
 function editaSeg(id){const s=segs.find(x=>x.id===id);$('sf-tit').textContent='✏️ Editar la búsqueda vigilada';$('s-id').value=s.id;
   $('s-nombre').value=s.nombre;$('s-consulta').value=s.consulta;$('s-incluir').value=s.incluir;$('s-excluir').value=s.excluir;
@@ -650,9 +654,12 @@ function editaSeg(id){const s=segs.find(x=>x.id===id);$('sf-tit').textContent='�
   $('s-horas').value=s.cada_horas;$('s-sinag').checked=!!s.sin_agotados;$('s-idioma').value=(s.opciones&&s.opciones.idioma)||(s.castellano?'castellano':'todos');
   const o=s.opciones||{};$('s-preventas').checked=!!o.preventas;$('s-conenvio').checked=!!o.con_envio;$('s-segmano').checked=!!o.segunda_mano;$('s-abierta').checked=!!o.abierta;$('s-region').value=o.region||'es';$('s-paginas').value=o.paginas||'';$('s-resumen').checked=!!o.resumen;$('s-alguna').value=o.alguna||'';
   $('c-telegram').checked=s.canales.includes('telegram');$('c-correo').checked=s.canales.includes('correo');$('sf-det').open=true;scrollTo(0,0);}
-async function pausa(id){const s=segs.find(x=>x.id===id);pintaSeg(await api('seguimientos',{accion:'guardar',...s,activo:!s.activo,sin_agotados:!!s.sin_agotados}));}
+async function pausa(id){const s=segs.find(x=>x.id===id);const l=await api('seguimientos',{accion:'guardar',...s,activo:!s.activo,sin_agotados:!!s.sin_agotados});
+  if(l.error){aviso(l.error);return;}pintaSeg(l);
+  aviso(s.activo?'En pausa: no se revisará sola hasta que la reanudes (no se borra nada)'
+    :(Date.now()/1000-(s.ultima||0)>=s.cada_horas*3600?`Reanudada: se revisa ahora mismo y luego cada ${s.cada_horas} h`:`Reanudada: la próxima revisión, ${proxima(s)}`));}
 async function borraSeg(id){if(confirm('¿Dejar de vigilar esta búsqueda? Se borran también sus avisos; el historial de precios se conserva.'))pintaSeg(await api('seguimientos',{accion:'borrar',id}));}
-async function revisa(id,b){b.disabled=true;b.textContent='Revisando… (hasta 1 min)';await api('seguimientos',{accion:'revisar',id});
+async function revisa(id,b){b.disabled=true;b.textContent='Buscando… (hasta 1 min)';await api('seguimientos',{accion:'revisar',id});
   let n=0;const t=setInterval(async()=>{const l=await api('seguimientos');const s=l.find(x=>x.id===id);
     if(++n>60||(s&&Date.now()/1000-s.ultima<20)){clearInterval(t);pintaSeg(l);cargaNavAv();aviso('Revisión terminada: mira la pestaña Avisos');}},3000);}
 
@@ -670,7 +677,7 @@ async function cargaAvisos(){const todos=await api('avisos');try{localStorage.se
     <button type="button" class="peli mini" id="av-vaciar">Borrar todos</button></div>
     <div style="margin:0 0 10px"><label for="av-orden">Ordenar por</label><select id="av-orden">${Object.entries(ORDEN_AV).map(([k,v])=>`<option value="${k}" ${k===ordenAv?'selected':''}>${v}</option>`).join('')}</select></div>`+l.map((a,i)=>`<div class="res"><a class="cuerpo" href="${esc(a.url)}" target="_blank" rel="noopener"><div class="pr">${euro(a.precio)}</div>
     <div class="info"><div class="t">${esc(a.titulo)}</div><div class="meta"><span class="tag">${esc(nombreT(a.tienda))}</span><span class="tag ok">${esc(a.motivo)}</span></div>
-    <div class="mut" style="margin-top:4px">${fecha(a.ts)}</div></div></a><button type="button" class="graf" data-i="${i}" title="Historial de precios" aria-label="Ver historial de precios">📈</button><button type="button" class="quita" data-id="${a.id}" title="Quitar este aviso (no se repetirá salvo que baje más)" aria-label="Quitar este aviso">✕</button></div>`).join('')
+    <div class="mut" style="margin-top:4px">${fecha(a.ts)}</div></div></a><button type="button" class="graf" data-i="${i}" title="Historial de precios" aria-label="Ver historial de precios">📈<small>Precio</small></button><button type="button" class="quita" data-id="${a.id}" title="Quitar este aviso (no se repetirá salvo que baje más)" aria-label="Quitar este aviso">✕<small>Quitar</small></button></div>`).join('')
     :'<div class="card vacio-msg"><span class="em">🔔</span>No tienes avisos.<br>Cuando un producto de una búsqueda vigilada llegue a tu precio, aparecerá aquí.</div>';
   document.querySelectorAll('#av-lista .graf').forEach(g=>g.onclick=()=>{const a=l[+g.dataset.i];abreHist(a.url,a.titulo,a.tienda);});
   document.querySelectorAll('#av-lista .quita').forEach(g=>g.onclick=async()=>{await api('avisos',{accion:'borrar',id:+g.dataset.id});cargaAvisos();aviso('Aviso quitado. No se repetirá salvo que baje más de precio');});

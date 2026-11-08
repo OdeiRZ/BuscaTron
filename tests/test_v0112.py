@@ -32,6 +32,25 @@ class Caidas(unittest.TestCase):
                 self.assertEqual([r[0] for r in c.execute("SELECT tienda FROM avisos")], ["b.es"])
 
 
+class Textos(unittest.TestCase):
+    def test_productos_y_ofertas(self):
+        res = [{"grupo": "a", "url": "1", "precio": 1}, {"grupo": "a", "url": "2", "precio": 2}, {"grupo": "b", "url": "3", "precio": 3}]
+        self.assertEqual(seguimiento.productos(res), "2 productos (3 ofertas)")
+        self.assertEqual(seguimiento.productos(res[:1]), "1 producto (1 oferta)")
+
+    def test_que_vigiladas_cubren_un_producto(self):
+        tmp = tempfile.mkdtemp()
+        with mock.patch.object(bd, "RUTA", os.path.join(tmp, "t.db")):
+            seguimiento.guarda({"nombre": "Cráneo", "consulta": "tirania craneo rojo", "excluir": "funda"})
+            seguimiento.guarda({"nombre": "Caras", "consulta": "marvel champions", "pmin": "50"})
+            seguimiento.guarda({"nombre": "Pausada", "consulta": "tirania", "activo": False})
+            t = "Marvel Champions: La Tiranía de Cráneo Rojo"
+            self.assertEqual(seguimiento.cubren(t, 30), ["Cráneo"])                  # «Caras» exige 50 € o más
+            self.assertEqual(seguimiento.cubren(t, 60), ["Cráneo", "Caras"])
+            self.assertEqual(seguimiento.cubren("Funda Tiranía de Cráneo Rojo", 30), [])
+            self.assertEqual(seguimiento.cubren("Marvel Champions: Civil War", 30), [])
+
+
 class Trocea(unittest.TestCase):
     def test_corto_va_en_un_mensaje(self):
         self.assertEqual(notifica.trocea("hola\n\nadiós"), ["hola\n\nadiós"])

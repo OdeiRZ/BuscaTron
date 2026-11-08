@@ -219,7 +219,8 @@ class Handler(BaseHTTPRequestHandler):
                  "/api/arranque": lambda: {"disponible": arranque.disponible(), "activo": arranque.activo()},
                  "/api/historial": lambda: (motor.historial_producto(parse_qs(url.query)["grupo"][0]) if parse_qs(url.query).get("grupo")
                                             else motor.historial_de(parse_qs(url.query).get("url", [""])[0])),
-                 "/api/objetivos": lambda: list(motor.objetivos().values()),
+                 "/api/objetivos": lambda: [dict(o, vigilan=seguimiento.cubren(o["titulo"], o["precio"])) for o in motor.objetivos().values()],
+                 "/api/vigilan": lambda: seguimiento.cubren(parse_qs(url.query)["titulo"][0], _num(parse_qs(url.query).get("precio", [""])[0])),
                  "/api/busquedas": lambda: (busquedas.obtiene(int(parse_qs(url.query)["id"][0])) or {"error": "búsqueda no encontrada"})
                  if "id" in parse_qs(url.query) else busquedas.lista()}
         if url.path in rutas:

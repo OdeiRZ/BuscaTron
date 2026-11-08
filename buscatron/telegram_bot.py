@@ -48,7 +48,7 @@ def buscar(texto):
         if not grupos:
             return responde(f"No he encontrado «{texto}» en tus tiendas (en castellano y con stock).")
         nombres = seguimiento._nombres()
-        lineas = [f"«{texto}»: {len(grupos)} productos, {len(res)} ofertas. Los 5 más baratos:"]
+        lineas = [f"«{texto}»: {seguimiento.productos(res)}. Los 5 más baratos:"]
         lineas += [seguimiento.linea_grupo(g, nombres=nombres) for g in grupos[:5]]
         responde("\n\n".join(lineas))
     finally:

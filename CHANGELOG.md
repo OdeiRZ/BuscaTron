@@ -3,6 +3,15 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.11.3] - 2026-11-08
+
+### Cambiado
+- **El objetivo 🎯 de un producto dice si avisará**: solo avisa si alguna búsqueda vigilada activa encuentra ese producto. Al ponerlo, BuscaTron dice qué vigilada lo cubre o, si ninguna, ofrece vigilar la búsqueda en ese momento. En Ajustes → Objetivos por producto, cada uno indica qué vigilada lo vigila o avisa con ⚠️ de que no avisará.
+- **Botones de las vigiladas más claros**: «🔄 Buscar ahora», «✏️ Editar», «⏸️ Pausar» / «▶️ Reanudar» y «🗑 Borrar». Al reanudar se dice si se revisa al momento o cuándo; al pausar, que no se borra nada.
+- **Mismas palabras en todas partes**: el estado de una vigilada, el resumen y el bot de Telegram dicen «X productos (Y ofertas)», como la página.
+- **Nombres**: «En castellano (incluye los dudosos)» y «Solo castellano confirmado»; «Páginas a mirar en cada tienda»; «Tiendas que no tienes en tu lista».
+- **Botones de icono con texto** para el móvil: «📈 Precio», «✕ Quitar» y «🗑 Quitar».
+
 ## [0.11.2] - 2026-11-08
 
 ### Corregido

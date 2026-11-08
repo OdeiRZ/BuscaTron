@@ -6,7 +6,7 @@ Buscador y vigilante de precios **local** para tiendas online españolas. Pensad
 - **Datos en vivo**: no usa cachés ni comparadores intermedios, así que el precio es el que ves en la tienda.
 - **Tus datos se quedan en tu equipo**: lista de tiendas, historial y tokens se guardan en archivos locales que no se suben al repositorio.
 
-> Estado: **versión funcional** (v0.11.2). Consulta el [CHANGELOG](CHANGELOG.md).
+> Estado: **versión funcional** (v0.11.3). Consulta el [CHANGELOG](CHANGELOG.md).
 
 ## Inicio rápido
 
@@ -64,7 +64,7 @@ Pulsa «Vigilar esta búsqueda» (o crea una en la pestaña Vigiladas) y deja qu
 - No repite avisos: solo vuelve a avisar si el precio baja más, o pasados 30 días.
 - **Resumen por Telegram** (opcional, en cada búsqueda vigilada): si una revisión no trae avisos nuevos, te manda igualmente los 5 más baratos del momento, para saber que la vigilancia funciona. Ojo: «Precio máximo» solo filtra resultados; para que te avise hay que rellenar «Avisarme si cuesta como mucho» o el % de bajada.
 - **Revisión automática**: cada seguimiento se revisa solo cada X horas (por defecto 12) mientras BuscaTron esté en marcha, y la tarjeta muestra cuándo toca la próxima. Si el equipo estaba apagado, la revisión pendiente se lanza al encender, en menos de un minuto. Cada revisión actualiza los precios y el historial.
-- Revisar ahora, pausar, editar y borrar (al borrar un seguimiento se borran también sus avisos; el historial de precios se conserva).
+- **🔄 Buscar ahora** (una revisión inmediata, con sus avisos; no quita la pausa), **⏸️ Pausar / ▶️ Reanudar** (al reanudar, si ya le tocaba, se revisa en menos de un minuto), editar y borrar (al borrar un seguimiento se borran también sus avisos; el historial de precios se conserva).
 
 ### 🔔 Avisos
 Lista de todo lo que ha saltado, con el motivo, la tienda, el enlace y el historial (📈). Se puede **ordenar** por fecha, por precio (de menor a mayor o al revés), por nombre o por tienda, y recuerda tu elección. Un contador rojo en la pestaña indica los nuevos.
@@ -94,8 +94,8 @@ Los títulos de las tiendas casi nunca dicen el idioma (en una muestra real, el 
 | *(sin etiqueta)* | no hay pistas |
 
 El selector **«Idioma del juego»** (en la búsqueda y en cada seguimiento) tiene tres modos:
-- **En castellano** (por defecto): oculta solo lo que **dice expresamente** estar en otro idioma. Lo dudoso se muestra, con su etiqueta.
-- **Solo castellano seguro**: deja solo lo que **está o parece** en castellano. Es más seguro, pero también oculta los títulos sin pistas.
+- **En castellano (incluye los dudosos)** (por defecto): oculta solo lo que **dice expresamente** estar en otro idioma. Lo dudoso se muestra, con su etiqueta.
+- **Solo castellano confirmado**: deja solo lo que **está o parece** en castellano. Es más seguro, pero también oculta los títulos sin pistas.
 - **Cualquier idioma**: no filtra.
 
 **La ficha manda en los avisos.** Algunas tiendas, sobre todo Amazon, traducen los títulos de sus anuncios: «Extensión Marvel Champions: Deadpool» puede ser la edición francesa. Por eso, antes de enviar un aviso de un seguimiento, BuscaTron abre la **ficha del producto** y lee su campo «Idioma» («Idioma: Francés»): si no es castellano, no avisa. Si la ficha no dice el idioma o no se puede leer, avisa igualmente pero el motivo lo indica («idioma sin confirmar»). El resultado se recuerda 30 días, así que cada ficha se consulta una vez. Con «Cualquier idioma» no se consulta ninguna ficha.
@@ -134,7 +134,7 @@ Se añaden a tu lista de tiendas la primera vez (como «segunda mano») y puedes
 1. Hace la búsqueda en **Bing** (y en DuckDuckGo si Bing da pocas direcciones), con dos formulaciones y dos páginas de resultados.
 2. Descarta las tiendas que ya consultas, las que bloquean bots (Amazon, eBay, Wallapop…), las redes sociales, enciclopedias y reseñas, y las webs de países fuera de la región elegida (España: `.es` y dominios genéricos; Unión Europea: además otros países de la UE; cualquier país: todas).
 3. Lee el precio de las páginas halladas: fichas de producto (datos estructurados de schema.org o Open Graph) y listados de tiendas. Solo se muestran precios en euros.
-4. Las webs nuevas aparecen en «Webs nuevas encontradas» con un botón para **añadirlas a tu lista** y consultarlas siempre.
+4. Las webs nuevas aparecen en «Tiendas que no tienes en tu lista» con un botón para **añadirlas a tu lista** y consultarlas siempre.
 
 Es menos precisa y más lenta que las tiendas de tu lista: úsala para descubrir y, cuando una web te guste, añádela.
 
@@ -285,7 +285,7 @@ permitir_acceso_movil.bat     abre el cortafuegos para tu red local (pide admini
 python -m unittest discover -s tests
 ```
 
-156 pruebas, sin red. Cubren las reglas de aviso (incluida la diferencia entre una tienda caída y una que no tiene el producto) (objetivo de la búsqueda y del producto, media histórica, no repetir, reaviso, limpieza de obsoletos), el historial por producto, las órdenes del bot, el extractor (precios tachados, texto oculto, títulos recortados, preventas, estados de segunda mano, páginas siguientes, datos de producto, envío), el motor (paginación, filtros, total con envío, mínimo histórico, historial), la búsqueda abierta, el filtro de IP y el PIN, la importación a mano y las búsquedas guardadas.
+158 pruebas, sin red. Cubren las reglas de aviso (incluida la diferencia entre una tienda caída y una que no tiene el producto) (objetivo de la búsqueda y del producto, media histórica, no repetir, reaviso, limpieza de obsoletos), el historial por producto, las órdenes del bot, el extractor (precios tachados, texto oculto, títulos recortados, preventas, estados de segunda mano, páginas siguientes, datos de producto, envío), el motor (paginación, filtros, total con envío, mínimo histórico, historial), la búsqueda abierta, el filtro de IP y el PIN, la importación a mano y las búsquedas guardadas.
 
 ## Limitaciones conocidas
 
