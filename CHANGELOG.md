@@ -3,6 +3,11 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.11.9] - 2026-11-08
+
+### Corregido
+- **Enlaces de búsqueda tomados por productos**: en Amazon, la sugerencia «En lugar de lo anterior, busca Eternal decks» y las búsquedas relacionadas («marvel champions fundas») contienen las palabras buscadas, así que salían como un producto con el precio de la tarjeta siguiente (p. ej. 9,99 €, «Más barato» y «−72 %»), y su enlace llevaba al buscador. Ahora se descartan los enlaces que llevan a la propia página de resultados y los textos de sugerencia del buscador. Se borraron del historial los 13 precios falsos que habían dejado (ninguno llegó a avisar).
+
 ## [0.11.8] - 2026-11-08
 
 ### Cambiado

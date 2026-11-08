@@ -117,6 +117,24 @@ class PreciosConMiles(unittest.TestCase):
             self.assertEqual(importar._precios(texto), [esperado], texto)
 
 
+class SugerenciaDelBuscador(unittest.TestCase):
+    def test_en_lugar_de_lo_anterior_no_es_un_producto(self):
+        from buscatron import extract
+        base = "https://www.amazon.es/s?k=Eternal+decks&s=price-asc-rank"
+        html = ('<span>Mostrando resultados de eternal desk</span>'
+                '<a href="/s?k=Eternal+decks&s=price-asc-rank&dc=">En lugar de lo anterior, busca Eternal decks</a>'
+                '<a href="/dp/B0ABCDEFGH/ref=sr_1_1">Caja Eternal Decks para cartas</a><span>9,99 €</span>')
+        r = extract.extrae(html, base, "Eternal decks")
+        self.assertEqual([(x["titulo"], x["precio"], x["url"]) for x in r],
+                         [("Caja Eternal Decks para cartas", 9.99, "https://www.amazon.es/dp/B0ABCDEFGH")])
+
+    def test_un_producto_con_otra_ruta_o_parametros_no_se_descarta(self):
+        from buscatron import extract
+        base = "https://t.es/index.php?controller=search&s=civil+war"
+        self.assertFalse(extract.es_otra_busqueda("https://t.es/index.php?id_product=5&controller=product", base))
+        self.assertTrue(extract.es_otra_busqueda("https://t.es/index.php?controller=search&s=civil+war&page=2", base))
+
+
 class EnlacesSeguros(unittest.TestCase):
     def test_solo_direcciones_web(self):
         from buscatron import extract

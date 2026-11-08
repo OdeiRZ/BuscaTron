@@ -198,6 +198,18 @@ class _Parser(HTMLParser):
         self.eventos.append(("x", d))
 
 
+# Sugerencias del buscador de la tienda («En lugar de lo anterior, busca X» en Amazon): llevan a otra búsqueda, no a un producto.
+SUGERENCIA = re.compile(r"^\s*(en lugar de lo anterior|buscar en su lugar|busca en su lugar|quiz[aá]s? quisiste decir|quisiste decir|"
+                        r"mostrando resultados (de|para)|resultados para|search instead|did you mean|showing results for)", re.I)
+
+
+def es_otra_busqueda(url, base):
+    """¿El enlace lleva a la propia página de resultados (misma ruta y los mismos parámetros de búsqueda) y no a un producto?"""
+    u, b = urlparse(url), urlparse(base)
+    claves_b = {k for k, _ in parse_qsl(b.query)}
+    return bool(claves_b) and u.netloc == b.netloc and u.path == b.path and claves_b <= {k for k, _ in parse_qsl(u.query)}
+
+
 def analiza(html, base, consulta, ventana=40, con_estado=False):
     """Devuelve (productos, url_de_la_página_siguiente|None).
     Producto: {titulo, url, precio, agotado, preventa, estado}."""
@@ -205,7 +217,8 @@ def analiza(html, base, consulta, ventana=40, con_estado=False):
     p = _Parser(base)
     p.feed(html)
     ev = p.eventos
-    encajan = [i for i, e in enumerate(ev) if e[0] == "a" and len(e[2]) >= 4 and all(w in normaliza(e[2]) for w in palabras)]
+    encajan = [i for i, e in enumerate(ev) if e[0] == "a" and len(e[2]) >= 4 and all(w in normaliza(e[2]) for w in palabras)
+               and not SUGERENCIA.match(e[2]) and not es_otra_busqueda(e[1], base)]
     out, vistos = [], set()
     for k, i in enumerate(encajan):
         e = ev[i]
