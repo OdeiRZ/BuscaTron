@@ -37,6 +37,10 @@ CONOCIDAS = {
 
 AMAZON_ANTES = "https://www.amazon.es/s?k={q}&s=price-asc-rank"
 
+# Búsqueda de repaso: una página más, en todas las secciones y por relevancia, de la que solo se toman los juegos (por
+# su título). Para los mal clasificados: Eternal Decks no está en «Juguetes y juegos» de Amazon.
+REPASO = {"www.amazon.es": "https://www.amazon.es/s?k={q}"}
+
 
 # Tiendas que bloquean cualquier acceso automático: no se consultan, solo se ofrece el enlace de búsqueda.
 MANUALES = {

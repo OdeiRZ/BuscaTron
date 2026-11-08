@@ -69,7 +69,39 @@ def _intenta(t, consulta, get, paginas=1, con_estado=False):
     return [], err or "no encuentro su buscador: añade la dirección de búsqueda en «Editar la lista de tiendas»"
 
 
+JUEGO = re.compile(r"\b(juegos?|games?|cartas|expansion|tablero|boardgame|lcg|cooperativo|miniaturas|rol)\b")
+
+
 def _tienda(t, consulta, nav=None, paginas=1):
+    """La tienda y, si tiene búsqueda de repaso (cfg.REPASO: Amazon en todas sus secciones), lo que esta añada."""
+    h, items, err = _tienda_base(t, consulta, nav, paginas)
+    repaso = cfg.REPASO.get(h)
+    if repaso and not es_caida(err):
+        vistas = {x["url"] for x in items}
+        nuevos = [x for x in _repaso(t, repaso, consulta, nav) if x["url"] not in vistas]
+        if nuevos:
+            items, err = items + nuevos, None
+    return h, items, err
+
+
+def _repaso(t, plantilla, consulta, nav):
+    """Una página de la búsqueda de repaso, solo con lo que por su título es un juego. Sirve para los juegos que la tienda
+    tiene mal clasificados (Eternal Decks no está en «Juguetes y juegos» de Amazon) sin traer relojes ni zapatillas."""
+    url = cfg.url_busqueda(plantilla, consulta)
+    try:
+        time.sleep(PAUSA)
+        if nav and t.get("js"):
+            st, html = navegador.get(url, visible=nav["visible"], esperar_humano=90 if nav["visible"] else 0)
+        else:
+            st, html = fetch.get(url)
+    except Exception:                               # el repaso nunca estropea lo ya encontrado
+        return []
+    if st != 200:
+        return []
+    return [x for x in extract.analiza(html, url, consulta)[0] if JUEGO.search(extract.normaliza(x["titulo"]))]
+
+
+def _tienda_base(t, consulta, nav=None, paginas=1):
     """nav: None (sin navegador) o {'visible': bool}. Orden: método rápido y, si falla, navegador."""
     h = t["host"]
     estados = t.get("tipo") == "segunda_mano"
