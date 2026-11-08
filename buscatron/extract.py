@@ -409,6 +409,17 @@ def idioma_pagina(html):
     return None
 
 
+PAIS_RESENA = re.compile(r"Rese[ñn]ado en ([A-ZÁÉÍÓÚ][\wáéíóúñ ]+?) el \d")
+
+
+def idioma_por_resenas(html):
+    """Amazon a veces vende aquí la edición de otro país sin decir el idioma (y con «Versión ES» en el título): sus
+    opiniones son de allí. 'otro' si hay al menos 2 y ninguna de España; None si no se puede saber.
+    Civil War (FFGMC56): 4 de Francia → francesa. Las ediciones en castellano probadas tienen opiniones de España."""
+    paises = PAIS_RESENA.findall(html)
+    return "otro" if len(paises) >= 2 and "España" not in paises else None
+
+
 def codigo_idioma(valor):
     """'es' | 'en' | 'otro' a partir del texto de la ficha; None si está vacío. Si admite varios idiomas, manda el castellano."""
     n = normaliza(valor or "")

@@ -139,5 +139,31 @@ class TituloDeZacatrus(unittest.TestCase):
             self.assertEqual(extract.limpia_titulo(t), t)
 
 
+class IdiomaPorOpiniones(unittest.TestCase):
+    def test_todas_de_otro_pais_es_otro_idioma(self):
+        # Amazon: Civil War FFGMC56 con «Versión ES» en el título y 4 opiniones de Francia
+        h = "".join(f"<span>Reseñado en Francia el {d} de julio de 2026</span>" for d in (1, 2, 3, 4))
+        self.assertEqual(extract.idioma_por_resenas(h), "otro")
+
+    def test_con_alguna_de_espana_o_pocas_no_se_sabe(self):
+        self.assertIsNone(extract.idioma_por_resenas("Reseñado en España el 1 de mayo · Reseñado en Francia el 2 de mayo"))
+        self.assertIsNone(extract.idioma_por_resenas("Reseñado en Francia el 1 de mayo"))
+        self.assertIsNone(extract.idioma_por_resenas("<p>Sin opiniones</p>"))
+
+
+class LaFichaMandaEnLaBusqueda(ConArchivos):
+    def test_ficha_en_otro_idioma_se_oculta_aunque_el_titulo_diga_es(self):
+        fr, es = "https://www.amazon.es/dp/FR", "https://www.amazon.es/dp/ES"
+        with bd.conecta() as c:
+            c.execute("INSERT INTO fichas(url,idioma,agotado,preventa,ts) VALUES(?,?,NULL,NULL,1)", (fr, "otro"))
+            c.execute("INSERT INTO fichas(url,idioma,agotado,preventa,ts) VALUES(?,?,NULL,NULL,1)", (es, "es"))
+        items = [{"titulo": "Marvel Champions: Civil War - Versión ES", "url": fr, "precio": 36.94, "agotado": False, "preventa": False, "estado": ""},
+                 {"titulo": "Marvel Champions: Civil War", "url": es, "precio": 39.0, "agotado": False, "preventa": False, "estado": ""}]
+        tienda = lambda t, c, nav=None, paginas=1: (t["host"], [dict(i) for i in items] if t["host"] == "a.es" else [], None)
+        with mock.patch.object(motor, "_tienda", tienda), mock.patch.object(motor.navegador, "disponible", lambda: False):
+            res, _ = motor.buscar("civil war")
+        self.assertEqual([(x["url"], x["idioma"], x["idioma_seguro"]) for x in res], [(es, "es", True)])
+
+
 if __name__ == "__main__":
     unittest.main()

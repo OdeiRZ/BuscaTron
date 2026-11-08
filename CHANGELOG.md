@@ -3,6 +3,12 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.14.1] - 2026-11-08
+
+### Corregido
+- **Ediciones de otro país en Amazon**: avisó de «Asmodee Marvel Champions: Civil War FFG - Extensión de Juego de Cartas» (36,94 €), que es la edición francesa: su ficha no tiene campo «Idioma» y el título dice «Versión ES». Ahora, en Amazon, si la ficha no dice el idioma y tiene al menos 2 opiniones y ninguna de España, cuenta como otro idioma. Probado con 14 fichas: las ediciones en castellano tienen opiniones de España; las sospechosas eran Civil War (4 de Francia) y dos Dune de Asmodee (todas de Italia). Se borró el aviso.
+- **La ficha manda también en las búsquedas**: si ya se leyó la ficha de un producto, su idioma cuenta en lugar del que sugiere el título; así esa edición francesa no sale en castellano, y lo que la ficha confirma sale como «En castellano» en vez de «Probablemente».
+
 ## [0.14.0] - 2026-11-08
 
 ### Añadido

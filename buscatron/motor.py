@@ -235,6 +235,8 @@ def ficha(x, lista=None):
          "agotado": datos.get("agotado") if datos else None, "preventa": datos.get("preventa") if datos else None}
     if r["agotado"] is None and not r["preventa"]:     # los datos no lo dicen: lo que pone la ficha («Avisadme cuando…»)
         r["agotado"] = extract.sin_stock_pagina(html)
+    if r["idioma"] is None and "amazon." in x["url"]:  # sin campo «Idioma»: de dónde son sus opiniones
+        r["idioma"] = extract.idioma_por_resenas(html)
     with bd.conecta() as c:
         c.execute("INSERT OR REPLACE INTO fichas(url, idioma, agotado, preventa, ts) VALUES(?,?,?,?,?)",
                   (x["url"], r["idioma"] or "", None if r["agotado"] is None else int(r["agotado"]),
@@ -252,6 +254,17 @@ def prior_tienda(items):
     cods = [idioma_de(x["titulo"])[0] for x in items]
     es, otros = cods.count("es"), sum(1 for c in cods if c in ("en", "otro"))
     return "es" if es >= 3 and es >= 2 * otros else None
+
+
+def idiomas_de_fichas(urls):
+    """{url: 'es'|'en'|'otro'} de las fichas ya leídas que dicen su idioma."""
+    urls, r = list(dict.fromkeys(urls)), {}
+    with bd.conecta() as c:
+        for i in range(0, len(urls), 500):
+            trozo = urls[i:i + 500]
+            r.update({u: idi for u, idi in c.execute(
+                "SELECT url, idioma FROM fichas WHERE idioma IN ('es','en','otro') AND url IN (%s)" % ",".join("?" * len(trozo)), trozo)})
+    return r
 
 
 def idioma_con_tienda(titulo, prior):
@@ -482,8 +495,12 @@ def buscar(consulta, incluir="", excluir="", ocultar_agotados=True, hosts=None, 
     nav = {"visible": False} if aj["usar_navegador"] and navegador.disponible() else None   # siempre en segundo plano
     ocultos = set(ignorados())                                       # «ya lo tengo / no me interesa»
 
+    idioma_ficha = {}           # lo que ya se leyó en la ficha de cada producto manda sobre lo que sugiere su título
+
     def pasa(x, prior=None):
         x["idioma"], x["idioma_seguro"] = idioma_con_tienda(x["titulo"], prior)
+        if x.get("url") in idioma_ficha:      # Amazon: «Versión ES» en el título y la ficha dice francés
+            x["idioma"], x["idioma_seguro"] = idioma_ficha[x["url"]], True
         n = extract.normaliza(x["titulo"])
         if frases and not any(extract.encaja(n, f) for f in frases):
             return False
@@ -502,6 +519,7 @@ def buscar(consulta, incluir="", excluir="", ocultar_agotados=True, hosts=None, 
         for i, (host, items, err) in enumerate(resultados):
             if err == DESAFIO:
                 resultados[i] = _tienda(por_host[host], consulta, {"visible": True}, paginas)
+    idioma_ficha.update(idiomas_de_fichas([x["url"] for _, items, _ in resultados for x in items]))
     for host, items, err in resultados:
         kept = 0
         prior = prior_tienda(items)
