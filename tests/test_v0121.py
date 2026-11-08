@@ -89,5 +89,11 @@ class RepasoDeAmazon(unittest.TestCase):
         repaso.assert_not_called()
 
 
+class CampoNulo(unittest.TestCase):
+    def test_null_es_vacio(self):
+        from buscatron import web
+        self.assertEqual((web._num(None), web._num(""), web._num("12,5")), (None, None, 12.5))
+
+
 if __name__ == "__main__":
     unittest.main()

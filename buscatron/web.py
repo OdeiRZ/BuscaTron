@@ -69,7 +69,7 @@ ESTATICOS = {"/manifest.webmanifest": lambda: (json.dumps(MANIFIESTO, ensure_asc
 
 
 def _num(v):
-    v = str(v).replace(",", ".").strip()
+    v = "" if v is None else str(v).replace(",", ".").strip()     # null en el JSON = campo vacío (antes: «'None'»)
     return float(v) if v else None
 
 

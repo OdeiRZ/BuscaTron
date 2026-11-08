@@ -3,6 +3,11 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.12.2] - 2026-11-08
+
+### Corregido
+- **Campos numéricos a `null` en la API**: una búsqueda con `"pmax": null` fallaba («could not convert string to float: 'None'»). Ahora `null` cuenta como campo vacío, igual que lo que envía la página.
+
 ## [0.12.1] - 2026-11-08
 
 ### Añadido
