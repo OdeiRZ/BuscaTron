@@ -55,9 +55,18 @@ def limpia(dias=180, ahora=None):
 _preparadas = set()        # bases a las que ya se aplicó el esquema en esta ejecución
 
 
+class _Conexion(sqlite3.Connection):
+    """Como la de sqlite3, pero `with` además de confirmar los cambios cierra la conexión al terminar el bloque."""
+    def __exit__(self, *exc):
+        try:
+            return super().__exit__(*exc)
+        finally:
+            self.close()
+
+
 def conecta(ruta=None):
     ruta = ruta or RUTA
-    c = sqlite3.connect(ruta, timeout=30)
+    c = sqlite3.connect(ruta, timeout=30, factory=_Conexion)
     c.row_factory = sqlite3.Row
     if ruta not in _preparadas:
         _prepara(c)

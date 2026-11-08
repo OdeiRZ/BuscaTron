@@ -4,7 +4,6 @@ mezclan con el resto de resultados (y con el historial) durante unas horas.
 Acepta el texto de la página (Ctrl+A, Ctrl+C) o su código HTML, y no hace ninguna petición a la tienda."""
 import re
 import time
-from urllib.parse import urlparse
 
 from . import bd, extract
 
@@ -18,7 +17,7 @@ def _precios(linea):
     out = []
     for rx in (extract.PRECIO, extract.PRECIO_ANTES):
         for m in rx.finditer(linea):
-            v = extract.a_numero(m.group(1))
+            v = extract.precio_texto(m.group(1))
             if v:
                 out.append(v)
     return out

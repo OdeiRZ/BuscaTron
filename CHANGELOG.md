@@ -3,6 +3,12 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.11.6] - 2026-11-08
+
+### Corregido
+- **Precios con punto de miles**: «1.299 €» se leía como 299 €, «2.500€» como 500 € y «€ 1.299» como 1,29 €, así que un producto caro podía salir como el más barato (y hasta avisar). Ahora se leen bien, tanto de las tiendas como de lo pegado a mano; comprobado sin cambios en páginas reales guardadas de Amazon y Bixoto.
+- Las conexiones a la base de datos se cierran al terminar cada operación (antes quedaban abiertas hasta que Python las recogía).
+
 ## [0.11.5] - 2026-11-08
 
 ### Corregido

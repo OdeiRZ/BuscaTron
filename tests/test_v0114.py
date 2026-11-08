@@ -106,6 +106,17 @@ class Recordatorio(ConArchivos):
         self.assertEqual(importar.por_caducar(), [])
 
 
+class PreciosConMiles(unittest.TestCase):
+    def test_punto_de_miles_y_punto_decimal(self):
+        from buscatron import extract, importar
+        casos = {"1.299 €": 1299, "2.500€": 2500, "€ 1.299": 1299, "1.299,00 €": 1299, "29,99 €": 29.99, "29.99 €": 29.99,
+                 "1.50 €": 1.5, "12 €": 12}
+        for texto, esperado in casos.items():
+            html = f'<a href="/p/x">Mesa de juego</a><span>{texto}</span>'
+            self.assertEqual(extract.extrae(html, "https://t.es/", "mesa de juego")[0]["precio"], esperado, texto)
+            self.assertEqual(importar._precios(texto), [esperado], texto)
+
+
 class EnlacesSeguros(unittest.TestCase):
     def test_solo_direcciones_web(self):
         from buscatron import extract

@@ -6,8 +6,16 @@ import unicodedata
 from html.parser import HTMLParser
 from urllib.parse import parse_qsl, urlencode, urljoin, urlparse, urlunparse
 
-PRECIO = re.compile(r"(\d{1,3}(?:\.\d{3})*(?:,\d{1,2})|\d+(?:\.\d{1,2})?)\s*(?:€|eur)", re.I)
-PRECIO_ANTES = re.compile(r"(?:€|eur)\s*(\d{1,3}(?:\.\d{3})*(?:,\d{1,2})|\d+(?:[.,]\d{1,2})?)", re.I)
+# «1.299 €» y «2.500€» llevan punto de miles (antes se leían 299 y 500); «29.99 €» y «1.50 €», punto decimal.
+PRECIO = re.compile(r"(?<![\d.,])(\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?|\d+,\d{1,2}|\d+(?:\.\d{1,2})?)\s*(?:€|eur)", re.I)
+PRECIO_ANTES = re.compile(r"(?:€|eur)\s*(\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?|\d+(?:[.,]\d{1,2})?)", re.I)
+MILES = re.compile(r"\d{1,3}(?:\.\d{3})+")
+
+
+def precio_texto(s):
+    """Número de un precio escrito en la página: «1.299» son mil doscientos noventa y nueve; «29,99» o «29.99», decimales."""
+    s = str(s).strip()
+    return a_numero(s.replace(".", "") if MILES.fullmatch(s) else s)
 TACHADO_PARTES = {"old", "regular", "before", "compare", "was", "strike", "strikethrough", "through", "tachado", "tachada", "antes",
                   "original", "msrp", "discount", "descuento", "saving", "savings", "ahorro", "ahorras", "reduction", "rebaja"}
 
@@ -180,7 +188,7 @@ class _Parser(HTMLParser):
                 for m in rx.finditer(d):
                     if d[:m.start()].rstrip().endswith(("-", "−", "–")):      # «-2,59 €» es un descuento, no un precio
                         continue
-                    v = a_numero(m.group(1))
+                    v = precio_texto(m.group(1))
                     if v:
                         self.eventos.append(("p", v))
                         if self._a is not None:
