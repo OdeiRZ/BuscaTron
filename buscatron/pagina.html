@@ -183,6 +183,23 @@ kbd{font:600 11px/1 system-ui,sans-serif;padding:2px 5px;border:1px solid var(--
 .motivo{margin-top:6px;font-size:13px;font-weight:600;color:var(--ok);line-height:1.35}
 .av .t{font-weight:600}
 .tag.nuevo{background:var(--ac);color:#fff}
+/* referencia de Amazon */
+#ref{position:fixed;inset:0;z-index:29;display:none;align-items:flex-end;justify-content:center;background:rgba(10,12,20,.55)}
+#ref.v{display:flex}
+#ref .hoja{background:var(--card);width:100%;max-width:860px;border-radius:18px 18px 0 0;padding:16px 16px calc(18px + env(safe-area-inset-bottom));max-height:92vh;overflow:auto}
+@media(min-width:800px){#ref{align-items:center}#ref .hoja{border-radius:18px}}
+.ref-sel{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+.ref-res{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:8px 0 12px}
+.refc{border:1px solid var(--bd);border-radius:12px;padding:12px;margin-bottom:10px;background:var(--card)}
+.refc .t{font-weight:700;overflow-wrap:anywhere}
+.refc .l{font-size:13px;color:var(--mut);margin-top:4px}
+.refc .l b{color:var(--tx)}
+.amz{margin-top:8px;padding-top:8px;border-top:1px dashed var(--bd)}
+.amz .meta{margin-top:6px}
+.camel{display:block;width:100%;max-width:600px;height:auto;margin-top:8px;border-radius:8px;background:#fff}
+.enlaces{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.enlaces a,.enlaces button{display:inline-flex;align-items:center;min-height:36px;padding:0 12px;border-radius:999px;background:var(--ac2);color:var(--ac);font-size:13px;font-weight:600;text-decoration:none}
+@media(min-width:800px){.ref-lista{display:grid;grid-template-columns:1fr 1fr;gap:10px}.ref-lista .refc{margin-bottom:0}}
 /* estado de las tiendas */
 #estado-t details>summary{font-size:13px;color:var(--ac)}
 /* PC ancho: dos columnas en Buscar y rejillas en el resto */
@@ -397,6 +414,7 @@ kbd{font:600 11px/1 system-ui,sans-serif;padding:2px 5px;border:1px solid var(--
 </section>
 </main>
 <div id="hist" role="dialog" aria-modal="true" aria-label="Historial de precios"><div class="hoja" id="hoja"></div></div>
+<div id="ref" role="dialog" aria-modal="true" aria-label="Referencia de Amazon"><div class="hoja" id="hoja3"></div></div>
 <div id="pegar" role="dialog" aria-modal="true" aria-label="Pegar resultados"><div class="hoja" id="hoja2"></div></div>
 <div id="toast"></div>
 
@@ -432,8 +450,8 @@ function ir(t,historial=true){if(!TABS.includes(t))t='buscar';
   tabActual=t;scrollTo(0,0);try{localStorage.setItem('bt-tab',t)}catch(e){}}
 document.querySelectorAll('#nav button').forEach(b=>b.onclick=()=>ir(b.dataset.t));
 // Las hojas (historial de precios, pegar resultados) también: «atrás» las cierra.
-const hojaAbierta=()=>['hist','pegar'].find(id=>$(id).classList.contains('v'));
-function abreHoja(id){if(!hojaAbierta())history.pushState({t:tabActual,hoja:id},'',location.hash||'#'+tabActual);$(id).classList.add('v');}
+const hojaAbierta=()=>['hist','pegar','ref'].find(id=>$(id).classList.contains('v'));   // la de encima primero
+function abreHoja(id){history.pushState({t:tabActual,hoja:id},'',location.hash||'#'+tabActual);$(id).classList.add('v');}   // una entrada por hoja: «atrás» cierra la de encima
 function cierraHoja(id){if(!$(id).classList.contains('v'))return;$(id).classList.remove('v');if(history.state&&history.state.hoja)history.back();}
 addEventListener('popstate',e=>{const h=hojaAbierta();if(h){$(h).classList.remove('v');return;}
   const t=(location.hash||'#buscar').slice(1);if(t!==tabActual)ir(t,false);});
@@ -643,7 +661,45 @@ function vigilar(){limpiaSeg();$('s-consulta').value=$('q').value;$('s-nombre').
 /* historial de precios */
 function cierraHist(){cierraHoja('hist');}
 $('hist').onclick=e=>{if(e.target===$('hist'))cierraHist();};
-document.addEventListener('keydown',e=>{if(e.key==='Escape'){cierraHist();cierraPegar();}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){const h=hojaAbierta();if(h)cierraHoja(h);}});
+$('ref').onclick=e=>{if(e.target===$('ref'))cierraHoja('ref');};
+
+/* 📊 referencia de Amazon: cada producto con su equivalente en Amazon y lo que BuscaTron ha visto allí */
+let refAmbito='avisos';
+const camel=a=>`https://es.camelcamelcamel.com/product/${a}`,keepa=a=>`https://keepa.com/#!product/9-${a}`;
+const grafCamel=a=>`https://charts.camelcamelcamel.com/es/${a}/amazon.png?force=1&zero=0&w=600&h=300&desired=false&legend=1&ilt=1&tp=all&fo=0&lang=es_ES`;
+function veredicto(p,a){
+  if(p.tienda==='www.amazon.es'&&p.url===a.url)return a.n>1&&a.actual<=a.minimo+0.005?'<span class="tag ok">Ahora en su mínimo visto</span>':'';
+  if(p.precio<a.minimo-0.005)return `<span class="tag ok">${Math.round((1-p.precio/a.minimo)*100)} % por debajo de lo más barato visto en Amazon</span>`;
+  if(p.precio<=a.actual+0.005)return '<span class="tag ok">Más barato que Amazon ahora</span>';
+  return `<span class="tag ko">Amazon está más barato ahora (${euro(a.actual)})</span>`;}
+function tarjetaRef(p,i){const a=p.amazon,q=encodeURIComponent(p.titulo);
+  const otro=a&&(a.idioma==='otro'||a.idioma==='en');
+  const amz=a?`<div class="amz"><div class="l">En Amazon: <b>${euro(a.actual)}</b> ahora · lo más barato visto <b>${euro(a.minimo)}</b>${a.maximo>a.minimo?` · lo más caro ${euro(a.maximo)}`:''} · ${a.n} precio${a.n===1?'':'s'} desde el ${fecha(a.desde).split(',')[0]}</div>
+      <div class="meta">${veredicto(p,a)}${otro?'<span class="tag ko">Esa ficha de Amazon no está en castellano</span>':''}</div>
+      ${p.tienda==='www.amazon.es'&&p.url===a.url?'':`<div class="l">Es «<a href="${esc(a.url)}" target="_blank" rel="noopener">${esc(a.titulo)}</a>»</div>`}
+      <img class="camel" loading="lazy" referrerpolicy="no-referrer" alt="Gráfica de camelcamelcamel" src="${grafCamel(a.asin)}" onerror="this.remove()">
+      <div class="enlaces"><a href="${camel(a.asin)}" target="_blank" rel="noopener">camelcamelcamel ↗</a><a href="${keepa(a.asin)}" target="_blank" rel="noopener">Keepa ↗</a>
+        <a href="${esc(a.url)}" target="_blank" rel="noopener">Amazon ↗</a><button type="button" data-rh="${i}">📈 Lo visto por BuscaTron</button></div>
+      ${p.alternativas.length?`<details><summary>¿No es ese? Otras posibles en Amazon (${p.alternativas.length})</summary>${p.alternativas.map(o=>`<div class="l">${euro(o.actual)} · <a href="${esc(o.url)}" target="_blank" rel="noopener">${esc(o.titulo)}</a> · <a href="${camel(o.asin)}" target="_blank" rel="noopener">camel ↗</a></div>`).join('')}</details>`:''}</div>`
+    :`<div class="amz"><div class="l">BuscaTron todavía no lo ha visto en Amazon.</div>
+      <div class="enlaces"><a href="https://es.camelcamelcamel.com/search?sq=${q}" target="_blank" rel="noopener">Buscar en camelcamelcamel ↗</a><a href="https://www.amazon.es/s?k=${q}" target="_blank" rel="noopener">Buscar en Amazon ↗</a></div></div>`;
+  return `<div class="refc"><div class="t">${esc(p.titulo)}</div><div class="l">Tu mejor precio: <b>${euro(p.precio)}</b> en ${esc(nombreT(p.tienda))} · <a href="${esc(p.url)}" target="_blank" rel="noopener">ver ↗</a></div>${amz}</div>`;}
+async function abreRef(ambito){if(ambito)refAmbito=ambito;
+  const sel=`<div class="ref-sel" role="group" aria-label="Productos">${[['avisos','De tus avisos'],['vigiladas','De lo que encuentran tus vigiladas']].map(([k,v])=>`<button type="button" class="chip ${k===refAmbito?'on':''}" data-ramb="${k}" aria-pressed="${k===refAmbito}">${v}</button>`).join('')}</div>`;
+  const cab=`<button type="button" class="cierra" aria-label="Cerrar">✕</button><h3>📊 Referencia de Amazon</h3>
+    <p class="ayuda" style="margin-top:4px">Cada producto con su equivalente en Amazon y lo que BuscaTron ha visto allí en tus búsquedas. Para el histórico de años, abre camelcamelcamel o Keepa: no dejan leer sus datos automáticamente, pero sus fichas están a un toque.</p>${sel}`;
+  $('hoja3').innerHTML=cab+'<div class="carga" style="margin:22px 0"><div class="spin"></div>Preparando el resumen…</div>';
+  if(!$('ref').classList.contains('v'))abreHoja('ref');
+  const l=await api('referencia?ambito='+refAmbito);
+  if(!Array.isArray(l)){$('hoja3').innerHTML=cab+`<p class="err">${esc(l.error||'No se pudo preparar el resumen. ¿BuscaTron está actualizado y abierto?')}</p>`;}
+  else{const con=l.filter(p=>p.amazon),bajo=con.filter(p=>!(p.tienda==='www.amazon.es'&&p.url===p.amazon.url)&&p.precio<p.amazon.minimo-0.005).length;
+    $('hoja3').innerHTML=cab+(l.length?`<div class="ref-res"><div class="stat"><b>${l.length}</b><span>Productos</span></div><div class="stat"><b>${con.length}</b><span>Vistos en Amazon</span></div><div class="stat"><b>${bajo}</b><span>Por debajo de Amazon</span></div></div>
+      <div class="ref-lista">${l.map(tarjetaRef).join('')}</div>`
+      :`<div class="vacio-msg">${refAmbito==='avisos'?'No tienes avisos ahora mismo.':'Tus vigiladas activas todavía no han encontrado nada.'}</div>`);
+    $('hoja3').querySelectorAll('[data-rh]').forEach(b=>b.onclick=()=>{const a=l[+b.dataset.rh].amazon;abreHist(a.url,a.titulo,'www.amazon.es');});}
+  $('hoja3').querySelector('.cierra').onclick=()=>cierraHoja('ref');
+  $('hoja3').querySelectorAll('[data-ramb]').forEach(b=>b.onclick=()=>abreRef(b.dataset.ramb));}
 function cierraPegar(){cierraHoja('pegar');}
 $('pegar').onclick=e=>{if(e.target===$('pegar'))cierraPegar();};
 function abrePegar(host,enlace){
@@ -729,7 +785,8 @@ function ordenaSegs(l,modo){const az=(a,b)=>a.nombre.localeCompare(b.nombre,'es'
 const FILTRO_SEG={todas:'Todas',activas:'Activas',pausa:'En pausa'};
 let filtroSeg='todas';try{const o=localStorage.getItem('bt-filtro-seg');if(o in FILTRO_SEG)filtroSeg=o;}catch(e){}
 function cabeceraSeg(l){const act=l.filter(s=>s.activo).length,pau=l.length-act,n={todas:l.length,activas:act,pausa:pau};
-  return `<div class="cuenta">${l.length} búsqueda${l.length===1?'':'s'} vigilada${l.length===1?'':'s'}: ${act} activa${act===1?'':'s'}${pau?`, ${pau} en pausa`:''}</div>
+  return `<div class="cuenta" style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><span>${l.length} búsqueda${l.length===1?'':'s'} vigilada${l.length===1?'':'s'}: ${act} activa${act===1?'':'s'}${pau?`, ${pau} en pausa`:''}</span>
+    <button type="button" class="sec mini" onclick="abreRef('vigiladas')" title="Lo que encuentran tus vigiladas, comparado con lo visto en Amazon">📊 Referencia de Amazon</button></div>
   ${pau&&act?`<div class="filtro-seg" role="group" aria-label="Mostrar">${Object.entries(FILTRO_SEG).map(([k,v])=>`<button type="button" class="chip ${k===filtroSeg?'on':''}" data-fseg="${k}" aria-pressed="${k===filtroSeg}">${v} · ${n[k]}</button>`).join('')}</div>`:''}
   <div class="orden-res"><label for="seg-orden">Ordenar por</label><select id="seg-orden">${Object.entries(ORDEN_SEG).map(([k,v])=>`<option value="${k}" ${k===ordenSeg?'selected':''}>${v}</option>`).join('')}</select></div>`;}
 function tarjetaSeg(s){
@@ -810,8 +867,8 @@ async function cargaAvisos(){const [todos,vig]=await Promise.all([api('avisos'),
   try{localStorage.setItem('bt-vistos',String(todos.length?Math.max(...todos.map(a=>a.id)):0))}catch(e){}
   $('nav-av').textContent='';
   const l=ordenaAvisos(todos,ordenAv),nuevos=l.filter(a=>a.id>vistosAntes).length,deSeg=id=>(segs.find(s=>s.id===id)||{}).nombre;
-  $('av-lista').innerHTML=l.length?`<div class="cuenta" style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span>${l.length} aviso${l.length>1?'s':''}${nuevos?` · <b style="color:var(--ac)">${nuevos} nuevo${nuevos>1?'s':''}</b>`:''}</span>
-    <button type="button" class="peli mini" id="av-vaciar">Borrar todos</button></div>
+  $('av-lista').innerHTML=l.length?`<div class="cuenta" style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><span>${l.length} aviso${l.length>1?'s':''}${nuevos?` · <b style="color:var(--ac)">${nuevos} nuevo${nuevos>1?'s':''}</b>`:''}</span>
+    <span style="display:flex;gap:8px"><button type="button" class="sec mini" id="av-ref" title="Cada aviso comparado con lo visto en Amazon, con enlaces a camelcamelcamel y Keepa">📊 Referencia de Amazon</button><button type="button" class="peli mini" id="av-vaciar">Borrar todos</button></span></div>
     <div class="orden-av" style="margin:0 0 10px"><label for="av-orden">Ordenar por</label><select id="av-orden">${Object.entries(ORDEN_AV).map(([k,v])=>`<option value="${k}" ${k===ordenAv?'selected':''}>${v}</option>`).join('')}</select></div>`+l.map((a,i)=>`<div class="gr av"><div class="res con-acc"><a class="cuerpo" href="${esc(a.url)}" target="_blank" rel="noopener"><div class="pr">${euro(a.precio)}</div>
     <div class="info"><div class="t">${esc(a.titulo)}</div><div class="meta">${a.id>vistosAntes?'<span class="tag nuevo">Nuevo</span>':''}<span class="tag">${esc(nombreT(a.tienda))}</span></div>
     <div class="motivo">${esc(a.motivo)}</div>
@@ -821,6 +878,7 @@ async function cargaAvisos(){const [todos,vig]=await Promise.all([api('avisos'),
   document.querySelectorAll('#av-lista .graf').forEach(g=>g.onclick=()=>{const a=l[+g.dataset.i];abreHist(a.url,a.titulo,a.tienda);});
   document.querySelectorAll('#av-lista .quita').forEach(g=>g.onclick=async()=>{await api('avisos',{accion:'borrar',id:+g.dataset.id});cargaAvisos();aviso('Aviso quitado. No se repetirá salvo que baje más de precio');});
   if($('av-orden'))$('av-orden').onchange=()=>{ordenAv=$('av-orden').value;try{localStorage.setItem('bt-orden-av',ordenAv)}catch(e){}cargaAvisos();};
+  if($('av-ref'))$('av-ref').onclick=()=>abreRef('avisos');
   if($('av-vaciar'))$('av-vaciar').onclick=async()=>{if(confirm('¿Borrar todos los avisos? Los productos que sigan a buen precio volverán a avisarte en la próxima revisión.')){await api('avisos',{accion:'vaciar'});cargaAvisos();aviso('Avisos borrados');}};}
 async function cargaNavAv(){try{const l=await api('avisos');const v=Number(localStorage.getItem('bt-vistos')||0);
   const n=l.filter(a=>a.id>v).length;$('nav-av').textContent=n?String(n):'';}catch(e){}}

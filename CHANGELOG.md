@@ -3,6 +3,16 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.15.0] - 2026-11-09
+
+### Añadido
+- **📊 Referencia de Amazon** (botón en Avisos y en Vigiladas): todos tus productos de una vez, cada uno con tu mejor precio, su equivalente en Amazon y lo que BuscaTron ha visto allí (precio actual, más barato y más caro, desde cuándo), un veredicto («14 % por debajo de lo más barato visto en Amazon», «Amazon está más barato ahora»), aviso si esa ficha no está en castellano, su gráfica y enlaces a camelcamelcamel y Keepa. Puede verse «De tus avisos» o «De lo que encuentran tus vigiladas». Sale todo de la base de datos, sin consultas.
+- El emparejamiento descarta lo que descarta la vigilada (fundas…) y lo que cuesta menos de la mitad o más del doble (packs); con nombres de una palabra («Vantage») solo toma lo que se anuncia como juego.
+
+### Corregido
+- El botón «atrás» con una hoja abierta encima de otra (el historial sobre la referencia) cierra solo la de encima.
+- Se borró de la caché la ficha de Bixoto de «La Próxima Evolución», mal leída como otro idioma por el fallo de la v0.13.2 (Bixoto no se consulta sola, así que no podía volver a leerse).
+
 ## [0.14.1] - 2026-11-08
 
 ### Corregido

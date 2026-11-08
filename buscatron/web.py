@@ -16,8 +16,8 @@ from hashlib import sha256
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from urllib.parse import parse_qs, urlparse
 
-from . import (ajustes, arranque, busquedas, extract, fetch, importar, motor, notifica, programador, seguimiento,
-               telegram_bot, tiendas as cfg)
+from . import (ajustes, arranque, busquedas, extract, fetch, importar, motor, notifica, programador, referencia,
+               seguimiento, telegram_bot, tiendas as cfg)
 
 TAILSCALE = ipaddress.ip_network("100.64.0.0/10")
 MAX_FALLOS, VENTANA_FALLOS = 5, 300      # intentos de PIN fallidos por IP y ventana (segundos)
@@ -248,6 +248,7 @@ class Handler(BaseHTTPRequestHandler):
                  "/api/historial": lambda: (motor.historial_producto(parse_qs(url.query)["grupo"][0]) if parse_qs(url.query).get("grupo")
                                             else motor.historial_de(parse_qs(url.query).get("url", [""])[0])),
                  "/api/objetivos": lambda: [dict(o, vigilan=seguimiento.cubren(o["titulo"], o["precio"])) for o in motor.objetivos().values()],
+                 "/api/referencia": lambda: referencia.resumen("vigiladas" if parse_qs(url.query).get("ambito") == ["vigiladas"] else "avisos"),
                  "/api/vigilan": lambda: seguimiento.cubren(parse_qs(url.query)["titulo"][0], _num(parse_qs(url.query).get("precio", [""])[0])),
                  "/api/busquedas": lambda: (busquedas.obtiene(int(parse_qs(url.query)["id"][0])) or {"error": "búsqueda no encontrada"})
                  if "id" in parse_qs(url.query) else busquedas.lista()}
