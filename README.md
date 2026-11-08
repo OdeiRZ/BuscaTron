@@ -6,7 +6,7 @@ Buscador y vigilante de precios **local** para tiendas online españolas. Pensad
 - **Datos en vivo**: no usa cachés ni comparadores intermedios, así que el precio es el que ves en la tienda.
 - **Tus datos se quedan en tu equipo**: lista de tiendas, historial y tokens se guardan en archivos locales que no se suben al repositorio.
 
-> Estado: **versión funcional** (v0.11.7). Consulta el [CHANGELOG](CHANGELOG.md).
+> Estado: **versión funcional** (v0.11.8). Consulta el [CHANGELOG](CHANGELOG.md).
 
 ## Inicio rápido
 
@@ -58,27 +58,28 @@ La web está pensada para móvil (probada a 360 px) y escritorio. Arranca con el
 
 ### 👁️ Vigiladas
 Pulsa «Vigilar esta búsqueda» (o crea una en la pestaña Vigiladas) y deja que BuscaTron la revise sola cada X horas mientras esté abierto (con el [arranque con Windows](#arranque-con-windows-y-bandeja), siempre).
-- **Aviso por precio objetivo** («menos de 39 €»), por **bajada respecto a la media histórica** del artículo («un 15 % menos de lo habitual»), o por ambos. Si un producto tiene **su propio objetivo (🎯)**, se usa ese en lugar del de la búsqueda («por debajo de tu objetivo para este producto de 30 €»); tiene que estar dentro del precio mínimo y máximo de la búsqueda.
+- **Aviso por precio objetivo** («menos de 39 €»), por **bajada respecto a la media histórica** del artículo («un 15 % menos de lo habitual»), o por ambos. Si un producto tiene **su propio objetivo (🎯)**, se usa ese en lugar del de la búsqueda («por debajo de tu objetivo para este producto de 30 €»); tiene que estar dentro del precio mínimo y máximo de la búsqueda. Un objetivo 🎯 **solo avisa si alguna búsqueda vigilada activa encuentra ese producto**: al ponerlo, BuscaTron te dice cuál lo cubre o, si ninguna, te ofrece vigilar la búsqueda en ese momento.
 - Cada seguimiento lleva las mismas opciones que la búsqueda: preventas, envío, segunda mano, otras webs y páginas por tienda.
 - **Comprueba la ficha del producto** antes de avisar: si su ficha dice que está agotado o en preventa (y no las incluyes), no avisa, aunque el listado de la tienda no lo diga. También el idioma (ver [Idioma de los juegos](#idioma-de-los-juegos)): un juego en francés no te avisa aunque su título esté en español.
 - No repite avisos: solo vuelve a avisar si el precio baja más, o pasados 30 días.
 - **Resumen por Telegram** (opcional, en cada búsqueda vigilada): si una revisión no trae avisos nuevos, te manda igualmente los 5 más baratos del momento, para saber que la vigilancia funciona. Ojo: «Precio máximo» solo filtra resultados; para que te avise hay que rellenar «Avisarme si cuesta como mucho» o el % de bajada.
 - **Revisión automática**: cada seguimiento se revisa solo cada X horas (por defecto 12) mientras BuscaTron esté en marcha, y la tarjeta muestra cuándo toca la próxima. Si el equipo estaba apagado, la revisión pendiente se lanza al encender, en menos de un minuto. Cada revisión actualiza los precios y el historial.
+- **Estado de cada revisión** en su tarjeta: «3 productos (10 ofertas), 0 avisos nuevos, 1 tiendas sin respuesta». «Sin respuesta» son solo las tiendas que fallaron (sin conexión, captcha, error de su web); una tienda que respondió pero no tiene ese producto no cuenta. Si la revisión entera falla, se anota «la revisión falló: …» y espera a su hora, en lugar de repetirse cada minuto contra todas tus tiendas.
 - **🔄 Buscar ahora** (una revisión inmediata, con sus avisos; no quita la pausa), **⏸️ Pausar / ▶️ Reanudar** (al reanudar, si ya le tocaba, se revisa en menos de un minuto), editar y borrar (al borrar un seguimiento se borran también sus avisos; el historial de precios se conserva).
 
 ### 🔔 Avisos
 Lista de todo lo que ha saltado, con el motivo, la tienda, el enlace y el historial (📈). Se puede **ordenar** por fecha, por precio (de menor a mayor o al revés), por nombre o por tienda, y recuerda tu elección. Un contador rojo en la pestaña indica los nuevos.
 
-Cada revisión **retira los avisos que ya no cumplen tu búsqueda** (porque se agotó, es una preventa, está en otro idioma o salió de tu rango de precio), siempre que la tienda haya respondido: si una web falla, no se borra nada. Si un producto vuelve a estar disponible a un precio que cumple, avisa de nuevo. Con «Vaciar avisos» puedes limpiar la lista a mano, o quitar uno solo con la **✕** de su tarjeta: se oculta de la lista pero BuscaTron recuerda que ya te avisó, así que no vuelve a avisar de ese producto salvo que baje más de precio (o pasen 30 días).
+Cada revisión **retira los avisos que ya no cumplen tu búsqueda** (porque se agotó, es una preventa, está en otro idioma o salió de tu rango de precio), siempre que la tienda haya respondido: si una web falla (sin conexión, captcha, error), no se borra nada de esa tienda; si responde pero ya no tiene el producto, su aviso se retira. Los avisos largos de Telegram se parten en varios mensajes (el límite de Telegram es de 4096 caracteres). Si un producto vuelve a estar disponible a un precio que cumple, avisa de nuevo. Con «Vaciar avisos» puedes limpiar la lista a mano, o quitar uno solo con la **✕** de su tarjeta: se oculta de la lista pero BuscaTron recuerda que ya te avisó, así que no vuelve a avisar de ese producto salvo que baje más de precio (o pasen 30 días).
 
 ### ⚙️ Ajustes
 - **Búsqueda**: páginas que se leen por tienda por defecto.
 - **Arranque con Windows**: interruptor para iniciar BuscaTron al encender el equipo.
-- **Estado de las tiendas**: cuántas de sus últimas 10 consultas dieron resultados, cuándo fue el último y su último problema, con un botón para desactivarla; avisa de las que nunca dan nada.
+- **Estado de las tiendas**: cuántas de sus últimas 10 consultas dieron resultados, cuándo fue el último y su último problema, con un botón para desactivarla. Distingue la tienda que **no responde** (conviene desactivarla) de la que **responde bien pero no ha tenido nada de lo que buscas** (por ejemplo, Outlet-PC sin stock de ese juego): esa solo conviene desactivarla si no suele tener tus juegos.
 - **Productos ocultos**, para volver a mostrarlos.
 - **Objetivos por producto** (🎯), para quitarlos.
 - **Telegram** y **correo (SMTP)** para recibir los avisos, con botón de prueba.
-- **Acceso desde el móvil** y PIN opcional.
+- **Acceso desde el móvil**: las direcciones para abrirlo, con la HTTPS de Tailscale (🔒) la primera si la tienes publicada, y PIN opcional.
 - **Navegador**: usar tu Chrome para tiendas que cargan con JavaScript.
 
 ## Idioma de los juegos
@@ -208,8 +209,8 @@ Seguridad:
 ## Cómo encuentra los productos
 
 1. **Descubre el buscador** de cada tienda leyendo el formulario de su portada. Si no lo encuentra, prueba plantillas habituales (PrestaShop, Magento, Shopify, WooCommerce) y recuerda la que funciona. Algunas tiendas llevan su URL de búsqueda conocida en el código.
-2. **Descarga los resultados** y se queda con los enlaces cuyo texto contiene todas las palabras de la búsqueda, junto al primer precio vigente (dentro de la tarjeta del producto o justo después). Ignora los precios tachados y el texto oculto de la página, y detecta «agotado» y «preventa». Si la tienda recorta el título, lo reconstruye a partir del atributo `title` o de la dirección del producto. Las direcciones se guardan **sin códigos de seguimiento** (en Amazon, `amazon.es/dp/ASIN`; en el resto, sin `utm_*`, `ref`, `srsltid`…), de modo que un mismo producto es siempre la misma dirección: así acumula historial, «Mínimo histórico» y no repite avisos.
-3. **Trata bien a las tiendas**: pausa de 0,6 s entre dos peticiones a la misma web, como mucho 4 direcciones de prueba cuando no conoce su buscador, parada inmediata si una tienda responde «429 demasiadas peticiones», y no vuelve a llamar durante 10 minutos a una web que no ha respondido a la conexión. Así evita que una tienda te bloquee la IP por parecer un ataque; si lo hiciera, te aparecería como «no responde».
+2. **Descarga los resultados** y se queda con los enlaces cuyo texto contiene todas las palabras de la búsqueda, junto al primer precio vigente (dentro de la tarjeta del producto o justo después). Ignora los precios tachados y el texto oculto de la página, y detecta «agotado» y «preventa». Entiende el punto de miles («1.299 €» son 1299 €) y el punto decimal («29.99 €»), y descarta los enlaces que no son direcciones web. Si la tienda recorta el título, lo reconstruye a partir del atributo `title` o de la dirección del producto. Las direcciones se guardan **sin códigos de seguimiento** (en Amazon, `amazon.es/dp/ASIN`; en el resto, sin `utm_*`, `ref`, `srsltid`…), de modo que un mismo producto es siempre la misma dirección: así acumula historial, «Mínimo histórico» y no repite avisos.
+3. **Trata bien a las tiendas**: pausa de 0,6 s entre dos peticiones a la misma web, como mucho 4 direcciones de prueba cuando no conoce su buscador, parada inmediata si una tienda responde «429 demasiadas peticiones», no vuelve a llamar durante 10 minutos a una web que no ha respondido a la conexión, nunca lee más de 6 páginas por tienda (aunque pongas más en Ajustes) y una revisión vigilada que falla no se reintenta hasta su hora. Bixoto y Ferretería Ibérica no se consultan nunca de forma automática, tampoco desde la búsqueda abierta. Así evita que una tienda te bloquee la IP por parecer un ataque; si lo hiciera, te aparecería como «no responde».
 4. **Sigue las páginas siguientes** (enlace `rel="next"` o «Siguiente») hasta el número de páginas elegido, mientras aporten productos nuevos.
 5. **Si el método rápido no encuentra nada** y el navegador está activado, vuelve a intentarlo renderizando la página con tu Chrome (con Playwright). Si funciona, recuerda que esa tienda lo necesita.
 6. **Ordena por precio** (o por precio total) y guarda cada resultado en `buscatron.db` (SQLite). Ese historial alimenta la regla de «bajada respecto a la media», la etiqueta «Mínimo histórico» y las gráficas. Una vez al día, lo de hace más de 6 meses se compacta a un precio por producto y día, para que no crezca sin control.
@@ -246,8 +247,10 @@ Se crean al usar la herramienta y no se suben al repositorio:
 | `buscatron.db` | historial de precios, seguimientos y avisos (SQLite) |
 | `config.json` | tokens de Telegram, PIN, ajustes de correo, de búsqueda y del navegador |
 | `navegador_perfil/` | sesión del navegador opcional |
-| `buscatron.log` | mensajes y errores cuando BuscaTron se inicia sin ventana |
+| `buscatron.log` | mensajes y errores cuando BuscaTron se inicia sin ventana (al pasar de 2 MB se archiva como `buscatron.log.1`) |
 | `.venv/` | entorno de Python propio de BuscaTron (opcional) |
+
+`tiendas.json` y `config.json` se guardan de forma segura (en un temporal que sustituye al bueno de una vez), así que nunca quedan a medias aunque se lean y escriban a la vez; y lo que una búsqueda aprende de una tienda se guarda sin pisar lo que cambiaste mientras buscaba.
 
 ## Estructura
 
@@ -285,7 +288,7 @@ permitir_acceso_movil.bat     abre el cortafuegos para tu red local (pide admini
 python -m unittest discover -s tests
 ```
 
-170 pruebas, sin red. Cubren las reglas de aviso (incluida la diferencia entre una tienda caída y una que no tiene el producto) (objetivo de la búsqueda y del producto, media histórica, no repetir, reaviso, limpieza de obsoletos), el historial por producto, las órdenes del bot, el extractor (precios tachados, texto oculto, títulos recortados, preventas, estados de segunda mano, páginas siguientes, datos de producto, envío), el motor (paginación, filtros, total con envío, mínimo histórico, historial), la búsqueda abierta, el filtro de IP y el PIN, la importación a mano y las búsquedas guardadas.
+170 pruebas, sin red. Cubren las reglas de aviso (objetivo de la búsqueda y del producto, media histórica, no repetir, reaviso, limpieza de obsoletos, tienda caída frente a tienda sin el producto), qué vigilada cubre cada objetivo, el historial por producto, las órdenes del bot y los mensajes largos de Telegram, la escritura segura de los archivos y los cambios de tiendas durante una búsqueda, los errores del servidor, el tope de páginas y las revisiones que fallan, los precios con punto de miles, el extractor (precios tachados, texto oculto, títulos recortados, preventas, estados de segunda mano, páginas siguientes, datos de producto, envío), el motor (paginación, filtros, total con envío, mínimo histórico, historial), la búsqueda abierta, el filtro de IP y el PIN, la importación a mano y las búsquedas guardadas.
 
 ## Limitaciones conocidas
 

@@ -3,6 +3,12 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.11.8] - 2026-11-08
+
+### Cambiado
+- **Estado de las tiendas** ya no da por rota una tienda que responde bien pero no tiene lo que buscas (p. ej. Outlet-PC sin stock de ese juego): lo dice así y sugiere desactivarla solo si no suele tener tus juegos. «Conviene desactivarla» queda para las que no responden.
+- **README** al día con todo lo de la auditoría: qué cuenta como «tienda sin respuesta», el 🎯 que solo avisa si una vigilada encuentra el producto, revisiones fallidas, tope de 6 páginas, Bixoto y Ferretería nunca automáticas, precios con punto de miles, mensajes largos de Telegram, dirección HTTPS en Ajustes, guardado seguro de los archivos y log archivado.
+
 ## [0.11.7] - 2026-11-08
 
 ### Corregido

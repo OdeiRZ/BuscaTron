@@ -701,7 +701,9 @@ async function cargaAjustes(){const a=await api('ajustes');$('a-token').value=a.
   $('a-pin').value=a.pin;$('a-pag').value=a.paginas||3;cargaRed();cargaArranque();cargaEstado();cargaOcultos();cargaObjetivos();}
 async function cargaEstado(){const l=await api('estado_tiendas',{});if(!Array.isArray(l))return;
   $('estado-t').innerHTML=l.map(e=>`<div class="est"><b>${esc(e.nombre)}${e.activa?'':' <span class="tag">desactivada</span>'}</b>
-    <span class="mut">${e.manual?'La miras tú: no se consulta sola':e.consultas?`${e.con_resultados} de ${e.consultas} consultas con resultados${e.ultimo_ok?' · último resultado '+relativo(e.ultimo_ok):''}`:'Todavía sin consultas'}${e.sugerir_desactivar?' · <span class="err">nunca da resultados: conviene desactivarla</span>':''}${e.ultimo_error&&!e.con_resultados&&!e.manual?`<br>Último problema: ${esc(e.ultimo_error)}`:''}</span>
+    <span class="mut">${e.manual?'La miras tú: no se consulta sola':e.consultas?`${e.con_resultados} de ${e.consultas} consultas con resultados${e.ultimo_ok?' · último resultado '+relativo(e.ultimo_ok):''}`:'Todavía sin consultas'}${e.sugerir_desactivar?(/^(no tiene nada|tiene productos)/.test(e.ultimo_error||'')
+      ?' · <span class="mut">responde bien, pero no ha tenido nada de lo que buscas; desactívala solo si no suele tener tus juegos (acelera las búsquedas)</span>'
+      :' · <span class="err">no ha respondido en sus últimas consultas: conviene desactivarla</span>'):''}${e.ultimo_error&&!e.con_resultados&&!e.manual?`<br>Último problema: ${esc(e.ultimo_error)}`:''}</span>
     ${e.manual?'':`<button type="button" class="${e.activa?'peli':'sec'} mini" data-act="${esc(e.host)}">${e.activa?'Desactivar':'Activar'}</button>`}</div>`).join('');
   document.querySelectorAll('#estado-t [data-act]').forEach(b=>b.onclick=async()=>{const t=tiendas.find(x=>x.host===b.dataset.act);if(!t)return;
     t.activa=!t.activa;await guardaActivas();cargaEstado();aviso(t.activa?'Tienda activada: entra en tus búsquedas':'Tienda desactivada: ya no se consulta');});}
