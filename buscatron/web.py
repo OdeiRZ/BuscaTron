@@ -4,6 +4,7 @@ import ipaddress
 import json
 import os
 import socket
+import sys
 import threading
 import time
 import urllib.request
@@ -222,7 +223,10 @@ class Handler(BaseHTTPRequestHandler):
                  "/api/busquedas": lambda: (busquedas.obtiene(int(parse_qs(url.query)["id"][0])) or {"error": "búsqueda no encontrada"})
                  if "id" in parse_qs(url.query) else busquedas.lista()}
         if url.path in rutas:
-            return self._json(rutas[url.path]())
+            try:
+                return self._json(rutas[url.path]())
+            except (ValueError, KeyError) as e:
+                return self._json({"error": str(e) or "datos no válidos"}, 400)
         self._enviar(_pagina().encode(), "text/html; charset=utf-8")
 
     def do_POST(self):
@@ -396,6 +400,11 @@ class Servidor(ThreadingHTTPServer):
     # En Windows SO_REUSEADDR deja que dos procesos compartan puerto sin error.
     allow_reuse_address = os.name != "nt"
     daemon_threads = True
+
+    def handle_error(self, request, client_address):
+        if isinstance(sys.exc_info()[1], ConnectionError):      # el móvil cortó la conexión (pantalla bloqueada, otra app…)
+            return
+        super().handle_error(request, client_address)
 
 
 def _ya_hay_uno(puerto):

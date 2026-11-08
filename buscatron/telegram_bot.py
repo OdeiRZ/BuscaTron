@@ -31,7 +31,7 @@ def _api(token, metodo, datos=None, timeout=20):
 
 
 def responde(texto):
-    notifica.telegram(texto[:4000])
+    notifica.telegram(texto)                # si es largo, notifica lo parte en varios mensajes
 
 
 def _hora(ts):
@@ -111,7 +111,7 @@ def _bucle():
         try:
             if menu_puesto != token:                     # el menú «/» de Telegram con las órdenes
                 _api(token, "setMyCommands", {"commands": json.dumps([{"command": c, "description": d} for c, d in ORDENES])})
-                menu_puesto = token
+                menu_puesto, offset = token, None        # otro bot: su numeración de mensajes empieza de nuevo
             datos = {"timeout": 50, **({"offset": offset} if offset else {})}
             r = _api(token, "getUpdates", datos, timeout=65)
         except Exception:

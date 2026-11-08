@@ -88,7 +88,7 @@ class Avisos(Base):
     def test_si_la_tienda_falla_no_se_borra_nada(self):
         self.sid = seguimiento.guarda({"consulta": "marvel", "objetivo": "40"})
         self.busca(30)
-        self.revisa_con([], {"t.es": {"encontrados": 0, "error": "HTTP 503"}})
+        self.revisa_con([], {"t.es": {"encontrados": 0, "error": "HTTP 503", "caida": True}})
         self.assertEqual(len(seguimiento.avisos()), 1)
 
     def test_vuelve_a_avisar_si_el_producto_regresa(self):
@@ -177,7 +177,8 @@ class Avisos(Base):
     def test_resumen_por_telegram_si_no_hay_avisos(self):
         self.sid = seguimiento.guarda({"consulta": "marvel", "objetivo": "20", "canales": "app,telegram", "opciones": {"resumen": True}})
         r = self.revisa_con([item(30, url="https://t.es/a"), item(25, url="https://t.es/b"), item(40, url="https://t.es/c", agotado=True)],
-                            {"t.es": {"encontrados": 3, "error": None}, "x.es": {"encontrados": 0, "error": "no responde"}})
+                            {"t.es": {"encontrados": 3, "error": None}, "x.es": {"encontrados": 0, "error": "no responde", "caida": True},
+                             "y.es": {"encontrados": 0, "error": "no tiene nada que coincida con la búsqueda", "caida": False}})
         self.assertEqual(r["avisos"], [])
         canales, asunto, texto = self.enviados[0]
         self.assertEqual((canales, asunto), (["telegram"], "BuscaTron · marvel · resumen"))

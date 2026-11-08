@@ -6,6 +6,7 @@ import time
 from . import ajustes, bd, fetch, extract, descubre, importar, navegador, tiendas as cfg
 
 DESAFIO = "pide demostrar que eres humano (captcha). Para resolverlo tú, activa en Ajustes → Navegador la opción de abrir una ventana"
+SIN_COINCIDENCIAS = "no tiene nada que coincida con la búsqueda"     # la tienda respondió, pero sin ese producto
 MIN_HISTORIAL = 3
 PAUSA = 0.6                 # segundos entre dos peticiones seguidas a la misma tienda (para no parecer un ataque)
 MAX_INTENTOS = 4            # direcciones de búsqueda que se prueban en una tienda cuyo buscador no se conoce
@@ -42,7 +43,7 @@ def _intenta(t, consulta, get, paginas=1, con_estado=False):
             continue
         items, sig = extract.analiza(html, url, consulta, con_estado=con_estado)
         if not items:
-            err = "no tiene nada que coincida con la búsqueda"
+            err = SIN_COINCIDENCIAS
             continue
         t["plantilla"] = pl
         paginas_vistas, urls_vistas = {url}, {x["url"] for x in items}
@@ -81,7 +82,7 @@ def _tienda(t, consulta, nav=None, paginas=1):
             if r:
                 return h, r, None
         if nav is None:
-            return h, [], (err or "no tiene nada que coincida con la búsqueda") + " (quizá solo la lea un navegador: activa «Usar Chrome» en Ajustes)"
+            return h, [], (err or SIN_COINCIDENCIAS) + " (quizá solo la lea un navegador: activa «Usar Chrome» en Ajustes)"
         visible = nav["visible"]
         get = lambda u: navegador.get(u, visible=visible, esperar_humano=90 if visible else 0)
         plant = t.get("plantilla")
@@ -91,7 +92,7 @@ def _tienda(t, consulta, nav=None, paginas=1):
             return h, r, None
         if plant is None:
             t["plantilla"] = None
-        return h, [], err or "no tiene nada que coincida con la búsqueda"
+        return h, [], err or SIN_COINCIDENCIAS
     except navegador.Desafio:
         return h, [], DESAFIO
     except Exception as e:
@@ -379,6 +380,11 @@ def historial_producto(grupo):
             "tienda": f"{tiendas} tiendas" if tiendas != 1 else "1 tienda", "puntos": pts, "por_producto": True}
 
 
+def es_caida(err):
+    """True si la tienda no respondió (red, captcha, error HTTP…); «no tiene nada que coincida» es una respuesta."""
+    return bool(err) and not err.startswith(SIN_COINCIDENCIAS)
+
+
 def registra_estado(informe, consulta):
     ts = time.time()
     filas = [(h, ts, consulta, i.get("brutos", i.get("encontrados", 0)), i.get("error") or "") for h, i in informe.items()
@@ -466,7 +472,8 @@ def buscar(consulta, incluir="", excluir="", ocultar_agotados=True, hosts=None, 
                 x["tienda"], x["origen"] = host, por_host[host].get("tipo", "tienda")
                 res.append(x)
                 kept += 1
-        informe[host] = {"encontrados": kept, "error": err if not kept else None, "brutos": len(items), "error_tienda": err}
+        informe[host] = {"encontrados": kept, "error": err if not kept else None, "brutos": len(items), "error_tienda": err,
+                         "caida": es_caida(err) and not kept}
     for t in manuales:
         informe[t["host"]] = {"encontrados": 0, "error": None, "manual": cfg.url_busqueda(t["plantilla"], consulta)}
         previos = [x for x in importar.vigentes(t["host"], consulta) if pasa(x)]      # lo que el usuario pegó a mano
@@ -485,7 +492,7 @@ def buscar(consulta, incluir="", excluir="", ocultar_agotados=True, hosts=None, 
                 x["origen"] = "web"
                 res.append(x)
                 kept += 1
-        informe["Búsqueda abierta"] = {"encontrados": kept, "error": info if not kept else None}
+        informe["Búsqueda abierta"] = {"encontrados": kept, "error": info if not kept else None, "caida": es_caida(info) and not kept}
     cfg.guarda(lista)  # persiste las plantillas descubiertas
     registra_estado({h: {"brutos": i.get("brutos", 0), "error": i.get("error_tienda")} for h, i in informe.items() if "brutos" in i}, consulta)
 

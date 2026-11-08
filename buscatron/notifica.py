@@ -8,16 +8,38 @@ from email.message import EmailMessage
 from . import ajustes
 
 
+MAX_TELEGRAM = 4000        # Telegram rechaza los mensajes de más de 4096 caracteres
+
+
+def trocea(texto, n=MAX_TELEGRAM):
+    """Parte un texto largo en mensajes de hasta n caracteres, cortando entre párrafos (un producto por párrafo)."""
+    trozos, actual = [], ""
+    for p in texto.split("\n\n"):
+        while len(p) > n:                      # un párrafo que no cabe ni solo
+            if actual:
+                trozos.append(actual)
+                actual = ""
+            trozos.append(p[:n])
+            p = p[n:]
+        if actual and len(actual) + 2 + len(p) > n:
+            trozos.append(actual)
+            actual = p
+        else:
+            actual = f"{actual}\n\n{p}" if actual else p
+    return trozos + [actual] if actual else trozos
+
+
 def telegram(texto, a=None):
     a = a or ajustes.carga()
     if not (a["telegram_token"] and a["telegram_chat"]):
         raise ValueError("falta el token o el chat de Telegram")
-    datos = urllib.parse.urlencode({"chat_id": a["telegram_chat"], "text": texto,
-                                    "disable_web_page_preview": "true"}).encode()
     url = f"https://api.telegram.org/bot{a['telegram_token']}/sendMessage"
-    with urllib.request.urlopen(urllib.request.Request(url, data=datos), timeout=20) as r:
-        if not json.load(r).get("ok"):
-            raise RuntimeError("Telegram rechazó el mensaje")
+    for trozo in trocea(texto):
+        datos = urllib.parse.urlencode({"chat_id": a["telegram_chat"], "text": trozo,
+                                        "disable_web_page_preview": "true"}).encode()
+        with urllib.request.urlopen(urllib.request.Request(url, data=datos), timeout=20) as r:
+            if not json.load(r).get("ok"):
+                raise RuntimeError("Telegram rechazó el mensaje")
 
 
 def detectar_chat(a=None):

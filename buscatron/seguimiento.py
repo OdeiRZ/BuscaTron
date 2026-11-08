@@ -108,8 +108,8 @@ def limpia_avisos(seg_id, res, informe):
     """Retira los avisos que ya no cumplen la búsqueda (agotado, otro idioma, fuera de precio…).
     Solo se tocan los de tiendas que han respondido en esta revisión: un fallo de red no borra nada."""
     vivas = {x["url"] for x in res}
-    sin_respuesta = {h for h, i in informe.items() if i["error"]}
-    abierta_fallida = bool(informe.get("Búsqueda abierta", {}).get("error"))
+    sin_respuesta = {h for h, i in informe.items() if i.get("caida")}
+    abierta_fallida = bool(informe.get("Búsqueda abierta", {}).get("caida"))
     with bd.conecta() as c:
         for r in c.execute("SELECT id, url, tienda FROM avisos WHERE seg_id=?", (seg_id,)).fetchall():
             if r["tienda"] in informe:
@@ -193,7 +193,7 @@ def revisa(seg_id, enviar=True):
                 c.execute("INSERT INTO avisos(ts,seg_id,titulo,tienda,url,precio,motivo) VALUES(?,?,?,?,?,?,?)",
                           (ts, seg_id, x["titulo"], x["tienda"], x["url"], x["precio"], motivo))
                 nuevos.append({**x, "motivo": motivo})
-            caidas = sum(1 for i in informe.values() if i["error"])
+            caidas = sum(1 for i in informe.values() if i.get("caida"))
             estado = f"{len(res)} resultados, {len(nuevos)} avisos nuevos" + (f", {caidas} tiendas sin respuesta" if caidas else "")
             c.execute("UPDATE seguimientos SET ultima=?, estado=? WHERE id=?", (ts, estado, seg_id))
         envio = {}
@@ -249,7 +249,7 @@ def resumen(seg, opc, modo, res, informe, n=5):
     validos = [x for x in res if not (x.get("agotado") and seg["sin_agotados"]) and not (x.get("preventa") and not opc.get("preventas"))
                and (modo == "todos" or motor.permite(x.get("idioma", "?"), x.get("idioma_seguro", False), modo))]
     grupos = agrupa(validos)
-    caidas = sum(1 for i in informe.values() if i.get("error"))
+    caidas = sum(1 for i in informe.values() if i.get("caida"))
     lineas = [f"Sin avisos nuevos. Revisados {len(res)} resultados" + (f" ({caidas} tiendas sin respuesta)" if caidas else "") + "."]
     if grupos:
         nombres = _nombres()

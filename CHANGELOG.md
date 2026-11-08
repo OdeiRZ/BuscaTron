@@ -3,6 +3,15 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.11.2] - 2026-11-08
+
+### Corregido
+- **«Tiendas sin respuesta» en las vigiladas**: contaba también las tiendas que sí respondieron pero no tenían ese producto, así que una revisión normal decía «20 tiendas sin respuesta» cuando solo había fallado una. Ahora solo cuentan las caídas de verdad (red, captcha, errores HTTP), en el estado de la vigilada y en el resumen de Telegram.
+- **Avisos obsoletos**: por el mismo motivo, los avisos de una tienda que ya no tenía el producto no se retiraban nunca; ahora se retiran en cuanto la tienda responde sin él.
+- **Mensajes largos de Telegram**: un aviso con muchos productos podía pasar del límite de 4096 caracteres y Telegram lo rechazaba entero. Ahora se parte en varios mensajes, entre producto y producto.
+- **Bot de órdenes**: al cambiar el token por el de otro bot, seguía con la numeración de mensajes del anterior y podía ignorar los del nuevo.
+- **Log**: ya no se llena de trazas cada vez que el móvil corta la conexión, y una consulta con datos mal formados responde con un error en vez de quedarse sin respuesta.
+
 ## [0.11.1] - 2026-11-07
 
 ### Eliminado
