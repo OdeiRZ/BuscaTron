@@ -114,6 +114,7 @@ summary .n{font-weight:500;color:var(--mut);font-size:13px;white-space:nowrap;fl
 .manuales{display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 8px}
 .manuales a{display:inline-flex;align-items:center;min-height:42px;padding:0 14px;border-radius:999px;background:var(--ac2);color:var(--ac);font-weight:600;font-size:14px;text-decoration:none}
 .cuenta{font-size:13px;color:var(--mut);margin:2px 2px 10px}
+.orden-res{margin:0 0 10px}
 .vacio-msg{text-align:center;padding:26px 12px;color:var(--mut)}
 .vacio-msg .em{font-size:38px;display:block;margin-bottom:6px}
 .carga{display:flex;align-items:center;gap:12px;color:var(--mut)}
@@ -426,12 +427,19 @@ function idiomaTag(x){
 function relativo(ts){const h=(Date.now()/1000-ts)/3600;return h<1?'hace menos de 1 h':h<48?`hace ${Math.round(h)} h`:`hace ${Math.round(h/24)} días`;}
 let ultimoTotal=0;
 function agrupa(items){const m=new Map();items.forEach(x=>{const k=x.grupo||x.url;if(!m.has(k))m.set(k,[]);m.get(k).push(x);});return [...m.values()];}
-let pintados=[];
+let pintados=[],idxBarato=0;
+const ORDEN_RES={barato:'Precio: de menor a mayor',caro:'Precio: de mayor a menor',nombre:'Nombre: de la A a la Z',tienda:'Tienda: de la A a la Z'};
+let ordenRes='barato';try{const o=localStorage.getItem('bt-orden-res');if(o in ORDEN_RES)ordenRes=o;}catch(e){}
+function ordenaGrupos(gs,conE){const p=g=>conE&&g[0].envio!=null?g[0].total:g[0].precio,az=(a,b)=>a.localeCompare(b,'es',{sensitivity:'base',numeric:true});
+  const f={barato:(a,b)=>p(a)-p(b),caro:(a,b)=>p(b)-p(a),nombre:(a,b)=>az(a[0].titulo,b[0].titulo)||p(a)-p(b),tienda:(a,b)=>az(nombreT(a[0].tienda),nombreT(b[0].tienda))||p(a)-p(b)}[ordenRes];
+  return [...gs].sort((a,b)=>(a[0].agotado-b[0].agotado)||f(a,b));}
+function masBarato(conE){let k=-1,m=Infinity;   // la tarjeta más barata (con stock), esté donde esté según el orden elegido
+  pintados.forEach((g,i)=>{const p=conE&&g[0].envio!=null?g[0].total:g[0].precio;if(!g[0].agotado&&p<m){m=p;k=i;}});return k;}
 function pintaLista(){const c=$('lista-res');if(!c)return;const N=Number($('top').value)||10,conE=ultimoBody.con_envio;
-  let cuenta;
-  if($('agrupar').checked){pintados=agrupa(ultimos).slice(0,N);c.innerHTML=pintados.map((g,i)=>tarjeta(g[0],i,conE,g.slice(1))).join('');
-    cuenta=`${pintados.length} producto${pintados.length===1?'':'s'} más barato${pintados.length===1?'':'s'}, con ${ultimos.length} ofertas de ${ultimoTotal} encontradas${conE?' (precio con envío)':''}`;}
-  else{pintados=ultimos.slice(0,N).map(x=>[x]);c.innerHTML=pintados.map((g,i)=>tarjeta(g[0],i,conE)).join('');cuenta=`${pintados.length} ofertas más baratas de ${ultimoTotal} encontradas${conE?' (precio con envío)':''}`;}
+  let cuenta;const que={barato:'más barato',caro:'más caro',nombre:'por nombre',tienda:'por tienda'}[ordenRes];
+  if($('agrupar').checked){pintados=ordenaGrupos(agrupa(ultimos),conE).slice(0,N);idxBarato=masBarato(conE);c.innerHTML=pintados.map((g,i)=>tarjeta(g[0],i,conE,g.slice(1))).join('');
+    cuenta=`${pintados.length} producto${pintados.length===1?'':'s'}${ordenRes==='barato'||ordenRes==='caro'?' '+que+(pintados.length===1?'':'s'):', '+que}, con ${ultimos.length} ofertas de ${ultimoTotal} encontradas${conE?' (precio con envío)':''}`;}
+  else{pintados=ordenaGrupos(ultimos.map(x=>[x]),conE).slice(0,N);idxBarato=masBarato(conE);c.innerHTML=pintados.map((g,i)=>tarjeta(g[0],i,conE)).join('');cuenta=`${pintados.length} ofertas${ordenRes==='barato'?' más baratas':ordenRes==='caro'?' más caras':', '+que} de ${ultimoTotal} encontradas${conE?' (precio con envío)':''}`;}
   const cu=$('cuenta-res');if(cu)cu.textContent=cuenta;
   c.querySelectorAll('.graf').forEach(g=>g.onclick=()=>{const x=pintados[+g.dataset.g][0];abreHist(x.url,x.titulo,x.tienda,$('agrupar').checked?x.grupo:null);});
   c.querySelectorAll('[data-ign]').forEach(g=>g.onclick=async()=>{const t=pintados[+g.dataset.ign][0].titulo;
@@ -465,14 +473,16 @@ async function cargaObjetivos(){const l=await api('objetivos');if(!Array.isArray
 function tarjeta(x,i,conEnvio,otros=[]){
   const web=x.origen==='web',sm=x.origen==='segunda_mano',usaTotal=conEnvio&&x.envio!=null;
   const sub=usaTotal?`<small>${euro(x.precio)} + envío ${euro(x.envio)}</small>`:(x.envio==null?'':x.envio===0?'<small>envío gratis</small>':`<small>+ ${euro(x.envio)} de envío</small>`);
-  const tarjetaHtml=`<div class="res con-acc ${i===0?'best':''}"><a class="cuerpo" href="${esc(x.url)}" target="_blank" rel="noopener">
+  const tarjetaHtml=`<div class="res con-acc ${i===idxBarato?'best':''}"><a class="cuerpo" href="${esc(x.url)}" target="_blank" rel="noopener">
     <div class="pr">${euro(usaTotal?x.total:x.precio)}${sub}</div>
     <div class="info"><div class="t">${esc(x.titulo)}</div>
-    <div class="meta"><span class="tag">${esc(nombreT(x.tienda))}</span>${idiomaTag(x)}${i===0?'<span class="tag ok">Más barato</span>':''}${x.descuento?`<span class="tag ok">−${x.descuento} % sobre su precio de mercado (${euro(x.pvp)})</span>`:''}${x.minimo?'<span class="tag ok">Mínimo histórico</span>':''}${sm?'<span class="tag">Segunda mano</span>':''}${x.estado?`<span class="tag">${esc(x.estado)}</span>`:''}${x.importado?`<span class="tag pre">Pegado a mano ${relativo(x.importado)}</span>`:''}${x.preventa?'<span class="tag pre">Preventa</span>':''}${x.agotado?'<span class="tag ko">Agotado</span>':''}${web?'<span class="tag pre">Web fuera de tu lista</span>':''}${x.objetivo_producto!=null?`<span class="tag ${x.precio<=x.objetivo_producto?'ok':''}">🎯 Tu objetivo: ${euro(x.objetivo_producto)}</span>`:''}</div></div></a>
+    <div class="meta"><span class="tag">${esc(nombreT(x.tienda))}</span>${idiomaTag(x)}${i===idxBarato?'<span class="tag ok">Más barato</span>':''}${x.descuento?`<span class="tag ok">−${x.descuento} % sobre su precio de mercado (${euro(x.pvp)})</span>`:''}${x.minimo?'<span class="tag ok">Mínimo histórico</span>':''}${sm?'<span class="tag">Segunda mano</span>':''}${x.estado?`<span class="tag">${esc(x.estado)}</span>`:''}${x.importado?`<span class="tag pre">Pegado a mano ${relativo(x.importado)}</span>`:''}${x.preventa?'<span class="tag pre">Preventa</span>':''}${x.agotado?'<span class="tag ko">Agotado</span>':''}${web?'<span class="tag pre">Web fuera de tu lista</span>':''}${x.objetivo_producto!=null?`<span class="tag ${x.precio<=x.objetivo_producto?'ok':''}">🎯 Tu objetivo: ${euro(x.objetivo_producto)}</span>`:''}</div></div></a>
     <button type="button" class="graf" data-g="${i}" title="Historial de precios" aria-label="Ver historial de precios">📈<small>Precio</small></button></div>
     <div class="accs"><button type="button" data-obj="${i}" class="${x.objetivo_producto!=null?'on':''}" title="Avisarme cuando baje a un precio">🎯 ${x.objetivo_producto!=null?euro(x.objetivo_producto):'Avisarme a…'}</button>
     <button type="button" data-ign="${i}" class="no" title="Ya lo tengo / no me interesa: ocultarlo siempre">🚫 No me interesa</button></div>`;
-  const mas=otros.length?`<details class="otras"><summary>${otros.length} tienda${otros.length===1?'':'s'} más, desde ${euro(Math.min(...otros.map(o=>conEnvio&&o.envio!=null?o.total:o.precio)))}</summary>${otros.map(o=>`<a href="${esc(o.url)}" target="_blank" rel="noopener"><b>${euro(conEnvio&&o.envio!=null?o.total:o.precio)}</b><span>${esc(nombreT(o.tienda))}${o.agotado?' · agotado':''}${o.preventa?' · preventa':''}${o.importado?' · pegado a mano':''}${o.estado?' · '+esc(o.estado):''}</span></a>`).join('')}</details>`:'';
+  const nt=new Set(otros.map(o=>o.tienda)).size,    // tiendas distintas: Amazon con 40 ofertas es una sola tienda
+    cuantas=nt===otros.length?`${nt} tienda${nt===1?'':'s'} más`:`${otros.length} ofertas más en ${nt} tienda${nt===1?'':'s'}`;
+  const mas=otros.length?`<details class="otras"><summary>${cuantas}, desde ${euro(Math.min(...otros.map(o=>conEnvio&&o.envio!=null?o.total:o.precio)))}</summary>${otros.map(o=>`<a href="${esc(o.url)}" target="_blank" rel="noopener"><b>${euro(conEnvio&&o.envio!=null?o.total:o.precio)}</b><span>${esc(nombreT(o.tienda))}${o.agotado?' · agotado':''}${o.preventa?' · preventa':''}${o.importado?' · pegado a mano':''}${o.estado?' · '+esc(o.estado):''}</span></a>`).join('')}</details>`:'';
   return `<div class="gr">${tarjetaHtml}${mas}</div>`;}
 function cuerpoForm(){return {q:$('q').value,incluir:$('incluir').value,alguna:$('alguna').value,excluir:$('excluir').value,pmin:$('pmin').value,pmax:$('pmax').value,
   top:$('top').value,sin_agotados:$('sinag').checked,castellano:$('idioma').value!=='todos',idioma:$('idioma').value,tiendas:tiendas.filter(t=>t.activa).map(t=>t.host),
@@ -487,13 +497,14 @@ function muestra(r,body,guardada){
   const manuales=Object.entries(r.informe).filter(([h,i])=>i.manual);
   const fallos=Object.entries(r.informe).filter(([h,i])=>i.error).map(([h,i])=>`<div class="err" style="margin-top:6px"><b>${esc(nombreT(h))}</b>: ${esc(i.error)}</div>`);
   const guard=guardada?`<div class="card guardada"><span>🕘 Búsqueda guardada ${relativo(guardada)}: los precios pueden haber cambiado.</span><button type="button" class="sec mini" id="actualizar">Repetir</button></div>`:'';
-  $('out').innerHTML=guard+(ultimos.length?`<div class="cuenta" id="cuenta-res"></div><div id="lista-res"></div>
+  $('out').innerHTML=guard+(ultimos.length?`<div class="cuenta" id="cuenta-res"></div><div class="orden-res"><label for="orden-res">Ordenar por</label><select id="orden-res">${Object.entries(ORDEN_RES).map(([k,v])=>`<option value="${k}" ${k===ordenRes?'selected':''}>${v}</option>`).join('')}</select></div><div id="lista-res"></div>
     <div class="acciones"><button type="button" class="sec" id="vigilar">👁️ Vigilar esta búsqueda</button></div>`
     :`<div class="card vacio-msg"><span class="em">🤷</span>Ningún resultado con esos filtros.<br>Prueba a quitar palabras de «Descartar», a ampliar el precio o a mostrar los agotados.</div>`)+
     (nuevas.length?`<div class="card"><h2>🆕 Tiendas que no tienes en tu lista</h2><p class="ayuda" style="margin-top:0">No están en tu lista de tiendas. Añádelas para que se consulten en todas tus búsquedas.</p><div class="manuales">${nuevas.map(h=>`<button type="button" class="sec mini" data-add="${esc(h)}">＋ ${esc(h)}</button>`).join('')}</div></div>`:'')+
     (manuales.length?`<div class="card"><h2>🔗 Tiendas que tienes que mirar tú</h2><p class="ayuda" style="margin-top:0">Bloquean a BuscaTron, así que no se consultan solas. Abre su enlace (ya lleva tu búsqueda) y, si quieres comparar sus precios aquí, copia sus resultados y pégalos:</p><div class="manuales">${manuales.map(([h,i])=>`<div class="manual-fila"><a href="${esc(i.manual)}" target="_blank" rel="noopener">${esc(nombreT(h))} ↗</a><button type="button" class="sec mini" data-pegar="${esc(h)}" data-enlace="${esc(i.manual)}">📋 Pegar resultados</button><span class="mut" id="imp-${esc(h)}">${i.importados?`${i.importados} pegado${i.importados>1?'s':''} ${relativo(i.importado_ts)}`:''}</span></div>`).join('')}</div></div>`:'')+
     (fallos.length?`<details class="card"><summary>Tiendas sin resultados o con problemas <span class="n">${fallos.length}</span></summary>${fallos.join('')}</details>`:'');
   if($('vigilar'))$('vigilar').onclick=vigilar;
+  if($('orden-res'))$('orden-res').onchange=()=>{ordenRes=$('orden-res').value;try{localStorage.setItem('bt-orden-res',ordenRes)}catch(e){}pintaLista();};
   if($('actualizar'))$('actualizar').onclick=()=>$('f').requestSubmit();
   pintaLista();
   document.querySelectorAll('#out [data-pegar]').forEach(b=>b.onclick=()=>abrePegar(b.dataset.pegar,b.dataset.enlace));

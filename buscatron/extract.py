@@ -46,6 +46,21 @@ def normaliza(texto):
     return re.sub(r"[^a-z0-9 ]+", " ", "".join(c for c in t if not unicodedata.combining(c)))
 
 
+def encaja(n, w):
+    """¿El texto normalizado n contiene w empezando en una palabra? «carta» encaja en «cartas», pero «vantage» no en
+    «advantage». También vale escrito junto o separado: «spider man» y «spiderman»."""
+    w = w.strip()
+    if not w:
+        return True
+    if re.search(r"(?<![a-z0-9])" + re.escape(w), n):
+        return True
+    junto, objetivo, pos, inicios = n.replace(" ", ""), w.replace(" ", ""), 0, []
+    for p in n.split():
+        inicios.append(pos)
+        pos += len(p)
+    return any(junto.startswith(objetivo, i) for i in inicios)
+
+
 SEGUIMIENTO = re.compile(r"^(utm_.*|srsltid|gclid|fbclid|msclkid|igshid|mc_[a-z]+|ref|ref_|referrer|dib|dib_tag|qid|sr|crid|sprefix|keywords|pd_rd_.*|pf_rd_.*|content-id|psc|th|spLa|smid)$", re.I)
 ASIN = re.compile(r"/(?:dp|gp/product|gp/aw/d)/([A-Z0-9]{10})(?:[/?]|$)")
 
@@ -217,7 +232,7 @@ def analiza(html, base, consulta, ventana=40, con_estado=False):
     p = _Parser(base)
     p.feed(html)
     ev = p.eventos
-    encajan = [i for i, e in enumerate(ev) if e[0] == "a" and len(e[2]) >= 4 and all(w in normaliza(e[2]) for w in palabras)
+    encajan = [i for i, e in enumerate(ev) if e[0] == "a" and len(e[2]) >= 4 and all(encaja(normaliza(e[2]), w) for w in palabras)
                and not SUGERENCIA.match(e[2]) and not es_otra_busqueda(e[1], base)]
     out, vistos = [], set()
     for k, i in enumerate(encajan):

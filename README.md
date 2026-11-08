@@ -6,7 +6,7 @@ Buscador y vigilante de precios **local** para tiendas online españolas. Pensad
 - **Datos en vivo**: no usa cachés ni comparadores intermedios, así que el precio es el que ves en la tienda.
 - **Tus datos se quedan en tu equipo**: lista de tiendas, historial y tokens se guardan en archivos locales que no se suben al repositorio.
 
-> Estado: **versión funcional** (v0.11.9). Consulta el [CHANGELOG](CHANGELOG.md).
+> Estado: **versión funcional** (v0.12.0). Consulta el [CHANGELOG](CHANGELOG.md).
 
 ## Inicio rápido
 
@@ -36,13 +36,16 @@ Opciones: `--puerto N` (por defecto 8790) y `--host 127.0.0.1` para que solo sea
 La web está pensada para móvil (probada a 360 px) y escritorio. Arranca con el tema claro u oscuro de tu sistema y tiene un botón (🌙 / ☀️) en la cabecera para alternarlo; recuerda tu elección.
 
 ### 🔎 Buscar
-- **Agrupa el mismo producto de varias tiendas** (opción «Agrupar», activada por defecto): una tarjeta por producto con su mejor precio y, desplegables, las demás tiendas. El producto se reconoce por sus palabras significativas (sin editorial, «expansión», «castellano», referencias de la tienda…) o, si usas «al menos una de estas», por la frase que encaja.
+- **Agrupa el mismo producto de varias tiendas** (opción «Agrupar», activada por defecto): una tarjeta por producto con su mejor precio y, desplegables, las demás tiendas. El producto se reconoce por sus palabras significativas (sin editorial, «expansión», «castellano», referencias de la tienda…) o, si usas «al menos una de estas», por la frase que encaja (salvo que la frase sea la propia búsqueda: con «Vantage» buscando «Vantage» juntaría en una tarjeta el juego, un reloj Polar Vantage y un coche Aston Martin Vantage). El desplegable dice cuántas tiendas hay de verdad: «6 tiendas más» o, si una tienda tiene varias ofertas, «40 ofertas más en 3 tiendas».
+- **Ordenar por** precio (de menor a mayor o al revés), nombre o tienda, encima de los resultados; se recuerda tu elección. «Más barato» marca siempre el más barato, esté donde esté.
 - **Descuento sobre el precio de mercado**: «−19 % sobre su precio de mercado (44,99 €)», donde el precio de mercado es el que más se repite entre al menos 3 tiendas (sin contar la segunda mano, y contando también las tiendas que tu filtro de precio deja fuera).
 - Debajo de cada producto, dos acciones:
   - **🎯 Avisarme a…**: un precio objetivo solo para ese producto («avísame de Civil War a 30 €»). Tus búsquedas vigiladas usan ese objetivo en vez del suyo cuando lo encuentran, en cualquier tienda; el producto lleva la etiqueta «🎯 Tu objetivo». Se ven y se quitan en Ajustes → «Objetivos por producto».
   - **🚫 No me interesa** (ya lo tengo): oculta un producto para siempre, en todas las tiendas, en tus búsquedas y en los avisos. Se recupera en Ajustes → «Productos ocultos».
 - La búsqueda **sigue en BuscaTron aunque cierres o bloquees el móvil, cambies de app o recargues**: al volver se recoge sola el resultado.
 - Busca un producto en todas las tiendas activas y ve los **N más baratos**, con precio, tienda, enlace y etiquetas (preventa, segunda mano y su estado, mínimo histórico…).
+- Las palabras se buscan **desde el principio de una palabra del título**: «carta» encuentra «cartas», pero «vantage» ya no encuentra «Tactical Advantage».
+- **Nombres que comparten otros productos** («Vantage» es también un reloj Polar, un coche Aston Martin y unos guantes Ansell): ningún filtro por nombre los distingue, porque la palabra es la misma. Lo que funciona es combinar un **precio mínimo** cercano al del juego con **Descartar** las palabras de lo que se cuela. Con «Vantage», precio mínimo 50 € y descartar `aston amr buggy rc guante siku carson ftx coche` deja exactamente las 9 ofertas del juego.
 - Filtros: palabras que debe contener, **al menos una de varias** (separadas por comas; ideal para vigilar varias ediciones o expansiones con una sola búsqueda, p. ej. `tirania, galaxia, titan loco`; ignora espacios y puntos, así que `shield` encuentra «S.H.I.E.L.D.»), palabras a descartar, precio mínimo y máximo, y **páginas leídas por tienda** (1 a 6).
 - **Ocultar agotados** (activado por defecto). Reconoce «agotado», «sin stock», «en reposición» y «reserva», y descarta los productos que la tienda no puede enviar ya.
 - **Idioma de los juegos** (selector con tres modos y una etiqueta de idioma en cada producto; ver [Idioma de los juegos](#idioma-de-los-juegos)): por defecto *Solo castellano*.
@@ -232,7 +235,7 @@ Resultado de la prueba el 6/11/2026 (las webs cambian, así que puede variar):
 
 | Estado | Tiendas |
 |---|---|
-| ✅ Funcionan (16) | Juegos de la Mesa Redonda, Zacatrus, Dungeon Marvels, Jugamos Una, Jugamos Otra, El Taller del Modelista, Mathom, Tablerum, Outlet Games, Ludus Belli, Bandua, Goblin Trader, Gameria, Masqueoca, Turol Games y **Amazon** (estas dos con navegador) |
+| ✅ Funcionan (16) | Juegos de la Mesa Redonda, Zacatrus, Dungeon Marvels, Jugamos Una, Jugamos Otra, El Taller del Modelista, Mathom, Tablerum, Outlet Games, Ludus Belli, Bandua, Goblin Trader, Gameria, Masqueoca, Turol Games y **Amazon** (estas dos con navegador; Amazon, solo en su sección «Juguetes y juegos») |
 | ➖ Responden, sin el producto probado (2) | Tiendas MGI, Outlet-PC |
 | 🔗 Solo enlace (2) | Ferretería Ibérica Madrid y Bixoto (con [importación a mano](#importar-a-mano)); Bixoto bloquea la IP incluso con una sola consulta automática desde un Chrome real (probado el 7/11/2026), así que no se consulta nunca de forma automática |
 | 🛒 Segunda mano | Vinted y Milanuncios funcionan; Wallapop y eBay, solo enlace |
@@ -288,12 +291,13 @@ permitir_acceso_movil.bat     abre el cortafuegos para tu red local (pide admini
 python -m unittest discover -s tests
 ```
 
-172 pruebas, sin red. Cubren las reglas de aviso (objetivo de la búsqueda y del producto, media histórica, no repetir, reaviso, limpieza de obsoletos, tienda caída frente a tienda sin el producto), qué vigilada cubre cada objetivo, el historial por producto, las órdenes del bot y los mensajes largos de Telegram, la escritura segura de los archivos y los cambios de tiendas durante una búsqueda, los errores del servidor, el tope de páginas y las revisiones que fallan, los precios con punto de miles, el extractor (precios tachados, texto oculto, títulos recortados, preventas, estados de segunda mano, páginas siguientes, datos de producto, envío), el motor (paginación, filtros, total con envío, mínimo histórico, historial), la búsqueda abierta, el filtro de IP y el PIN, la importación a mano y las búsquedas guardadas.
+175 pruebas, sin red. Cubren las reglas de aviso (objetivo de la búsqueda y del producto, media histórica, no repetir, reaviso, limpieza de obsoletos, tienda caída frente a tienda sin el producto), qué vigilada cubre cada objetivo, el historial por producto, las órdenes del bot y los mensajes largos de Telegram, la escritura segura de los archivos y los cambios de tiendas durante una búsqueda, los errores del servidor, el tope de páginas y las revisiones que fallan, los precios con punto de miles, el extractor (precios tachados, texto oculto, títulos recortados, preventas, estados de segunda mano, páginas siguientes, datos de producto, envío), el motor (paginación, filtros, total con envío, mínimo histórico, historial), la búsqueda abierta, el filtro de IP y el PIN, la importación a mano y las búsquedas guardadas.
 
 ## Limitaciones conocidas
 
 - Las revisiones programadas solo se ejecutan **mientras BuscaTron esté abierto**: activa el arranque con Windows para que lo esté siempre.
-- No reconoce «el mismo producto» entre tiendas: filtra por palabras. Usa «Excluir» para descartar accesorios, packs o ediciones que no te interesan.
+- No reconoce «el mismo producto» entre tiendas: filtra por palabras. Usa «Descartar» para quitar accesorios, packs o ediciones que no te interesan, y un precio mínimo para los productos que se llaman igual que tu juego.
+- Amazon se consulta solo en su sección **«Juguetes y juegos»** (`&i=toys` en su dirección de búsqueda): sin ella, «Vantage» devolvía 166 relojes, protectores y coches y el juego ni aparecía. Si buscas otras cosas en Amazon, quítalo de su dirección en «Editar la lista de tiendas».
 - Las tiendas cambian su web de vez en cuando y su lector puede dejar de funcionar. La web indica qué tiendas no han respondido.
 - Ferretería Ibérica, Wallapop y eBay bloquean cualquier acceso automático: solo se ofrece su enlace y, para ellas, la [importación a mano](#importar-a-mano). Amazon solo responde a un navegador real, así que necesita el [navegador opcional](#navegador-opcional) (Playwright y Chrome o Edge) y puede volver a pedir una comprobación humana si lo considera sospechoso.
 - La búsqueda abierta usa buscadores web gratuitos: es menos precisa, solo lee precios en euros y puede dejar de funcionar si el buscador la bloquea.

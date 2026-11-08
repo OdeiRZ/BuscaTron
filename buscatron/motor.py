@@ -274,7 +274,7 @@ def grupo_de(titulo, frases=()):
     """Con el filtro «al menos una de estas», el producto es la frase que encaja (más fiable); si no, su clave."""
     n = extract.normaliza(titulo)
     for f in frases:
-        if f in n or f.replace(" ", "") in n.replace(" ", ""):
+        if extract.encaja(n, f):
             return "f:" + f
     return "c:" + clave_producto(titulo)
 
@@ -334,7 +334,7 @@ def objetivo_para(x, objs):
     n = extract.normaliza(x["titulo"])
     for g, o in objs.items():
         f = g[2:] if g.startswith("f:") else None
-        if f and (f in n or f.replace(" ", "") in n.replace(" ", "")):
+        if f and extract.encaja(n, f):
             return o["precio"]
     return None
 
@@ -355,7 +355,7 @@ def historial_producto(grupo):
         if grupo.startswith("f:"):
             f = grupo[2:]
             titulos = [t for (t,) in c.execute("SELECT DISTINCT titulo FROM precios")
-                       if f in extract.normaliza(t) or f.replace(" ", "") in extract.normaliza(t).replace(" ", "")]
+                       if extract.encaja(extract.normaliza(t), f)]
             filas = []
             for i in range(0, len(titulos), 500):
                 trozo = titulos[i:i + 500]
@@ -451,9 +451,9 @@ def buscar(consulta, incluir="", excluir="", ocultar_agotados=True, hosts=None, 
     def pasa(x, prior=None):
         x["idioma"], x["idioma_seguro"] = idioma_con_tienda(x["titulo"], prior)
         n = extract.normaliza(x["titulo"])
-        if frases and not any(f in n or f.replace(" ", "") in n.replace(" ", "") for f in frases):
+        if frases and not any(extract.encaja(n, f) for f in frases):
             return False
-        return (all(w in n for w in inc) and not any(w in n for w in exc)
+        return (all(extract.encaja(n, w) for w in inc) and not any(extract.encaja(n, w) for w in exc)
                 and not (ocultar_agotados and x["agotado"])
                 and not (x.get("preventa") and not preventas)
                 and permite(x["idioma"], x["idioma_seguro"], modo)
@@ -503,9 +503,13 @@ def buscar(consulta, incluir="", excluir="", ocultar_agotados=True, hosts=None, 
     registra_estado({h: {"brutos": i.get("brutos", 0), "error": i.get("error_tienda")} for h, i in informe.items() if "brutos" in i}, consulta)
 
     # producto (grupo) y PVP aproximado, con todas las tiendas; después, el filtro de precio
+    # Una frase que no añade nada a la búsqueda («Vantage» buscando «Vantage») no distingue productos: juntaría en una sola
+    # tarjeta todo lo que la contenga (el juego, un reloj Polar Vantage, un coche Aston Martin Vantage…).
+    palabras_consulta = set(extract.normaliza(consulta).split())
+    frases_grupo = [f for f in frases if not set(f.split()) <= palabras_consulta]
     precios_grupo = {}
     for x in res:
-        x["grupo"] = grupo_de(x["titulo"], frases)
+        x["grupo"] = grupo_de(x["titulo"], frases_grupo)
         x["clave"] = clave_producto(x["titulo"])
         if not x["agotado"] and x.get("origen") != "segunda_mano":            # la segunda mano no marca el precio de mercado
             precios_grupo.setdefault(x["grupo"], {})

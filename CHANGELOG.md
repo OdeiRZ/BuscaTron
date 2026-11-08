@@ -3,6 +3,19 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.12.0] - 2026-11-08
+
+### Añadido
+- **Ordenar los resultados** de una búsqueda por precio (de menor a mayor o al revés), nombre o tienda; se recuerda. Ya no hace falta ir al final de la lista para ver los más caros. «Más barato» marca siempre el más barato, no el primero de la lista.
+
+### Cambiado
+- **Amazon, solo en «Juguetes y juegos»**: con «Vantage» pasaba de 166 relojes, protectores y coches (sin el juego) a 33 ofertas con el juego entre ellas. Cambia una sola vez, y solo si tenías la dirección de Amazon de siempre; se deshace en «Editar la lista de tiendas».
+- **Palabras desde el principio de una palabra**: «vantage» ya no encuentra «Tactical Advantage» (sigue valiendo «carta» para «cartas» y «spiderman» para «Spider-Man»). En la búsqueda, los filtros, las vigiladas, lo pegado a mano y la búsqueda abierta.
+
+### Corregido
+- **«148 tiendas más» que eran 148 ofertas de 9 tiendas**: el desplegable cuenta ahora las tiendas de verdad («148 ofertas más en 9 tiendas»).
+- **Todo en una sola tarjeta**: con «al menos una de estas» igual a la propia búsqueda («Vantage» buscando «Vantage»), todo lo que contuviera la palabra se agrupaba como un único producto. Ahora esa frase no agrupa; las que sí distinguen productos (campañas) siguen agrupando.
+
 ## [0.11.9] - 2026-11-08
 
 ### Corregido

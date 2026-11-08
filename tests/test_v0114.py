@@ -135,6 +135,46 @@ class SugerenciaDelBuscador(unittest.TestCase):
         self.assertTrue(extract.es_otra_busqueda("https://t.es/index.php?controller=search&s=civil+war&page=2", base))
 
 
+class PalabrasCompletas(unittest.TestCase):
+    def test_la_palabra_tiene_que_empezar_una_palabra_del_titulo(self):
+        from buscatron import extract
+        n = extract.normaliza
+        self.assertFalse(extract.encaja(n("Tactical Advantage"), "vantage"))
+        self.assertTrue(extract.encaja(n("Vantage (castellano)"), "vantage"))
+        self.assertTrue(extract.encaja(n("Pack de cartas"), "carta"))                  # plurales y prefijos, como antes
+        self.assertTrue(extract.encaja(n("Spider-Man: Marvel Champions"), "spiderman"))
+        self.assertTrue(extract.encaja(n("Spiderman Marvel"), "spider man"))
+        self.assertTrue(extract.encaja(n("La Tiranía de Cráneo Rojo"), "craneo rojo"))
+        self.assertFalse(extract.encaja(n("Tacticaladvantage"), "vantage"))
+
+    def test_una_frase_igual_a_la_busqueda_no_junta_productos_distintos(self):
+        html = ('<a href="/p/1">Vantage</a><span>81,00 €</span>'
+                '<a href="/p/2">Protector de pantalla Polar Vantage M3</a><span>9,00 €</span>'
+                '<a href="/p/3">Tactical Advantage</a><span>0,25 €</span>')
+        from buscatron import extract
+        items = extract.extrae(html, "https://t.es/buscar?q=vantage", "vantage")
+        self.assertEqual([x["titulo"] for x in items], ["Vantage", "Protector de pantalla Polar Vantage M3"])
+        tmp = tempfile.mkdtemp()
+        with mock.patch.object(bd, "RUTA", os.path.join(tmp, "t.db")), mock.patch.object(cfg, "RUTA", os.path.join(tmp, "t.json")), \
+                mock.patch.object(ajustes, "RUTA", os.path.join(tmp, "c.json")), mock.patch.object(motor.navegador, "disponible", lambda: False), \
+                mock.patch.object(motor, "_tienda", lambda t, *a: (t["host"], [dict(x) for x in items], None)):
+            cfg.guarda([{"host": "t.es", "activa": True, "plantilla": "https://t.es/buscar?q={q}"}])
+            res, _ = motor.buscar("Vantage", alguna="Vantage", castellano=False)
+            self.assertEqual(len({x["grupo"] for x in res}), 2)                             # el juego y el protector, por separado
+            res, _ = motor.buscar("juegos", alguna="vantage", castellano=False)             # frase que añade algo (campañas): agrupa
+            self.assertEqual({x["grupo"] for x in res}, {"f:vantage"})
+
+
+class AmazonEnJuguetes(ConArchivos):
+    def test_cambia_la_direccion_de_siempre_pero_no_una_tuya(self):
+        for propia, esperada in ((cfg.AMAZON_ANTES, cfg.CONOCIDAS["www.amazon.es"]),
+                                 ("https://www.amazon.es/s?k={q}&i=videogames", "https://www.amazon.es/s?k={q}&i=videogames")):
+            ajustes.guarda({"amazon_juguetes": False, "amazon_automatico": True})
+            cfg.guarda([{"host": "www.amazon.es", "activa": True, "plantilla": propia, "js": True}])
+            self.assertEqual(cfg.carga()[0]["plantilla"], esperada)
+        self.assertIn("i=toys", cfg.CONOCIDAS["www.amazon.es"])
+
+
 class EnlacesSeguros(unittest.TestCase):
     def test_solo_direcciones_web(self):
         from buscatron import extract

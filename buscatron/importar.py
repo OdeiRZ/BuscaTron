@@ -39,7 +39,7 @@ def parsea(texto, consulta, base=""):
 
     def es_titulo(l):
         n = extract.normaliza(_sin_precios(l))
-        return (len(n) >= 6 and all(w in n for w in palabras) and n.strip() != " ".join(palabras)
+        return (len(n) >= 6 and all(extract.encaja(n, w) for w in palabras) and n.strip() != " ".join(palabras)
                 and not n.startswith(IGNORAR))
     idx = [i for i, l in enumerate(lineas) if es_titulo(l)]
     out, vistos = [], set()
@@ -111,4 +111,4 @@ def vigentes(host, consulta, ahora=None):
         filas = [dict(r) for r in c.execute("SELECT * FROM importados WHERE host=? AND ts>? ORDER BY ts DESC",
                                            (host, ahora - CADUCA_HORAS * 3600))]
     return [{"titulo": f["titulo"], "url": f["url"], "precio": f["precio"], "agotado": bool(f["agotado"]), "preventa": bool(f["preventa"]),
-             "estado": "", "importado": f["ts"]} for f in filas if all(w in extract.normaliza(f["titulo"]) for w in palabras)]
+             "estado": "", "importado": f["ts"]} for f in filas if all(extract.encaja(extract.normaliza(f["titulo"]), w) for w in palabras)]

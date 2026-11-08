@@ -283,8 +283,9 @@ def cubren(titulo, precio=None):
             continue
         palabras = motor.extract.normaliza(f"{s['consulta']} {s['incluir'] or ''}").split()
         frases = [f for f in (motor.extract.normaliza(x).strip() for x in s["opciones"]["alguna"].split(",")) if f]
-        if (all(w in n for w in palabras) and not any(w in n for w in motor.extract.normaliza(s["excluir"] or "").split())
-                and (not frases or any(f in n or f.replace(" ", "") in n.replace(" ", "") for f in frases))
+        encaja = motor.extract.encaja
+        if (all(encaja(n, w) for w in palabras) and not any(encaja(n, w) for w in motor.extract.normaliza(s["excluir"] or "").split())
+                and (not frases or any(encaja(n, f) for f in frases))
                 and not (precio is not None and s["pmin"] is not None and precio < s["pmin"])):
             nombres.append(s["nombre"])
     return nombres

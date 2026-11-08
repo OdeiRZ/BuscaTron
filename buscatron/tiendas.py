@@ -28,9 +28,14 @@ outlet-pc.es www.goblintrader.es""".split()
 CONOCIDAS = {
     "www.masqueoca.com": "https://www.masqueoca.com/tienda/buscardo.asp?txtbusqueda={q}&dondebusco=1&vertodo=1&stockneg=1",
     "www.turolgames.com": "https://www.turolgames.com/es/buscar?controller=search&search_query={q}",  # necesita navegador (pantalla de carga con JS)
-    "www.amazon.es": "https://www.amazon.es/s?k={q}&s=price-asc-rank",                                 # solo responde a un navegador real
+    # Solo responde a un navegador real. «i=toys» = sección Juguetes y juegos: sin ella, «Vantage» devolvía 166 relojes,
+    # protectores y coches y el juego ni aparecía en las páginas leídas; con ella, 33 ofertas y el juego entre ellas.
+    "www.amazon.es": "https://www.amazon.es/s?k={q}&i=toys&s=price-asc-rank",
     "bixoto.com": "https://bixoto.com/es?search={q}",
 }
+
+
+AMAZON_ANTES = "https://www.amazon.es/s?k={q}&s=price-asc-rank"
 
 
 # Tiendas que bloquean cualquier acceso automático: no se consultan, solo se ofrece el enlace de búsqueda.
@@ -75,6 +80,12 @@ def carga():
                 t["manual"], t["plantilla"], t["js"] = False, CONOCIDAS["www.amazon.es"], True
         guarda(lista)
         ajustes.guarda({"amazon_automatico": True})
+    if not ajustes.carga()["amazon_juguetes"]:       # una vez: Amazon solo en Juguetes y juegos, si tenía la dirección de siempre
+        for t in lista:
+            if t["host"] == "www.amazon.es" and t.get("plantilla") == AMAZON_ANTES:
+                t["plantilla"] = CONOCIDAS["www.amazon.es"]
+        guarda(lista)
+        ajustes.guarda({"amazon_juguetes": True})
     for t in lista:
         t.setdefault("tipo", "tienda")
         if not t.get("plantilla") and t["host"] in CONOCIDAS:

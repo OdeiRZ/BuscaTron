@@ -9,7 +9,7 @@ _cerrojo = threading.RLock()
 SECRETOS = ("telegram_token", "smtp_clave", "pin")
 DEFECTO = {"telegram_token": "", "telegram_chat": "", "smtp_servidor": "", "smtp_puerto": 587,
            "smtp_usuario": "", "smtp_clave": "", "correo_destino": "",
-           "usar_navegador": True, "navegador_visible": False, "pin": "", "secreto": "", "paginas": 3, "segunda_mano_sembrada": False, "amazon_automatico": False, "ultima_limpieza": 0}
+           "usar_navegador": True, "navegador_visible": False, "pin": "", "secreto": "", "paginas": 3, "segunda_mano_sembrada": False, "amazon_automatico": False, "amazon_juguetes": False, "ultima_limpieza": 0}
 
 
 def carga():

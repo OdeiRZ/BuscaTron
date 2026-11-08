@@ -108,7 +108,7 @@ def _lee_pagina(url, consulta):
         d = extract.datos_producto(h, url)
         if d and not str(d["url"] or url).startswith(("http://", "https://")):
             d = None                            # una dirección rara (javascript:…) no se enlaza nunca
-        if d and d["moneda"] in ("EUR", "€", "") and all(w in extract.normaliza(d["titulo"] + " " + url) for w in palabras):
+        if d and d["moneda"] in ("EUR", "€", "") and all(extract.encaja(extract.normaliza(d["titulo"] + " " + url), w) for w in palabras):
             items = [{"titulo": d["titulo"] or extract.titulo_desde_url(url), "url": d["url"] or url, "precio": d["precio"],
                       "agotado": d["agotado"], "preventa": d["preventa"], "estado": ""}]
     for x in items:
