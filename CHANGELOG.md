@@ -3,6 +3,12 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.11.7] - 2026-11-08
+
+### Corregido
+- Si abrías la gráfica de un producto y enseguida la de otro, la respuesta tardía del primero podía taparla.
+- «¿Vigilar ahora la búsqueda…?» (al poner un 🎯 que ninguna vigilada cubre) usa la búsqueda de los resultados en pantalla, no lo que hubiera escrito después en la caja.
+
 ## [0.11.6] - 2026-11-08
 
 ### Corregido

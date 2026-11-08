@@ -6,7 +6,7 @@ Buscador y vigilante de precios **local** para tiendas online españolas. Pensad
 - **Datos en vivo**: no usa cachés ni comparadores intermedios, así que el precio es el que ves en la tienda.
 - **Tus datos se quedan en tu equipo**: lista de tiendas, historial y tokens se guardan en archivos locales que no se suben al repositorio.
 
-> Estado: **versión funcional** (v0.11.6). Consulta el [CHANGELOG](CHANGELOG.md).
+> Estado: **versión funcional** (v0.11.7). Consulta el [CHANGELOG](CHANGELOG.md).
 
 ## Inicio rápido
 

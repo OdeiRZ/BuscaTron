@@ -455,7 +455,7 @@ async function pideObjetivo(g){const x=g[0],k=x.grupo||('c:'+(x.clave||''));
   const vig=await api('vigilan?titulo='+encodeURIComponent(x.titulo)+'&precio='+n).catch(()=>null);
   if(!Array.isArray(vig)){aviso(`Te avisaré cuando una búsqueda vigilada lo encuentre a ${euro(n)} o menos`);return;}
   if(vig.length){aviso(`Te avisará «${vig[0]}» cuando lo encuentre a ${euro(n)} o menos`);return;}
-  if(confirm(`Objetivo guardado, pero ninguna búsqueda vigilada activa busca este producto, así que todavía no te avisará.\n\n¿Vigilar ahora la búsqueda «${$('q').value}»? Se revisará sola y te avisará cuando llegue a ${euro(n)}.`))vigilar();}
+  if(confirm(`Objetivo guardado, pero ninguna búsqueda vigilada activa busca este producto, así que todavía no te avisará.\n\n¿Vigilar ahora la búsqueda «${ultimoBody.q||$('q').value}»? Se revisará sola y te avisará cuando llegue a ${euro(n)}.`)){if(ultimoBody.q)aplicaParams(ultimoBody);vigilar();}}
 async function cargaObjetivos(){const l=await api('objetivos');if(!Array.isArray(l))return;
   $('objetivos').innerHTML=l.length?l.map(o=>`<div class="ign"><span>${esc(o.titulo)} · <b>${euro(o.precio)}</b><br><small class="${o.vigilan&&o.vigilan.length?'mut':'err'}">${o.vigilan&&o.vigilan.length?'Lo vigila: '+esc(o.vigilan.join(', ')):'⚠️ Ninguna búsqueda vigilada activa lo busca: no avisará'}</small></span><button type="button" class="sec mini" data-qobj="${esc(o.grupo)}">Quitar</button></div>`).join('')
     :'<p class="mut">No has puesto ninguno. Usa «🎯 Avisarme a…» debajo de un resultado.</p>';
@@ -599,12 +599,14 @@ function graficaSVG(p){
   return `<svg class="graf-svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="Evolución del precio">${rejilla}${linea}${puntos}
     <circle cx="${X(u.ts).toFixed(1)}" cy="${Y(u.precio).toFixed(1)}" r="4.5" style="fill:var(--ok)"/>
     <text x="${L}" y="${H-6}" font-size="10" style="fill:var(--mut)">${f(xs[0])}</text><text x="${W-R}" y="${H-6}" text-anchor="end" font-size="10" style="fill:var(--mut)">${f(xs[xs.length-1])}</text></svg>`;}
+let histPedido=0;     // si abres otra gráfica antes de que llegue la primera, la respuesta vieja se descarta
 async function abreHist(url,titulo,tienda,grupo,todas=true){
-  const porProducto=!!(grupo&&todas);
+  const porProducto=!!(grupo&&todas),yo=++histPedido;
   $('hoja').innerHTML=`<button type="button" class="cierra" aria-label="Cerrar">✕</button><h3>${esc(titulo)}</h3><div class="mut">${porProducto?'Mejor precio en todas tus tiendas':esc(nombreT(tienda))}</div>
     <div class="carga" style="margin:22px 0"><div class="spin"></div>Cargando historial…</div>`;
   $('hist').classList.add('v');$('hoja').querySelector('.cierra').onclick=cierraHist;
   const h=await api(porProducto?'historial?grupo='+encodeURIComponent(grupo):'historial?url='+encodeURIComponent(url)),p=h.puntos||[];
+  if(yo!==histPedido)return;
   const cambio=grupo?`<button type="button" class="sec mini" id="hist-cambia" style="margin-top:8px">${porProducto?'Ver solo '+esc(nombreT(tienda)):'Ver el mejor precio en todas las tiendas'}</button>`:'';
   const tiendasP=porProducto?[...new Set(p.map(q=>q.tienda))]:[];
   const sub=porProducto?`Mejor precio de cada hora en ${tiendasP.length} tienda${tiendasP.length===1?'':'s'}${p.length?' · ahora en '+esc(nombreT(p[p.length-1].tienda)):''}`:esc(nombreT(tienda));
