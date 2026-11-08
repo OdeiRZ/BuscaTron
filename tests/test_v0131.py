@@ -5,7 +5,7 @@ import unittest
 from unittest import mock
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from buscatron import bd, motor, seguimiento  # noqa: E402
+from buscatron import bd, extract, motor, seguimiento  # noqa: E402
 from tests.test_v0114 import ConArchivos  # noqa: E402
 
 
@@ -83,6 +83,26 @@ class EstadoRevisando(ConArchivos):
             with self.assertRaises(RuntimeError):
                 seguimiento.revisa(sid)
         self.assertFalse(seguimiento.lista()[0]["revisando"])
+
+
+class IdiomaDeLaFicha(unittest.TestCase):
+    def test_etiqueta_vacia_no_toma_el_texto_siguiente(self):
+        # Dungeon Marvels: «Idiomas:» vacío arriba y «Idioma | Castellano» en la ficha técnica
+        html = ('<p>Idiomas:</p><p></p><a href="#">+ Detalles del producto</a>'
+                '<dl class="data-sheet"><dt>Idioma</dt><dd>Castellano</dd><dt>Edad mínima</dt><dd>14</dd></dl>')
+        self.assertEqual(extract.codigo_idioma(extract.idioma_pagina(html)), "es")
+
+    def test_etiqueta_seguida_de_otra_etiqueta(self):
+        # Goblin Trader: un título «Idioma» y debajo la fila «Idioma: Español»
+        html = "<h3>Idioma</h3><h4>Idioma</h4><span>Español</span>"
+        self.assertEqual(extract.codigo_idioma(extract.idioma_pagina(html)), "es")
+
+    def test_sigue_leyendo_otros_idiomas(self):
+        self.assertEqual(extract.codigo_idioma(extract.idioma_pagina("<th>Idioma</th><td>Francés</td>")), "otro")
+        self.assertEqual(extract.codigo_idioma(extract.idioma_pagina("<span>Idioma: Inglés</span>")), "en")
+
+    def test_sin_idioma_de_verdad_no_inventa_uno(self):
+        self.assertIsNone(extract.idioma_pagina("<p>Idiomas:</p><a>+ Detalles del producto</a><p>Juegos de Tablero</p>"))
 
 
 if __name__ == "__main__":

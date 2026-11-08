@@ -3,6 +3,11 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.13.2] - 2026-11-08
+
+### Corregido
+- **Avisos bloqueados por un idioma mal leído en la ficha**: si la ficha tenía una etiqueta «Idioma» vacía, se tomaba como idioma el texto siguiente («+ Detalles del producto» en Dungeon Marvels, la propia palabra «Idioma» en Goblin Trader), salía «otro idioma» y no avisaba. Le pasó a Mage Knight: Edición Definitiva en Dungeon Marvels (114,71 €, por debajo del objetivo). Ahora lo que sigue a una etiqueta vacía solo cuenta si es un idioma, y si no se sigue buscando (la ficha técnica sí dice «Castellano»). Se borraron de la caché las 3 fichas mal leídas para que se vuelvan a leer.
+
 ## [0.13.1] - 2026-11-08
 
 ### Corregido

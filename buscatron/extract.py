@@ -358,6 +358,9 @@ def datos_producto(html, url=""):
 # ---- idioma real de un producto (ficha) --------------------------------------------------------------
 
 MARCAS_UNICODE = re.compile(r"[\u200e\u200f\u202a-\u202e]+")
+LENGUAS = re.compile(r"\b(castellano|espanol|spanish|ingles|english|frances|french|francais|aleman|german|deutsch|italiano|italian|"
+                     r"portugues|portuguese|polaco|polish|neerlandes|dutch|catalan|euskera|gallego|ruso|russian|chino|japones|"
+                     r"multilingue|multi-?idioma|independiente del idioma)\b")
 ETIQUETA_IDIOMA = re.compile(r"^(?:idiomas?|language|languages|langue|sprache)\b[\s:：-]*(.*)$", re.I)
 
 
@@ -371,8 +374,11 @@ def idioma_pagina(html):
         m = ETIQUETA_IDIOMA.match(re.sub(r"\s+", " ", t))
         if not m:
             continue
-        valor = m.group(1).strip(" :：") or next((x.strip(" :：") for x in textos[i + 1:i + 3] if x.strip(" :：")), "")
-        if valor and len(valor) <= 60:
+        valor = m.group(1).strip(" :：")
+        if not valor:                  # etiqueta y valor separados: lo siguiente solo vale si es un idioma
+            siguiente = next((x.strip(" :：") for x in textos[i + 1:i + 3] if x.strip(" :：")), "")
+            valor = siguiente if LENGUAS.search(normaliza(siguiente)) else ""
+        if valor and len(valor) <= 60:     # si no, sigue: Dungeon Marvels tiene un «Idiomas:» vacío antes del bueno
             return valor
     return None
 
