@@ -10,8 +10,39 @@ SIN_COINCIDENCIAS = "no tiene nada que coincida con la búsqueda"     # la tiend
 MIN_HISTORIAL = 3
 PAUSA = 0.6                 # segundos entre dos peticiones seguidas a la misma tienda (para no parecer un ataque)
 MAX_INTENTOS = 4            # direcciones de búsqueda que se prueban en una tienda cuyo buscador no se conoce
-REINTENTO_CAIDA = 600       # segundos sin volver a llamar a una tienda que no ha respondido a la conexión
-_caidas = {}     # {host: cuándo dejó de responder}: no se le vuelve a llamar hasta pasado REINTENTO_CAIDA
+REINTENTO_CAIDA = 600       # segundos sin volver a llamar a una tienda que no ha respondido a la conexión (la 1.ª vez)
+MAX_CAIDA = 86400           # …y cada vez que vuelve a fallar se espera 6 veces más (10 min, 1 h, 6 h), hasta 24 h
+_caidas = {}     # {host: cuándo dejó de responder} (lo que queda en memoria; lo que manda está en la tabla «caidas»)
+
+
+def espera_caida(fallos):
+    return min(REINTENTO_CAIDA * 6 ** max(fallos - 1, 0), MAX_CAIDA)
+
+
+def caida_hasta(h):
+    """Hasta cuándo no se llama a una tienda que no conecta (0 si se puede). Insistir contra una web que ha cortado
+    tu conexión alarga el bloqueo (Dungeon Marvels bloqueó la IP de casa el 9/11/2026 tras una ráfaga de pruebas)."""
+    with bd.conecta() as c:
+        f = c.execute("SELECT desde, fallos FROM caidas WHERE host=?", (h,)).fetchone()
+    return f["desde"] + espera_caida(f["fallos"]) if f else 0
+
+
+def marca_caida(h):
+    with bd.conecta() as c:
+        c.execute("INSERT INTO caidas(host, desde, fallos) VALUES(?,?,1) ON CONFLICT(host) DO UPDATE SET desde=excluded.desde, fallos=fallos+1",
+                  (h, time.time()))
+    _caidas[h] = time.time()
+
+
+def limpia_caida(h):
+    if _caidas.pop(h, None) is not None or caida_hasta(h):
+        with bd.conecta() as c:
+            c.execute("DELETE FROM caidas WHERE host=?", (h,))
+
+
+def _cuando(segundos):
+    m = int(segundos / 60) + 1
+    return f"{m} min" if m < 90 else f"{round(m / 60)} h"
 
 
 def _candidatas(t, consulta, get):
@@ -105,32 +136,44 @@ def _tienda_base(t, consulta, nav=None, paginas=1):
     """nav: None (sin navegador) o {'visible': bool}. Orden: método rápido y, si falla, navegador."""
     h = t["host"]
     estados = t.get("tipo") == "segunda_mano"
-    caida = _caidas.get(h)
-    if caida and time.time() - caida < REINTENTO_CAIDA:     # no insistir contra una web que no responde
-        return h, [], f"no responde; se volverá a probar dentro de {int((caida + REINTENTO_CAIDA - time.time()) / 60) + 1} min"
+    hasta = caida_hasta(h)
+    if hasta > time.time():                                  # no insistir contra una web que no responde
+        return h, [], f"no responde; se volverá a probar dentro de {_cuando(hasta - time.time())}"
     try:
-        if not (nav and t.get("js")):
-            r, err = _intenta(t, consulta, fetch.get, paginas, estados)
-            if r:
-                return h, r, None
-        if nav is None:
-            return h, [], (err or SIN_COINCIDENCIAS) + " (quizá solo la lea un navegador: activa «Usar Chrome» en Ajustes)"
-        visible = nav["visible"]
-        get = lambda u: navegador.get(u, visible=visible, esperar_humano=90 if visible else 0)
-        plant = t.get("plantilla")
-        r, err = _intenta(t, consulta, get, paginas, estados)
-        if r:
-            t["js"] = True
-            return h, r, None
-        if plant is None:
-            t["plantilla"] = None
-        return h, [], err or SIN_COINCIDENCIAS
+        return _tienda_viva(t, consulta, nav, paginas, estados)
     except navegador.Desafio:
         return h, [], DESAFIO
     except Exception as e:
         if isinstance(e, OSError):                           # tiempo agotado, conexión rechazada…
-            _caidas[h] = time.time()
+            marca_caida(h)
         return h, [], f"no se pudo conectar ({str(e)[:60]})"
+
+
+def _tienda_viva(t, consulta, nav, paginas, estados):
+    h = t["host"]
+    r = _tienda_consulta(t, consulta, nav, paginas, estados)
+    limpia_caida(h)                                          # ha respondido: se olvida que estuvo caída
+    return r
+
+
+def _tienda_consulta(t, consulta, nav, paginas, estados):
+    h = t["host"]
+    if not (nav and t.get("js")):
+        r, err = _intenta(t, consulta, fetch.get, paginas, estados)
+        if r:
+            return h, r, None
+    if nav is None:
+        return h, [], (err or SIN_COINCIDENCIAS) + " (quizá solo la lea un navegador: activa «Usar Chrome» en Ajustes)"
+    visible = nav["visible"]
+    get = lambda u: navegador.get(u, visible=visible, esperar_humano=90 if visible else 0)
+    plant = t.get("plantilla")
+    r, err = _intenta(t, consulta, get, paginas, estados)
+    if r:
+        t["js"] = True
+        return h, r, None
+    if plant is None:
+        t["plantilla"] = None
+    return h, [], err or SIN_COINCIDENCIAS
 
 
 OTROS_IDIOMAS = re.compile(r"\b(ingles|inglesa|english|frances|francesa|francais|aleman|alemana|deutsch|italiano|italiana|portugues|portuguesa|polaco|polaca|neerlandes|ruso|rusa|players|playing time|minutes)\b|\bages \d+")

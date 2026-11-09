@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS estado_tiendas(host TEXT, ts REAL, consulta TEXT, enc
 CREATE INDEX IF NOT EXISTS ix_estado_tiendas ON estado_tiendas(host, ts);
 CREATE TABLE IF NOT EXISTS objetivos(clave TEXT PRIMARY KEY, titulo TEXT, precio REAL, ts REAL);
 CREATE TABLE IF NOT EXISTS vinculos_amazon(clave TEXT PRIMARY KEY, asin TEXT, titulo TEXT, ts REAL);
+CREATE TABLE IF NOT EXISTS caidas(host TEXT PRIMARY KEY, desde REAL, fallos INTEGER);
 CREATE TABLE IF NOT EXISTS recordatorios(host TEXT, ts_importado REAL, PRIMARY KEY(host, ts_importado));
 CREATE TABLE IF NOT EXISTS importados(
     host TEXT, ts REAL, consulta TEXT, titulo TEXT, url TEXT, precio REAL, agotado INTEGER DEFAULT 0, preventa INTEGER DEFAULT 0);

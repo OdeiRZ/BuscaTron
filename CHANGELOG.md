@@ -3,6 +3,14 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.17.2] - 2026-11-09
+
+### Cambiado
+- **Una tienda que no conecta se deja en paz cada vez más tiempo**: 10 min, luego 1 h, 6 h y como mucho 24 h si sigue sin conectar, y se recuerda aunque BuscaTron se reinicie (antes, 10 min siempre y se olvidaba al reiniciar: unos 6 intentos por hora contra una web que te ha cortado, lo que puede alargar el bloqueo). Se olvida en cuanto vuelve a responder. Motivo: Dungeon Marvels bloqueó la conexión de casa el 9/11 tras una ráfaga de pruebas.
+
+### Corregido
+- Una prueba de tiendas caídas escribía en la base de datos de verdad; ahora usa una temporal y ninguna prueba sale a internet.
+
 ## [0.17.1] - 2026-11-09
 
 ### Corregido

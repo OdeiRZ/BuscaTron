@@ -227,10 +227,13 @@ class Cortesia(unittest.TestCase):
     def setUp(self):
         self.p = mock.patch.object(motor.time, "sleep")
         self.pausas = self.p.start()
+        self.bd = mock.patch.object(motor.bd, "RUTA", os.path.join(tempfile.mkdtemp(), "t.db"))   # las caídas se guardan en la BD
+        self.bd.start()
         motor._caidas.clear()
 
     def tearDown(self):
         self.p.stop()
+        self.bd.stop()
         motor._caidas.clear()
 
     def test_prueba_pocas_direcciones_y_con_pausa_si_no_conoce_el_buscador(self):
@@ -274,6 +277,32 @@ class Cortesia(unittest.TestCase):
         with mock.patch.object(motor, "_intenta", lambda *a, **k: ([], "HTTP 500")):
             motor._tienda({"host": "t.es", "plantilla": "https://t.es/?q={q}"}, "x")
         self.assertNotIn("t.es", motor._caidas)
+        self.assertEqual(motor.caida_hasta("t.es"), 0)
+
+    def test_si_sigue_sin_conectar_se_espera_cada_vez_mas_y_se_recuerda(self):
+        def rota(*a, **k):
+            raise TimeoutError("timed out")
+        t = {"host": "caida.es", "plantilla": "https://caida.es/?q={q}"}
+        esperas = []
+        with mock.patch.object(motor, "_intenta", rota), mock.patch.object(motor.fetch, "get", rota):   # nunca a la red
+            for _ in range(5):
+                motor._tienda_base(t, "x")
+                esperas.append(round((motor.caida_hasta("caida.es") - time.time()) / 60))
+                with motor.bd.conecta() as c:            # que haya pasado la espera, para volver a probar
+                    c.execute("UPDATE caidas SET desde=0 WHERE host='caida.es'")
+            self.assertEqual(esperas, [10, 60, 360, 1440, 1440])     # 10 min, 1 h, 6 h y como mucho 24 h
+            with motor.bd.conecta() as c:
+                c.execute("UPDATE caidas SET desde=? WHERE host='caida.es'", (time.time(),))
+            motor._caidas.clear()                        # como tras reiniciar BuscaTron: lo guardado en la BD sigue mandando
+            self.assertIn("no responde", motor._tienda_base(t, "x")[2])
+
+    def test_cuando_vuelve_a_responder_se_olvida(self):
+        motor.marca_caida("t.es")
+        with motor.bd.conecta() as c:
+            c.execute("UPDATE caidas SET desde=0 WHERE host='t.es'")
+        with mock.patch.object(motor, "_intenta", lambda *a, **k: ([], motor.SIN_COINCIDENCIAS)):
+            motor._tienda_base({"host": "t.es", "plantilla": "https://t.es/?q={q}"}, "x")
+        self.assertEqual(motor.caida_hasta("t.es"), 0)
 
 
 class VentanaSoloSiHaceFalta(unittest.TestCase):
