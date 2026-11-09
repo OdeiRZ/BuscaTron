@@ -73,6 +73,9 @@ def guarda(d):
         raise ValueError("falta la búsqueda")
     with bd.conecta() as c:
         if d.get("id"):
+            if "activo" not in d:      # editar sin decir nada de la pausa la deja como estaba
+                fila = c.execute("SELECT activo FROM seguimientos WHERE id=?", (d["id"],)).fetchone()
+                v["activo"] = fila["activo"] if fila else 1
             c.execute("UPDATE seguimientos SET " + ",".join(f"{k}=?" for k in CAMPOS) + " WHERE id=?",
                       [v[k] for k in CAMPOS] + [d["id"]])
             return int(d["id"])

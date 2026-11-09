@@ -3,6 +3,11 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.17.4] - 2026-11-09
+
+### Corregido
+- Editar una vigilada en pausa y guardarla desde el formulario la reactivaba sola. Ahora conserva su estado: solo ⏸️ Pausar / ▶️ Reanudar lo cambian.
+
 ## [0.17.3] - 2026-11-09
 
 ### Añadido

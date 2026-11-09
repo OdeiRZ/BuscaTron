@@ -802,7 +802,8 @@ function limpiaSeg(){$('sf').reset();$('s-id').value='';$('sf-tit').textContent=
 $('s-cancel').onclick=limpiaSeg;
 $('sf').onsubmit=async e=>{e.preventDefault();
   const canales=['app',$('c-telegram').checked&&'telegram',$('c-correo').checked&&'correo'].filter(Boolean).join(',');
-  const r=await api('seguimientos',{accion:'guardar',id:$('s-id').value||undefined,nombre:$('s-nombre').value,consulta:$('s-consulta').value,
+  const previa=segs.find(x=>x.id===+$('s-id').value);   // al editar se respeta si estaba en pausa
+  const r=await api('seguimientos',{accion:'guardar',id:$('s-id').value||undefined,activo:previa?!!previa.activo:true,nombre:$('s-nombre').value,consulta:$('s-consulta').value,
     incluir:$('s-incluir').value,excluir:$('s-excluir').value,pmin:$('s-pmin').value,pmax:$('s-pmax').value,objetivo:$('s-objetivo').value,
     bajo_historico:$('s-hist').value,cada_horas:$('s-horas').value,sin_agotados:$('s-sinag').checked,castellano:$('s-idioma').value!=='todos',canales,
     opciones:{preventas:$('s-preventas').checked,con_envio:$('s-conenvio').checked,segunda_mano:$('s-segmano').checked,abierta:$('s-abierta').checked,region:$('s-region').value,paginas:$('s-paginas').value,idioma:$('s-idioma').value,resumen:$('s-resumen').checked,alguna:$('s-alguna').value}});
