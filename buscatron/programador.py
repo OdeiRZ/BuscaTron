@@ -1,12 +1,42 @@
 """Hilo de tareas periódicas: lanza las búsquedas vigiladas cuando les toca, recuerda por Telegram cuando van a caducar
-los precios pegados a mano y, una vez al día, compacta el historial."""
+los precios pegados a mano, mira si vuelve una tienda que te bloqueó y, una vez al día, compacta el historial."""
 import threading
 import time
 import traceback
 
-from . import ajustes, bd, importar, notifica, seguimiento, tiendas as cfg
+from . import ajustes, bd, fetch, importar, notifica, seguimiento, tiendas as cfg
 
 LIMPIEZA_HORAS = 24
+BLOQUEO_HORAS = 6          # una tienda que bloqueó tu conexión se prueba con UNA petición a su portada cada tanto
+
+
+def bloqueadas():
+    """Tiendas desactivadas porque bloquearon tu conexión (campo «bloqueo»): cada BLOQUEO_HORAS una sola petición a su
+    portada; cuando vuelve a responder, se reactiva y te avisa por Telegram. Sin búsquedas: tan poco no renueva el
+    bloqueo (Dungeon Marvels, 9/11/2026)."""
+    for t in [t for t in cfg.carga() if t.get("bloqueo")]:
+        if time.time() - t["bloqueo"].get("probado", 0) < BLOQUEO_HORAS * 3600:
+            continue
+        try:
+            st, _ = fetch.get(f"https://{t['host']}/", timeout=20)
+            vuelve = st == 200
+        except Exception:   # noqa: BLE001  (sigue sin responder)
+            vuelve = False
+        with cfg.cerrojo:                       # sobre la lista actual, por si la cambiaste mientras tanto
+            lista = cfg.carga()
+            for x in lista:
+                if x["host"] == t["host"] and x.get("bloqueo"):
+                    if vuelve:
+                        x["activa"] = True
+                        x.pop("bloqueo")
+                    else:
+                        x["bloqueo"]["probado"] = time.time()
+            cfg.guarda(lista)
+        nombre = t.get("nombre") or t["host"]
+        print(f"{nombre}:", "vuelve a responder; reactivada" if vuelve else "sigue sin responder")
+        if vuelve:
+            notifica.envia(["telegram"], f"BuscaTron · {nombre}",
+                           f"{nombre} vuelve a responder: la he reactivado y entra otra vez en tus búsquedas y vigiladas.")
 
 
 def recordatorios():
@@ -38,7 +68,7 @@ def limpieza():
 
 def _bucle(pausa):
     while True:
-        for tarea in (lambda: [seguimiento.revisa(sid) for sid in seguimiento.pendientes()], recordatorios, limpieza):
+        for tarea in (lambda: [seguimiento.revisa(sid) for sid in seguimiento.pendientes()], recordatorios, bloqueadas, limpieza):
             try:
                 tarea()
             except Exception:

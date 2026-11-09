@@ -3,6 +3,14 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.17.3] - 2026-11-09
+
+### Añadido
+- **Tiendas que te han bloqueado**: se desactivan y BuscaTron solo prueba su portada (una petición) cada 6 h; en cuanto vuelve a responder, la reactiva y te avisa por Telegram. En Ajustes → Estado de las tiendas sale arriba con «te ha bloqueado», desde cuándo y la última prueba. Si la reactivas tú, deja de vigilarse. Dungeon Marvels queda así desde el 9/11 (bloqueo de la IP de casa tras una ráfaga de pruebas).
+
+### Cambiado
+- Vigiladas de Marvel Champions juntas: «Campañas y Héroes Reunidos 2» (una búsqueda con «al menos una de estas») cubre los 11 juegos; las 10 vigiladas sueltas que lo duplicaban quedan en pausa (sin borrar nada) y su tope sube a 50 € para cubrir Motivos Siniestros. De 15 búsquedas por ciclo a 5.
+
 ## [0.17.2] - 2026-11-09
 
 ### Cambiado

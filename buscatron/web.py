@@ -449,6 +449,8 @@ class Handler(BaseHTTPRequestHandler):
         if "activas" in c:
             for t in lista:
                 t["activa"] = t["host"] in c["activas"]
+                if t["activa"]:
+                    t.pop("bloqueo", None)        # la reactivas tú: deja de vigilarse como «te ha bloqueado»
         cfg.guarda(lista)
         return lista
 

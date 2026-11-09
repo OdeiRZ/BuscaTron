@@ -960,7 +960,10 @@ async function cargaEstado(){const l=await api('estado_tiendas',{});if(!Array.is
       :' · <span class="err">no ha respondido en sus últimas consultas: conviene desactivarla</span>'):''}${e.ultimo_error&&!e.con_resultados&&!e.manual?`<br>Último problema: ${esc(e.ultimo_error)}`:''}</span>
     ${e.manual?'':`<button type="button" class="${e.activa?'peli':'sec'} mini" data-act="${esc(e.host)}">${e.activa?'Desactivar':'Activar'}</button>`}</div>`;
   const atencion=l.filter(e=>!bien(e)),ok=l.filter(bien),abierto=$('estado-ok')&&$('estado-ok').open;
-  $('estado-t').innerHTML=(atencion.length?atencion.map(fila).join(''):'<p class="ok">Todas tus tiendas responden bien.</p>')
+  const bloq=tiendas.filter(t=>t.bloqueo);      // desactivadas porque bloquearon tu conexión: BuscaTron mira solo si vuelven
+  $('estado-t').innerHTML=bloq.map(t=>`<div class="est"><b>${esc(nombreT(t.host))} <span class="tag ko">te ha bloqueado</span></b>
+      <span class="mut">Desactivada desde el ${fecha(t.bloqueo.desde)}: cortó tu conexión por exceso de consultas. BuscaTron prueba su portada (una sola petición) cada 6 h${t.bloqueo.probado?` (última: ${fecha(t.bloqueo.probado)})`:''} y, en cuanto vuelva a responder, la reactiva y te avisa por Telegram.</span></div>`).join('')
+    +(atencion.length?atencion.filter(e=>!bloq.some(t=>t.host===e.host)).map(fila).join(''):'<p class="ok">Todas tus tiendas responden bien.</p>')
     +(ok.length?`<details id="estado-ok" ${abierto?'open':''}><summary>${ok.length} tienda${ok.length===1?'':'s'} sin problemas</summary>${ok.map(fila).join('')}</details>`:'');
   document.querySelectorAll('#estado-t [data-act]').forEach(b=>b.onclick=async()=>{const t=tiendas.find(x=>x.host===b.dataset.act);if(!t)return;
     t.activa=!t.activa;await guardaActivas();cargaEstado();aviso(t.activa?'Tienda activada: entra en tus búsquedas':'Tienda desactivada: ya no se consulta');});}
