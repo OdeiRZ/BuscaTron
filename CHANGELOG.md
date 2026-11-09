@@ -3,6 +3,14 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.17.0] - 2026-11-09
+
+### Añadido
+- **Referencia de Amazon: vincular a mano y sugerencias.** «Los Más Buscados de la Galaxia» salía como «no visto en Amazon» aunque BuscaTron había visto su ficha 19 veces: Amazon la titula «Fantasy MC16ES Flight Games Marvel Champions», sin el nombre del juego. Ahora, si no hay un equivalente seguro, se sugieren fichas parecidas (parte del nombre y precio parecido) con un botón «Es este», y se puede pegar el enlace de su ficha (también los cortos amzn.eu/d/…, que se siguen). El vínculo se recuerda, manda sobre el emparejamiento automático y se puede quitar; con un ASIN que BuscaTron no ha visto, enseña igualmente sus enlaces a camelcamelcamel y Keepa.
+
+### Corregido
+- **Un producto de Amazon, un historial**: hasta el 6/11 las direcciones de Amazon se guardaban con el rastro de la búsqueda (`/dp/ASIN/ref=…&dib=…`) y 55 productos tenían su historial partido en varias. Se unificaron 346 precios a `amazon.es/dp/ASIN`, y la referencia agrupa por ASIN.
+
 ## [0.16.1] - 2026-11-09
 
 ### Corregido

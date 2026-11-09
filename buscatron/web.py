@@ -313,6 +313,11 @@ class Handler(BaseHTTPRequestHandler):
             return lanza_busqueda(c)
         if ruta == "/api/buscar":
             return busca(c)
+        if ruta == "/api/referencia":         # vincular a mano un producto con su ficha de Amazon (o quitar el vínculo)
+            if c.get("quitar"):
+                referencia.desvincula(c["clave"])
+                return {"ok": True}
+            return {"asin": referencia.vincula(c["clave"], c.get("enlace", ""), c.get("titulo", ""))}
         if ruta == "/api/servicio":           # reiniciar o cerrar, como en PixelatIA: nunca con un trabajo en marcha
             if c.get("accion") not in ("reiniciar", "cerrar"):
                 raise ValueError("acción no válida")

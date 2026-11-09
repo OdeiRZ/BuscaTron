@@ -6,7 +6,7 @@ Buscador y vigilante de precios **local** para tiendas online españolas. Pensad
 - **Datos en vivo**: no usa cachés ni comparadores intermedios, así que el precio es el que ves en la tienda.
 - **Tus datos se quedan en tu equipo**: lista de tiendas, historial y tokens se guardan en archivos locales que no se suben al repositorio.
 
-> Estado: **versión funcional** (v0.16.1). Consulta el [CHANGELOG](CHANGELOG.md).
+> Estado: **versión funcional** (v0.17.0). Consulta el [CHANGELOG](CHANGELOG.md).
 
 ## En el móvil y en el PC
 
@@ -88,6 +88,7 @@ Un botón en **Avisos** y otro en **Vigiladas** abren un resumen de todos tus pr
 - **Tu mejor precio** y en qué tienda.
 - **Su equivalente en Amazon** (emparejado por las palabras del título, sin lo que descarta la vigilada ni productos a menos de la mitad o más del doble de precio, como fundas o packs) con lo que BuscaTron ha visto allí: precio actual, **lo más barato y lo más caro visto** y desde cuándo, y su gráfica (📈). Si no es ese, «¿No es ese?» enseña otras posibles.
 - **Veredicto**: «X % por debajo de lo más barato visto en Amazon», «Más barato que Amazon ahora» o «Amazon está más barato ahora». Avisa si esa ficha de Amazon no está en castellano.
+- **Fichas de Amazon mal tituladas** (Los Más Buscados de la Galaxia se llama allí «Fantasy MC16ES Flight Games Marvel Champions»): si no encuentra el equivalente con seguridad, sugiere fichas parecidas a un precio parecido con un botón **«Es este»**, y siempre puedes **pegar su enlace de Amazon** (también los cortos `amzn.eu/d/…`). El vínculo se recuerda y se puede quitar.
 - **Enlaces a camelcamelcamel y Keepa** de ese producto, con el histórico de años. No se pueden leer automáticamente (camelcamelcamel bloquea el acceso automático y Keepa pide una clave de pago), así que se abren con un toque; si tu navegador puede cargar la gráfica de camelcamelcamel, sale ahí mismo.
 
 El histórico propio de Amazon empieza con tus búsquedas (desde el 6/11/2026) y crece con cada revisión de las vigiladas. No hace ninguna consulta: todo sale de lo ya guardado, así que se abre al instante.
@@ -311,7 +312,7 @@ permitir_acceso_movil.bat     abre el cortafuegos para tu red local (pide admini
 python -m unittest discover -s tests
 ```
 
-215 pruebas, sin red. Cubren las reglas de aviso (objetivo de la búsqueda y del producto, media histórica, no repetir, reaviso, limpieza de obsoletos, tienda caída frente a tienda sin el producto), qué vigilada cubre cada objetivo, editar o borrar una vigilada mientras se revisa, el historial por producto, las órdenes del bot y los mensajes largos de Telegram, la escritura segura de los archivos y los cambios de tiendas durante una búsqueda, los errores del servidor, el tope de páginas y las revisiones que fallan, los precios con punto de miles, el extractor (precios tachados y con descuento, tarjetas que no se mezclan con la siguiente, texto oculto, títulos recortados, preventas, estados de segunda mano, páginas siguientes, datos de producto, envío), el motor (paginación, filtros, total con envío, mínimo histórico, historial), la búsqueda abierta, el filtro de IP y el PIN, la importación a mano y las búsquedas guardadas.
+221 pruebas, sin red. Cubren las reglas de aviso (objetivo de la búsqueda y del producto, media histórica, no repetir, reaviso, limpieza de obsoletos, tienda caída frente a tienda sin el producto), qué vigilada cubre cada objetivo, editar o borrar una vigilada mientras se revisa, el historial por producto, las órdenes del bot y los mensajes largos de Telegram, la escritura segura de los archivos y los cambios de tiendas durante una búsqueda, los errores del servidor, el tope de páginas y las revisiones que fallan, los precios con punto de miles, el extractor (precios tachados y con descuento, tarjetas que no se mezclan con la siguiente, texto oculto, títulos recortados, preventas, estados de segunda mano, páginas siguientes, datos de producto, envío), el motor (paginación, filtros, total con envío, mínimo histórico, historial), la búsqueda abierta, el filtro de IP y el PIN, la importación a mano y las búsquedas guardadas.
 
 ## Limitaciones conocidas
 
