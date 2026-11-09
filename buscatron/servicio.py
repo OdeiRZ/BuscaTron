@@ -57,7 +57,7 @@ def estado():
     return {"desde": DESDE, "desactualizado": desactualizado(), "ocupado": ocupado(), "pid": os.getpid()}
 
 
-def sale(reiniciar, servidor=None):
+def sale(reiniciar, servidor=None):   # servidor: ya no hace falta (os._exit suelta el puerto); se acepta por compatibilidad
     """Reinicia o cierra. Lanza ValueError si hay un trabajo en marcha (no se toca: hay que esperar a que termine)."""
     o = ocupado()
     if o:
@@ -73,22 +73,23 @@ def sale(reiniciar, servidor=None):
             navegador.cierra(espera=8)        # que Chrome suelte su perfil antes de que lo use el BuscaTron nuevo
         except Exception:   # noqa: BLE001
             pass
-        if servidor is not None:
-            try:
-                servidor.shutdown()           # deja de atender (sin cortar las respuestas en curso)…
-                servidor.server_close()       # …y suelta el puerto para el nuevo
-            except OSError:
-                pass
         try:
             from . import bandeja             # sale con os._exit (sin atexit): el icono se quita a mano para que no quede «fantasma»
             bandeja._quita()
         except Exception:   # noqa: BLE001
             pass
-        if reiniciar and os.environ.get("BUSCATRON_LANZADOR") != "bat":
-            _relanza()
-        print("BuscaTron:", "reiniciando…" if reiniciar else "cerrado desde la web.")
-        os._exit(CODIGO_REINICIO if reiniciar else 0)
-    threading.Timer(0.8, adios).start()
+        print("BuscaTron:", "reiniciando…" if reiniciar else "cerrado desde la web.", flush=True)
+        # El servidor NO se detiene antes: corre en el hilo principal y, al pararlo, el programa terminaba sin relanzarse
+        # (pasó el 9/11). Se lanza el nuevo y este sale al momento con os._exit, que suelta el puerto; el nuevo reintenta
+        # hasta que queda libre.
+        try:
+            if reiniciar and os.environ.get("BUSCATRON_LANZADOR") != "bat":
+                _relanza()
+        finally:
+            os._exit(CODIGO_REINICIO if reiniciar else 0)
+    t = threading.Timer(0.8, adios)
+    t.daemon = False                          # que no muera si el hilo principal acaba antes
+    t.start()
 
 
 def _relanza():

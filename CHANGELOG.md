@@ -3,6 +3,11 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.16.1] - 2026-11-09
+
+### Corregido
+- **Reiniciar desde la web cerraba BuscaTron sin volver a abrirlo** (sin .bat, como con el arranque de Windows): primero detenía el servidor, que corre en el hilo principal, y el programa terminaba antes de lanzar el nuevo. Ahora lanza el nuevo y sale al momento (al salir suelta el puerto; el nuevo reintenta hasta que queda libre). La prueba de reinicio real se hace ahora con el servidor en el hilo principal, como en BuscaTron; la anterior lo tenía en otro hilo y por eso no lo detectó.
+
 ## [0.16.0] - 2026-11-09
 
 ### Añadido
