@@ -3,6 +3,12 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.17.1] - 2026-11-09
+
+### Corregido
+- **«Referencia de Amazon» se quedaba en «Preparando el resumen…»** con un BuscaTron aún sin reiniciar: la página nueva esperaba datos que el servidor viejo no manda (sugerencias, vínculo) y fallaba al dibujar. Ahora funciona con los dos (lo nuevo pide reiniciar con 🆕) y, si algo falla, lo dice en vez de quedarse cargando.
+- Al cambiar rápido entre «De tus avisos» y «De lo que encuentran tus vigiladas», una respuesta que llegaba tarde podía pintar la otra lista; ahora solo cuenta la última que pediste.
+
 ## [0.17.0] - 2026-11-09
 
 ### Añadido

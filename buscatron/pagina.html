@@ -688,11 +688,13 @@ function veredicto(p,a){
   if(p.precio<a.minimo-0.005)return `<span class="tag ok">${Math.round((1-p.precio/a.minimo)*100)} % por debajo de lo más barato visto en Amazon</span>`;
   if(p.precio<=a.actual+0.005)return '<span class="tag ok">Más barato que Amazon ahora</span>';
   return `<span class="tag ko">Amazon está más barato ahora (${euro(a.actual)})</span>`;}
-const opcionAmz=(o,i)=>`<div class="l">${o.n?euro(o.actual)+' · ':''}<a href="${esc(o.url)}" target="_blank" rel="noopener">${esc(o.titulo||o.asin)}</a> · <a href="${camel(o.asin)}" target="_blank" rel="noopener">camel ↗</a>
-  <button type="button" class="sec mini" data-ves="${i}" data-asin="${esc(o.asin)}" style="margin-left:4px">Es este</button></div>`;
+const opcionAmz=(o,i,vincular=true)=>`<div class="l">${o.n?euro(o.actual)+' · ':''}<a href="${esc(o.url)}" target="_blank" rel="noopener">${esc(o.titulo||o.asin)}</a> · <a href="${camel(o.asin)}" target="_blank" rel="noopener">camel ↗</a>
+  ${vincular?`<button type="button" class="sec mini" data-ves="${i}" data-asin="${esc(o.asin)}" style="margin-left:4px">Es este</button>`:''}</div>`;
 function tarjetaRef(p,i){const a=p.amazon,q=encodeURIComponent(p.titulo);
+  p.sugerencias=p.sugerencias||[];p.alternativas=p.alternativas||[];      // un BuscaTron sin reiniciar no los manda
   const otro=a&&(a.idioma==='otro'||a.idioma==='en');
-  const pegar=`<button type="button" data-vpega="${i}">🔗 ${a?'Pegar el enlace correcto':'Pegar su enlace de Amazon'}</button>`;
+  const pegar=p.clave?`<button type="button" data-vpega="${i}">🔗 ${a?'Pegar el enlace correcto':'Pegar su enlace de Amazon'}</button>`
+    :'<span class="mut">Para vincularlo a mano, reinicia BuscaTron (🆕 arriba).</span>';
   const vinc=p.vinculado?`<div class="l">🔗 Vinculado a mano · <a href="#" data-vquita="${i}">quitar el vínculo</a></div>`:'';
   const amz=a?`<div class="amz">${a.n?`<div class="l">En Amazon: <b>${euro(a.actual)}</b> ahora · lo más barato visto <b>${euro(a.minimo)}</b>${a.maximo>a.minimo?` · lo más caro ${euro(a.maximo)}`:''} · ${a.n} precio${a.n===1?'':'s'} desde el ${fecha(a.desde).split(',')[0]}</div>
       <div class="meta">${veredicto(p,a)}${otro?'<span class="tag ko">Esa ficha de Amazon no está en castellano</span>':''}</div>`
@@ -701,20 +703,27 @@ function tarjetaRef(p,i){const a=p.amazon,q=encodeURIComponent(p.titulo);
       <img class="camel" loading="lazy" referrerpolicy="no-referrer" alt="Gráfica de camelcamelcamel" src="${grafCamel(a.asin)}" onerror="this.remove()">
       <div class="enlaces"><a href="${camel(a.asin)}" target="_blank" rel="noopener">camelcamelcamel ↗</a><a href="${keepa(a.asin)}" target="_blank" rel="noopener">Keepa ↗</a>
         <a href="${esc(a.url)}" target="_blank" rel="noopener">Amazon ↗</a>${a.n?`<button type="button" data-rh="${i}">📈 Lo visto por BuscaTron</button>`:''}</div>
-      ${p.vinculado?'':`<details><summary>¿No es ese?</summary>${p.alternativas.map(o=>opcionAmz(o,i)).join('')}<div class="enlaces">${pegar}</div></details>`}</div>`
+      ${p.vinculado?'':`<details><summary>¿No es ese?</summary>${p.alternativas.map(o=>opcionAmz(o,i,!!p.clave)).join('')}<div class="enlaces">${pegar}</div></details>`}</div>`
     :`<div class="amz"><div class="l">BuscaTron no ha encontrado su ficha en Amazon con seguridad${p.sugerencias.length?'. ¿Es alguna de estas?':'.'}</div>
-      ${p.sugerencias.map(o=>opcionAmz(o,i)).join('')}
+      ${p.sugerencias.map(o=>opcionAmz(o,i,!!p.clave)).join('')}
       <div class="enlaces">${pegar}<a href="https://es.camelcamelcamel.com/search?sq=${q}" target="_blank" rel="noopener">Buscar en camelcamelcamel ↗</a><a href="https://www.amazon.es/s?k=${q}" target="_blank" rel="noopener">Buscar en Amazon ↗</a></div></div>`;
   return `<div class="refc"><div class="t">${esc(p.titulo)}</div><div class="l">Tu mejor precio: <b>${euro(p.precio)}</b> en ${esc(nombreT(p.tienda))} · <a href="${esc(p.url)}" target="_blank" rel="noopener">ver ↗</a></div>${amz}</div>`;}
 async function vinculaRef(p,enlace){const r=await api('referencia',{clave:p.clave,enlace,titulo:p.titulo});
   if(r.error){aviso(r.error);return;}aviso('Vinculado: se recordará para este producto');abreRef();}
-async function abreRef(ambito){if(ambito)refAmbito=ambito;
+let refPedido=0;     // si cambias de lista antes de que llegue la primera, la respuesta vieja se descarta
+async function abreRef(ambito){if(ambito)refAmbito=ambito;const yo=++refPedido;
   const sel=`<div class="ref-sel" role="group" aria-label="Productos">${[['avisos','De tus avisos'],['vigiladas','De lo que encuentran tus vigiladas']].map(([k,v])=>`<button type="button" class="chip ${k===refAmbito?'on':''}" data-ramb="${k}" aria-pressed="${k===refAmbito}">${v}</button>`).join('')}</div>`;
   const cab=`<button type="button" class="cierra" aria-label="Cerrar">✕</button><h3>📊 Referencia de Amazon</h3>
     <p class="ayuda" style="margin-top:4px">Cada producto con su equivalente en Amazon y lo que BuscaTron ha visto allí en tus búsquedas. Para el histórico de años, abre camelcamelcamel o Keepa: no dejan leer sus datos automáticamente, pero sus fichas están a un toque.</p>${sel}`;
   $('hoja3').innerHTML=cab+'<div class="carga" style="margin:22px 0"><div class="spin"></div>Preparando el resumen…</div>';
   if(!$('ref').classList.contains('v'))abreHoja('ref');
-  const l=await api('referencia?ambito='+refAmbito);
+  const l=await api('referencia?ambito='+refAmbito).catch(e=>({error:'No se pudo hablar con BuscaTron'}));
+  if(yo!==refPedido)return;
+  try{pintaRef(l,cab);}catch(e){    // nunca «Preparando el resumen…» para siempre: se cuenta qué pasó
+    $('hoja3').innerHTML=cab+`<p class="err">No se pudo mostrar el resumen (${esc(e.message)}). Reinicia BuscaTron (🆕 arriba o Ajustes → Servicio) y vuelve a abrirlo.</p>`;}
+  $('hoja3').querySelector('.cierra').onclick=()=>cierraHoja('ref');
+  $('hoja3').querySelectorAll('[data-ramb]').forEach(b=>b.onclick=()=>abreRef(b.dataset.ramb));}
+function pintaRef(l,cab){
   if(!Array.isArray(l)){$('hoja3').innerHTML=cab+`<p class="err">${esc(l.error||'No se pudo preparar el resumen. ¿BuscaTron está actualizado y abierto?')}</p>`;}
   else{const con=l.filter(p=>p.amazon),bajo=con.filter(p=>!(p.tienda==='www.amazon.es'&&p.url===p.amazon.url)&&p.precio<p.amazon.minimo-0.005).length;
     $('hoja3').innerHTML=cab+(l.length?`<div class="ref-res"><div class="stat"><b>${l.length}</b><span>Productos</span></div><div class="stat"><b>${con.length}</b><span>Vistos en Amazon</span></div><div class="stat"><b>${bajo}</b><span>Por debajo de Amazon</span></div></div>
@@ -725,9 +734,7 @@ async function abreRef(ambito){if(ambito)refAmbito=ambito;
     $('hoja3').querySelectorAll('[data-vpega]').forEach(b=>b.onclick=()=>{const p=l[+b.dataset.vpega];
       const e=prompt(`Pega el enlace de «${p.titulo}» en Amazon (amazon.es/dp/… o amzn.eu/d/…). Se recordará para este producto.`);if(e&&e.trim())vinculaRef(p,e.trim());});
     $('hoja3').querySelectorAll('[data-vquita]').forEach(b=>b.onclick=async e=>{e.preventDefault();const p=l[+b.dataset.vquita];
-      await api('referencia',{clave:p.clave,quitar:true});aviso('Vínculo quitado');abreRef();});}
-  $('hoja3').querySelector('.cierra').onclick=()=>cierraHoja('ref');
-  $('hoja3').querySelectorAll('[data-ramb]').forEach(b=>b.onclick=()=>abreRef(b.dataset.ramb));}
+      await api('referencia',{clave:p.clave,quitar:true});aviso('Vínculo quitado');abreRef();});}}
 function cierraPegar(){cierraHoja('pegar');}
 $('pegar').onclick=e=>{if(e.target===$('pegar'))cierraPegar();};
 function abrePegar(host,enlace){
