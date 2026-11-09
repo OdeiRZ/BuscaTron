@@ -10,7 +10,7 @@ import traceback
 import urllib.parse
 import urllib.request
 
-from . import ajustes, motor, notifica, seguimiento
+from . import ajustes, motor, notifica, seguimiento, servicio
 
 ultimo_chat = None          # último chat que escribió al bot (lo usa «Detectar chat» en Ajustes)
 _ocupado = threading.Lock()
@@ -39,11 +39,14 @@ def _hora(ts):
 
 
 def buscar(texto):
+    if servicio.saliendo():
+        return responde("BuscaTron se está reiniciando: vuelve a escribirme en un minuto.")
     if not _ocupado.acquire(blocking=False):
         return responde("Ya estoy con otra búsqueda; espera a que termine.")
     try:
         responde(f"Buscando «{texto}» en tus tiendas… (tarda alrededor de un minuto)")
-        res, informe = motor.buscar(texto, ocultar_agotados=True, idioma="castellano")
+        with servicio.trabajo("telegram"):
+            res, informe = motor.buscar(texto, ocultar_agotados=True, idioma="castellano")
         grupos = seguimiento.agrupa(res)
         if not grupos:
             return responde(f"No he encontrado «{texto}» en tus tiendas (en castellano y con stock).")

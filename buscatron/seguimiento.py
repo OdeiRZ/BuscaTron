@@ -146,24 +146,31 @@ def _motivo(c, seg, x):
 
 def revisa(seg_id, enviar=True):
     """Ejecuta un seguimiento ahora. Devuelve {'resultados': n, 'avisos': [...], 'envio': {...}}."""
+    from . import servicio
     with _cerrojo:
-        if seg_id in _en_curso:
+        if seg_id in _en_curso or servicio.saliendo():      # ya en marcha, o BuscaTron reiniciándose: no se empieza
             return {"ocupado": True}
         _en_curso.add(seg_id)
     try:
-        for vuelta in range(3):
-            r, usada = _revisa(seg_id, enviar)
-            with bd.conecta() as c:
-                ahora = c.execute("SELECT * FROM seguimientos WHERE id=?", (seg_id,)).fetchone()
-                if ahora is None:              # la borraste mientras se revisaba: que no queden sus avisos
-                    c.execute("DELETE FROM avisos WHERE seg_id=?", (seg_id,))
-                    return r
-            if all(ahora[k] == usada[k] for k in DE_LA_BUSQUEDA):
-                return r
-        return r
+        with servicio.trabajo("revision"):
+            return _vueltas(seg_id, enviar)
     finally:
         with _cerrojo:
             _en_curso.discard(seg_id)
+
+
+def _vueltas(seg_id, enviar):
+    """Revisa y, si la editaste mientras tanto, otra vez con lo nuevo (como mucho tres vueltas)."""
+    for vuelta in range(3):
+        r, usada = _revisa(seg_id, enviar)
+        with bd.conecta() as c:
+            ahora = c.execute("SELECT * FROM seguimientos WHERE id=?", (seg_id,)).fetchone()
+            if ahora is None:              # la borraste mientras se revisaba: que no queden sus avisos
+                c.execute("DELETE FROM avisos WHERE seg_id=?", (seg_id,))
+                return r
+        if all(ahora[k] == usada[k] for k in DE_LA_BUSQUEDA):
+            return r
+    return r
 
 
 def _revisa(seg_id, enviar):

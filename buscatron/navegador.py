@@ -123,12 +123,16 @@ _hilo = None
 _cerrojo = threading.Lock()
 
 
-def cierra():
+def cierra(espera=0):
+    """Cierra Chrome. Con `espera`, aguarda hasta esos segundos a que suelte su perfil (al reiniciar BuscaTron)."""
     global _hilo
     with _cerrojo:
-        if _hilo and _hilo.is_alive():
-            _hilo.cola.put((None, None, 0))
+        h = _hilo
+        if h and h.is_alive():
+            h.cola.put((None, None, 0))
         _hilo = None
+    if espera and h:
+        h.join(espera)
 
 
 def get(url, visible=False, timeout=120, esperar_humano=0):

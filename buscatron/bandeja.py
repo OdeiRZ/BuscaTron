@@ -1,5 +1,6 @@
 """Icono de BuscaTron en la bandeja de Windows (junto al reloj), sin paquetes externos: solo funciones de Windows con ctypes.
-Doble clic abre la web; el menú (clic) permite abrirla, ver u ocultar la ventana de mensajes y cerrar BuscaTron.
+Doble clic abre la web; el menú (clic) permite abrirla, ver u ocultar la ventana de mensajes, reiniciar y cerrar BuscaTron
+(reiniciar y cerrar, nunca con un trabajo en marcha).
 Si BuscaTron se inicia sin ventana (pythonw, arranque con Windows) no hay consola que ocultar."""
 import atexit
 import ctypes
@@ -14,7 +15,7 @@ WM_LBUTTONUP, WM_LBUTTONDBLCLK, WM_RBUTTONUP, WM_DESTROY, WM_NULL = 0x0202, 0x02
 NIM_ADD, NIM_MODIFY, NIM_DELETE = 0, 1, 2
 NIF_MESSAGE, NIF_ICON, NIF_TIP = 1, 2, 4
 SW_HIDE, SW_RESTORE = 0, 9
-MENU_OPEN, MENU_CONSOLE, MENU_CLOSE = 1, 2, 3
+MENU_OPEN, MENU_CONSOLE, MENU_CLOSE, MENU_RESTART = 1, 2, 3, 4
 ICONO = os.path.join(os.path.dirname(os.path.abspath(__file__)), "icono.ico")
 
 _state = {"hwnd": None, "nid": None, "ok": False, "puerto": 8790}
@@ -72,6 +73,7 @@ def _menu(hwnd):
     user32.AppendMenuW(h, 0, MENU_OPEN, "Abrir BuscaTron en el navegador")
     if _consola():
         user32.AppendMenuW(h, 0, MENU_CONSOLE, "Ocultar la ventana de mensajes" if visible else "Mostrar la ventana de mensajes")
+    user32.AppendMenuW(h, 0, MENU_RESTART, "Reiniciar BuscaTron")
     user32.AppendMenuW(h, 0, MENU_CLOSE, "Cerrar BuscaTron")
     pt = wintypes.POINT()
     user32.GetCursorPos(ctypes.byref(pt))
@@ -83,9 +85,12 @@ def _menu(hwnd):
         _abrir()
     elif eleccion == MENU_CONSOLE:
         muestra_consola(not visible)
-    elif eleccion == MENU_CLOSE:
-        _quita()
-        os._exit(0)
+    elif eleccion in (MENU_RESTART, MENU_CLOSE):     # como en la web: nunca con un trabajo en marcha
+        from . import servicio, web
+        try:
+            servicio.sale(eleccion == MENU_RESTART, web._servidor.get("obj"))
+        except ValueError as e:
+            user32.MessageBoxW(hwnd, str(e), "BuscaTron", 0x40)      # MB_ICONINFORMATION
 
 
 def _quita():

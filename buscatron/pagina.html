@@ -200,6 +200,12 @@ kbd{font:600 11px/1 system-ui,sans-serif;padding:2px 5px;border:1px solid var(--
 .enlaces{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 .enlaces a,.enlaces button{display:inline-flex;align-items:center;min-height:36px;padding:0 12px;border-radius:999px;background:var(--ac2);color:var(--ac);font-size:13px;font-weight:600;text-decoration:none}
 @media(min-width:800px){.ref-lista{display:grid;grid-template-columns:1fr 1fr;gap:10px}.ref-lista .refc{margin-bottom:0}}
+/* reinicio */
+#reinicio{position:fixed;inset:0;z-index:40;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(10,12,20,.6)}
+#reinicio[hidden]{display:none}
+#reinicio .card{max-width:420px;margin:0}
+#b-act{margin-left:auto;font-size:18px}
+#b-act:not([hidden])+#tema{margin-left:8px}
 /* estado de las tiendas */
 #estado-t details>summary{font-size:13px;color:var(--ac)}
 /* PC ancho: dos columnas en Buscar y rejillas en el resto */
@@ -224,7 +230,9 @@ kbd{font:600 11px/1 system-ui,sans-serif;padding:2px 5px;border:1px solid var(--
 </head>
 <body>
 <header class="top"><div class="cab"><span class="logo">🏷️</span><div><h1>BuscaTron</h1><p>Compara precios en tus tiendas</p></div>
+  <button type="button" class="tema" id="b-act" hidden title="Hay una actualización: reinicia BuscaTron para aplicarla" aria-label="Actualización pendiente: reiniciar">🆕</button>
   <button type="button" class="tema" id="tema" aria-label="Cambiar de tema"></button></div></header>
+<div id="reinicio" hidden><div class="card carga"><div class="spin"></div><div id="reinicio-txt">Reiniciando BuscaTron…</div></div></div>
 
 <nav class="tabs" id="nav">
   <button data-t="buscar" class="on"><span class="ic">🔎</span>Buscar</button>
@@ -345,6 +353,13 @@ kbd{font:600 11px/1 system-ui,sans-serif;padding:2px 5px;border:1px solid var(--
 <section id="t-avisos" class="oculto"><div id="av-lista"></div></section>
 
 <section id="t-ajustes" class="oculto">
+  <div class="card" id="c-servicio">
+    <h2>🔧 Servicio</h2>
+    <p class="ayuda" style="margin-top:0" id="srv-info">Cargando…</p>
+    <div class="acciones"><button type="button" class="sec" id="srv-reiniciar" title="Reinicia BuscaTron (nunca con una búsqueda o revisión en marcha)">🔁 Reiniciar</button>
+      <button type="button" class="peli" id="srv-cerrar" title="Cierra BuscaTron en el ordenador">🔌 Cerrar</button></div>
+    <p class="ayuda">Reiniciar carga las actualizaciones (sale 🆕 arriba cuando hay una) y no corta nada: si hay una búsqueda o una revisión en marcha, no deja hasta que termine. Tras cerrarlo, solo se puede volver a abrir en el ordenador (icono del escritorio).</p>
+  </div>
   <div class="card">
     <h2>✈️ Telegram</h2>
     <p class="ayuda" style="margin-top:0">Crea un bot con @BotFather, pega su token, escríbele cualquier mensaje y pulsa «Detectar chat».</p>
@@ -883,8 +898,35 @@ async function cargaAvisos(){const [todos,vig]=await Promise.all([api('avisos'),
 async function cargaNavAv(){try{const l=await api('avisos');const v=Number(localStorage.getItem('bt-vistos')||0);
   const n=l.filter(a=>a.id>v).length;$('nav-av').textContent=n?String(n):'';}catch(e){}}
 
+/* servicio: reiniciar y cerrar, como en PixelatIA (nunca con un trabajo en marcha) */
+let srv=null;
+async function cargaServicio(){let s=null;try{s=await api('servicio');}catch(e){return;}
+  if(!s||s.error||!s.desde){   // el BuscaTron en marcha es anterior a esta función
+    $('srv-info').textContent='El BuscaTron que está en marcha es anterior a este botón: reinícialo una vez a mano (icono de la bandeja → Cerrar, y ábrelo otra vez) y desde entonces podrás hacerlo aquí.';
+    $('srv-reiniciar').hidden=$('srv-cerrar').hidden=true;$('b-act').hidden=false;$('b-act').dataset.viejo='1';return;}
+  srv=s;delete $('b-act').dataset.viejo;$('srv-reiniciar').hidden=$('srv-cerrar').hidden=false;
+  $('b-act').hidden=!s.desactualizado;$('b-act').disabled=!!s.ocupado;
+  $('srv-info').innerHTML=`En marcha desde el ${fecha(s.desde)}. ${s.desactualizado?'<b style="color:var(--wa)">🆕 Hay una actualización sin cargar: reinicia para aplicarla.</b>':'Está al día.'}${s.ocupado?` <b>Ahora hay ${esc(s.ocupado)} en marcha:</b> para reiniciar o cerrar, espera a que termine.`:''}`;
+  $('srv-reiniciar').disabled=$('srv-cerrar').disabled=!!s.ocupado;}
+async function saleSrv(accion){
+  if($('b-act').dataset.viejo){ir('ajustes');return;}
+  if(accion==='cerrar'&&!confirm('¿Cerrar BuscaTron?\n\nDejará de revisar tus vigiladas y de responder en el móvil y en Telegram. Para volver a abrirlo tendrás que usar el icono del escritorio en el ordenador.'))return;
+  if(accion==='reiniciar'&&!confirm('¿Reiniciar BuscaTron? Tarda unos segundos y no se pierde nada.'))return;
+  const antes=srv&&srv.desde,r=await api('servicio',{accion}).catch(e=>({error:'No se pudo hablar con BuscaTron'}));
+  if(r.error){aviso(r.error);cargaServicio();return;}
+  $('reinicio').hidden=false;
+  if(accion==='cerrar'){$('reinicio').querySelector('.spin').remove();
+    $('reinicio-txt').innerHTML='BuscaTron se ha cerrado.<br><span class="mut">Para volver a abrirlo, usa el icono del escritorio en el ordenador.</span>';return;}
+  const t0=Date.now();
+  (async function espera(){await new Promise(z=>setTimeout(z,1500));
+    try{const s=await (await fetch('/api/servicio',{cache:'no-store'})).json();if(s.desde&&s.desde!==antes){location.reload();return;}}catch(e){}
+    if(Date.now()-t0>90e3)$('reinicio-txt').innerHTML='BuscaTron está tardando en volver…<br><span class="mut">Si no vuelve, ábrelo con el icono del escritorio en el ordenador.</span>';
+    espera();})();}
+$('srv-reiniciar').onclick=()=>saleSrv('reiniciar');$('srv-cerrar').onclick=()=>saleSrv('cerrar');$('b-act').onclick=()=>saleSrv('reiniciar');
+setInterval(()=>{if(document.visibilityState==='visible')cargaServicio();},60000);
+
 /* ajustes */
-async function cargaAjustes(){const a=await api('ajustes');$('a-token').value=a.telegram_token;$('a-chat').value=a.telegram_chat;
+async function cargaAjustes(){cargaServicio();const a=await api('ajustes');$('a-token').value=a.telegram_token;$('a-chat').value=a.telegram_chat;
   $('a-srv').value=a.smtp_servidor;$('a-pto').value=a.smtp_puerto;$('a-usr').value=a.smtp_usuario;$('a-clv').value=a.smtp_clave;$('a-dst').value=a.correo_destino;
   $('a-nav').checked=!!a.usar_navegador;$('a-navvis').checked=!!a.navegador_visible;$('a-nav').disabled=!a.navegador_disponible;
   if(!a.navegador_disponible)$('a-nav-info').textContent='No disponible: hace falta Chrome o Edge instalado y el complemento Playwright (pip install playwright).';
@@ -931,7 +973,7 @@ async function prueba(canal){const g=await api('ajustes',ajustesForm());if(g.err
   const e=r.error||r[canal];msg(e?e:'Mensaje de prueba enviado: debería llegarte en unos segundos.',!e);}
 $('a-prueba-tg').onclick=()=>prueba('telegram');$('a-prueba-co').onclick=()=>prueba('correo');
 
-cargaT().then(()=>{if(!retomaBusqueda())cargaRec(true);});cargaNavAv();
+cargaT().then(()=>{if(!retomaBusqueda())cargaRec(true);});cargaNavAv();cargaServicio();
 if('serviceWorker' in navigator&&window.isSecureContext)navigator.serviceWorker.register('/sw.js').catch(()=>{});
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&!buscando)retomaBusqueda();});
 {const h=location.hash.slice(1);let t=TABS.includes(h)?h:null;     // la de la dirección (#avisos) o la última que usaste

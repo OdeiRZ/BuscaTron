@@ -17,7 +17,7 @@ from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from urllib.parse import parse_qs, urlparse
 
 from . import (ajustes, arranque, busquedas, extract, fetch, importar, motor, notifica, programador, referencia,
-               seguimiento, telegram_bot, tiendas as cfg)
+               seguimiento, servicio, telegram_bot, tiendas as cfg)
 
 TAILSCALE = ipaddress.ip_network("100.64.0.0/10")
 MAX_FALLOS, VENTANA_FALLOS = 5, 300      # intentos de PIN fallidos por IP y ventana (segundos)
@@ -97,6 +97,13 @@ def token_sesion(pin):
 
 def busca(c):
     """Hace la búsqueda y devuelve la respuesta (y la guarda como búsqueda reciente)."""
+    if servicio.saliendo():
+        raise ValueError("BuscaTron se está reiniciando: vuelve a buscar en unos segundos")
+    with servicio.trabajo("busqueda"):
+        return _busca(c)
+
+
+def _busca(c):
     res, inf = motor.buscar(c.get("q", "").strip(), c.get("incluir", ""), c.get("excluir", ""),
                             bool(c.get("sin_agotados", True)), c.get("tiendas"),
                             _num(c.get("pmin", "")), _num(c.get("pmax", "")),
@@ -248,6 +255,7 @@ class Handler(BaseHTTPRequestHandler):
                  "/api/historial": lambda: (motor.historial_producto(parse_qs(url.query)["grupo"][0]) if parse_qs(url.query).get("grupo")
                                             else motor.historial_de(parse_qs(url.query).get("url", [""])[0])),
                  "/api/objetivos": lambda: [dict(o, vigilan=seguimiento.cubren(o["titulo"], o["precio"])) for o in motor.objetivos().values()],
+                 "/api/servicio": servicio.estado,
                  "/api/referencia": lambda: referencia.resumen("vigiladas" if parse_qs(url.query).get("ambito") == ["vigiladas"] else "avisos"),
                  "/api/vigilan": lambda: seguimiento.cubren(parse_qs(url.query)["titulo"][0], _num(parse_qs(url.query).get("precio", [""])[0])),
                  "/api/busquedas": lambda: (busquedas.obtiene(int(parse_qs(url.query)["id"][0])) or {"error": "búsqueda no encontrada"})
@@ -305,6 +313,11 @@ class Handler(BaseHTTPRequestHandler):
             return lanza_busqueda(c)
         if ruta == "/api/buscar":
             return busca(c)
+        if ruta == "/api/servicio":           # reiniciar o cerrar, como en PixelatIA: nunca con un trabajo en marcha
+            if c.get("accion") not in ("reiniciar", "cerrar"):
+                raise ValueError("acción no válida")
+            servicio.sale(c["accion"] == "reiniciar", _servidor.get("obj"))
+            return {"ok": True}
         if ruta == "/api/ignorar":            # «ya lo tengo / no me interesa»
             if c.get("quitar"):
                 motor.deja_de_ignorar(c["quitar"])
@@ -458,9 +471,21 @@ def _ya_hay_uno(puerto):
         return False
 
 
+def _abre_puerto(host, puerto):
+    """Tras un reinicio desde la web, el BuscaTron anterior puede tardar un momento en soltar el puerto: se reintenta."""
+    intentos = 40 if os.environ.pop("BUSCATRON_REINICIO", None) else 1
+    for i in range(intentos):
+        try:
+            return Servidor((host, puerto), Handler)
+        except OSError:
+            if i == intentos - 1:
+                raise
+            time.sleep(0.5)
+
+
 def sirve(puerto=8790, host="0.0.0.0", abrir=False, bandeja=False):
     try:
-        servidor = Servidor((host, puerto), Handler)
+        servidor = _abre_puerto(host, puerto)
     except OSError as e:
         if abrir and _ya_hay_uno(puerto):          # ya está en marcha: basta con abrir su web
             print(f"BuscaTron ya está abierto en http://127.0.0.1:{puerto}; se abre en el navegador.")
@@ -468,7 +493,7 @@ def sirve(puerto=8790, host="0.0.0.0", abrir=False, bandeja=False):
             return
         raise SystemExit(f"No se pudo abrir el puerto {puerto} ({e.strerror}). "
                          f"¿Ya hay un BuscaTron abierto? Prueba otro: python -m buscatron --puerto {puerto + 1}")
-    _servidor.update(host=host, puerto=puerto)
+    _servidor.update(host=host, puerto=puerto, obj=servidor)
     programador.arranca()
     telegram_bot.arranca()
     threading.Thread(target=motor.rellena_claves, daemon=True).start()

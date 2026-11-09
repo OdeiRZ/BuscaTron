@@ -6,7 +6,7 @@ Buscador y vigilante de precios **local** para tiendas online españolas. Pensad
 - **Datos en vivo**: no usa cachés ni comparadores intermedios, así que el precio es el que ves en la tienda.
 - **Tus datos se quedan en tu equipo**: lista de tiendas, historial y tokens se guardan en archivos locales que no se suben al repositorio.
 
-> Estado: **versión funcional** (v0.15.0). Consulta el [CHANGELOG](CHANGELOG.md).
+> Estado: **versión funcional** (v0.16.0). Consulta el [CHANGELOG](CHANGELOG.md).
 
 ## En el móvil y en el PC
 
@@ -93,6 +93,7 @@ Un botón en **Avisos** y otro en **Vigiladas** abren un resumen de todos tus pr
 El histórico propio de Amazon empieza con tus búsquedas (desde el 6/11/2026) y crece con cada revisión de las vigiladas. No hace ninguna consulta: todo sale de lo ya guardado, así que se abre al instante.
 
 ### ⚙️ Ajustes
+- **🔧 Servicio**: reiniciar o cerrar BuscaTron desde la web (también desde el móvil) o desde el menú del icono de la bandeja, igual que en PixelatIA: **nunca con un trabajo en marcha** (una búsqueda, la revisión de una vigilada o una búsqueda del bot de Telegram): lo dice y espera a que termines. Cuando el código ha cambiado desde que arrancó sale **🆕** arriba: púlsalo para reiniciar y aplicar la actualización. Al reiniciar, la página espera a que vuelva y se recarga sola. Tras «Cerrar», solo se puede volver a abrir en el ordenador.
 - **Búsqueda**: páginas que se leen por tienda por defecto.
 - **Arranque con Windows**: interruptor para iniciar BuscaTron al encender el equipo.
 - **Estado de las tiendas**: cuántas de sus últimas 10 consultas dieron resultados, cuándo fue el último y su último problema, con un botón para desactivarla. Distingue la tienda que **no responde** (conviene desactivarla) de la que **responde bien pero no ha tenido nada de lo que buscas** (por ejemplo, Outlet-PC sin stock de ese juego): esa solo conviene desactivarla si no suele tener tus juegos.
@@ -289,6 +290,7 @@ buscatron/
   navegador.py     navegador opcional (Playwright + Chrome)
   tiendas.py       lista de tiendas, plantillas, segunda mano y tiendas «solo enlace»
   seguimiento.py   vigilancia, reglas de aviso y no repetición
+  servicio.py      reiniciar y cerrar desde la web o la bandeja (nunca con un trabajo en marcha) y aviso 🆕 de actualización
   referencia.py    referencia de Amazon: equivalente en Amazon de cada producto y lo visto allí
   telegram_bot.py  órdenes por Telegram (/buscar, /vigiladas, /revisar)
   programador.py   revisiones automáticas cada X horas
@@ -309,7 +311,7 @@ permitir_acceso_movil.bat     abre el cortafuegos para tu red local (pide admini
 python -m unittest discover -s tests
 ```
 
-207 pruebas, sin red. Cubren las reglas de aviso (objetivo de la búsqueda y del producto, media histórica, no repetir, reaviso, limpieza de obsoletos, tienda caída frente a tienda sin el producto), qué vigilada cubre cada objetivo, editar o borrar una vigilada mientras se revisa, el historial por producto, las órdenes del bot y los mensajes largos de Telegram, la escritura segura de los archivos y los cambios de tiendas durante una búsqueda, los errores del servidor, el tope de páginas y las revisiones que fallan, los precios con punto de miles, el extractor (precios tachados y con descuento, tarjetas que no se mezclan con la siguiente, texto oculto, títulos recortados, preventas, estados de segunda mano, páginas siguientes, datos de producto, envío), el motor (paginación, filtros, total con envío, mínimo histórico, historial), la búsqueda abierta, el filtro de IP y el PIN, la importación a mano y las búsquedas guardadas.
+214 pruebas, sin red. Cubren las reglas de aviso (objetivo de la búsqueda y del producto, media histórica, no repetir, reaviso, limpieza de obsoletos, tienda caída frente a tienda sin el producto), qué vigilada cubre cada objetivo, editar o borrar una vigilada mientras se revisa, el historial por producto, las órdenes del bot y los mensajes largos de Telegram, la escritura segura de los archivos y los cambios de tiendas durante una búsqueda, los errores del servidor, el tope de páginas y las revisiones que fallan, los precios con punto de miles, el extractor (precios tachados y con descuento, tarjetas que no se mezclan con la siguiente, texto oculto, títulos recortados, preventas, estados de segunda mano, páginas siguientes, datos de producto, envío), el motor (paginación, filtros, total con envío, mínimo histórico, historial), la búsqueda abierta, el filtro de IP y el PIN, la importación a mano y las búsquedas guardadas.
 
 ## Limitaciones conocidas
 

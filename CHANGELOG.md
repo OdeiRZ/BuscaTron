@@ -3,6 +3,13 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.16.0] - 2026-11-09
+
+### Añadido
+- **Reiniciar y cerrar BuscaTron desde la app** (Ajustes → 🔧 Servicio, también desde el móvil) y desde el menú del icono de la bandeja («Reiniciar BuscaTron»), con la lógica de PixelatIA: **nunca con un trabajo en marcha** (búsqueda, revisión de una vigilada o búsqueda del bot); lo dice y deja los botones desactivados hasta que termine. Mientras sale, no empieza trabajo nuevo.
+- **🆕 en la cabecera** cuando el código cambió desde que arrancó: un toque reinicia y aplica la actualización. La página espera a que vuelva y se recarga.
+- Al reiniciar sale con el código 3 y **BuscaTron.bat** lo vuelve a lanzar (sin abrir otra pestaña), como PixelatIA.bat. Con el arranque de Windows (pythonw, sin .bat) se relanza él mismo. Antes de salir cierra su Chrome y quita el icono de la bandeja; el nuevo reintenta unos segundos hasta que el puerto queda libre.
+
 ## [0.15.0] - 2026-11-09
 
 ### Añadido
