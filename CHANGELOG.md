@@ -3,6 +3,11 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.17.5] - 2026-11-14
+
+### Cambiado
+- **Resumen de Telegram**: en vez de los 5 productos más baratos de la vigilada (siempre los mismos), trae cada producto que cumple la búsqueda, del más barato al más caro, con sus 3 ofertas más baratas (hasta 30 productos; si no cabe en un mensaje, se parte). Activado en todas las vigiladas activas que avisan por Telegram.
+
 ## [0.17.4] - 2026-11-09
 
 ### Corregido

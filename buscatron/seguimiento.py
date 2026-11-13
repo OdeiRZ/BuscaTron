@@ -275,8 +275,9 @@ def agrupa(items):
     return sorted(grupos, key=lambda v: v[0]["precio"])
 
 
-def linea_grupo(g, con_motivo=False, nombres=None):
-    """«Título · 36,50 € en Bixoto (−19 % sobre su precio de mercado)», el motivo del aviso, el enlace y las otras tiendas."""
+def linea_grupo(g, con_motivo=False, nombres=None, otras=3):
+    """«Título · 36,50 € en Bixoto (−19 % sobre su precio de mercado)», el motivo del aviso, el enlace y hasta `otras`
+    tiendas más."""
     nombres = nombres or _nombres()
     x = g[0]
     partes = [f"{x['titulo']}\n{euros(x['precio'])} en {nombres.get(x.get('tienda'), x.get('tienda', ''))}"
@@ -285,13 +286,17 @@ def linea_grupo(g, con_motivo=False, nombres=None):
         partes.append(x["motivo"])
     partes.append(x["url"])
     if len(g) > 1:
-        otras = ", ".join(f"{euros(o['precio'])} en {nombres.get(o.get('tienda'), o.get('tienda', ''))}" for o in g[1:4])
-        partes.append("También: " + otras + (f" y {len(g) - 4} más" if len(g) > 4 else ""))
+        lista = ", ".join(f"{euros(o['precio'])} en {nombres.get(o.get('tienda'), o.get('tienda', ''))}" for o in g[1:1 + otras])
+        partes.append("También: " + lista + (f" y {len(g) - 1 - otras} más" if len(g) > 1 + otras else ""))
     return "\n".join(partes)
 
 
-def resumen(seg, opc, modo, res, informe, n=5):
-    """Mensaje de una revisión sin avisos nuevos: los n más baratos que cumplen la búsqueda."""
+MAX_RESUMEN = 30           # productos por resumen; Telegram lo trocea si no cabe en un mensaje
+
+
+def resumen(seg, opc, modo, res, informe, ofertas=3):
+    """Mensaje de una revisión sin avisos nuevos: cada producto que cumple la búsqueda (del más barato al más caro) con
+    sus `ofertas` ofertas más baratas."""
     validos = [x for x in res if not (x.get("agotado") and seg["sin_agotados"]) and not (x.get("preventa") and not opc.get("preventas"))
                and (modo == "todos" or motor.permite(x.get("idioma", "?"), x.get("idioma_seguro", False), modo))]
     grupos = agrupa(validos)
@@ -299,8 +304,10 @@ def resumen(seg, opc, modo, res, informe, n=5):
     lineas = [f"Sin avisos nuevos. Revisados {productos(res)}" + (f" ({caidas} tiendas sin respuesta)" if caidas else "") + "."]
     if grupos:
         nombres = _nombres()
-        lineas.append(f"Los {min(n, len(grupos))} productos más baratos ahora:")
-        lineas += [linea_grupo(g, nombres=nombres) for g in grupos[:n]]
+        lineas.append(f"{'Tu producto' if len(grupos) == 1 else f'Tus {len(grupos)} productos'} y sus {ofertas} ofertas más baratas:")
+        lineas += [linea_grupo(g, nombres=nombres, otras=ofertas - 1) for g in grupos[:MAX_RESUMEN]]
+        if len(grupos) > MAX_RESUMEN:
+            lineas.append(f"… y {len(grupos) - MAX_RESUMEN} productos más en BuscaTron")
     else:
         lineas.append("Ningún producto cumple ahora tu búsqueda.")
     return "\n\n".join(lineas)

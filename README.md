@@ -6,7 +6,7 @@ Buscador y vigilante de precios **local** para tiendas online españolas. Pensad
 - **Datos en vivo**: no usa cachés ni comparadores intermedios, así que el precio es el que ves en la tienda.
 - **Tus datos se quedan en tu equipo**: lista de tiendas, historial y tokens se guardan en archivos locales que no se suben al repositorio.
 
-> Estado: **versión funcional** (v0.17.4). Consulta el [CHANGELOG](CHANGELOG.md).
+> Estado: **versión funcional** (v0.17.5). Consulta el [CHANGELOG](CHANGELOG.md).
 
 ## En el móvil y en el PC
 
@@ -73,7 +73,7 @@ Pulsa «Vigilar esta búsqueda» (o crea una en la pestaña Vigiladas) y deja qu
 - Cada seguimiento lleva las mismas opciones que la búsqueda: preventas, envío, segunda mano, otras webs y páginas por tienda.
 - **Comprueba la ficha del producto** antes de avisar: si su ficha dice que está agotado o en preventa (y no las incluyes), no avisa, aunque el listado de la tienda no lo diga. También el idioma (ver [Idioma de los juegos](#idioma-de-los-juegos)): un juego en francés no te avisa aunque su título esté en español.
 - No repite avisos: solo vuelve a avisar si el precio baja más, o pasados 30 días.
-- **Resumen por Telegram** (opcional, en cada búsqueda vigilada): si una revisión no trae avisos nuevos, te manda igualmente los 5 más baratos del momento, para saber que la vigilancia funciona. Ojo: «Precio máximo» solo filtra resultados; para que te avise hay que rellenar «Avisarme si cuesta como mucho» o el % de bajada.
+- **Resumen por Telegram** (opcional, en cada búsqueda vigilada): si una revisión no trae avisos nuevos, te manda igualmente cada producto que encuentra con sus 3 ofertas más baratas, para saber que la vigilancia funciona. Ojo: «Precio máximo» solo filtra resultados; para que te avise hay que rellenar «Avisarme si cuesta como mucho» o el % de bajada.
 - **Revisión automática**: cada seguimiento se revisa solo cada X horas (por defecto 12) mientras BuscaTron esté en marcha, y la tarjeta muestra cuándo toca la próxima. Si el equipo estaba apagado, la revisión pendiente se lanza al encender, en menos de un minuto. Cada revisión actualiza los precios y el historial.
 - **Estado de cada revisión** en su tarjeta: «3 productos (10 ofertas), 0 avisos nuevos, 1 tiendas sin respuesta». «Sin respuesta» son solo las tiendas que fallaron (sin conexión, captcha, error de su web); una tienda que respondió pero no tiene ese producto no cuenta. Si la revisión entera falla, se anota «la revisión falló: …» y espera a su hora, en lugar de repetirse cada minuto contra todas tus tiendas.
 - **🔄 Buscar ahora** (una revisión inmediata, con sus avisos; no quita la pausa), **⏸️ Pausar / ▶️ Reanudar** (al reanudar, si ya le tocaba, se revisa en menos de un minuto), editar y borrar (al borrar un seguimiento se borran también sus avisos; el historial de precios se conserva).
