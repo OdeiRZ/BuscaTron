@@ -49,6 +49,8 @@ def limpia(dias=180, ahora=None):
         borradas["idiomas"] = c.execute("DELETE FROM idiomas WHERE ts < ?", (ahora - 60 * 86400,)).rowcount
         borradas["importados"] = c.execute("DELETE FROM importados WHERE ts < ?", (ahora - 7 * 86400,)).rowcount
         borradas["recordatorios"] = c.execute("DELETE FROM recordatorios WHERE ts_importado < ?", (ahora - 7 * 86400,)).rowcount
+        # un aviso quitado solo sirve para no repetirlo durante 30 días (seguimiento.REAVISO_DIAS)
+        borradas["avisos"] = c.execute("DELETE FROM avisos WHERE oculto=1 AND ts < ?", (ahora - 60 * 86400,)).rowcount
         borradas["estado_tiendas"] = c.execute("""DELETE FROM estado_tiendas WHERE rowid NOT IN (
             SELECT rid FROM (SELECT rowid rid, ROW_NUMBER() OVER (PARTITION BY host ORDER BY ts DESC) n FROM estado_tiendas) WHERE n <= 30)""").rowcount
     return borradas

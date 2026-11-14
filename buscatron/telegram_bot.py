@@ -76,10 +76,11 @@ def revisar():
     activas = [s for s in seguimiento.lista() if s["activo"]]
     if not activas:
         return responde("No hay búsquedas vigiladas activas.")
-    responde(f"Revisando {len(activas)} búsqueda(s) vigilada(s). Los avisos te llegarán como siempre.")
-    for s in activas:
-        seguimiento.revisa(s["id"])
-    responde("Revisión terminada.")
+    if servicio.saliendo():
+        return responde("BuscaTron se está reiniciando: vuelve a escribirme en un minuto.")
+    responde(f"Revisando {len(activas)} búsqueda(s) vigilada(s), de una en una. Los avisos te llegarán como siempre.")
+    saltadas = [s["nombre"] for s in activas if seguimiento.revisa(s["id"]).get("ocupado")]
+    responde("Revisión terminada." + (f" No he repetido {', '.join(saltadas)}: ya se estaba revisando." if saltadas else ""))
 
 
 def atiende(texto):

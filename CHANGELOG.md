@@ -3,6 +3,19 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.17.9] - 2026-11-14
+
+### Corregido
+- Una ficha que no se podía leer borraba el idioma ya verificado de ese producto (fallo de la 0.17.8): ahora se conserva y solo se descarta su stock antiguo.
+- Una tienda bloqueada se consultaba igualmente si la página llevaba abierta desde antes del bloqueo (seguía en su lista de tiendas activas).
+- «Detectar envío» solo consulta tiendas de tu lista.
+
+### Cambiado
+- Reactivar a mano una tienda bloqueada le da también la vuelta suave (3 días con una página por búsqueda).
+- `/revisar` en Telegram dice qué vigiladas no repitió porque ya se estaban revisando, y no empieza si BuscaTron se está reiniciando.
+- La limpieza diaria borra los avisos quitados hace más de 60 días (ya no sirven para evitar repetirlos).
+- Las peticiones a la web de BuscaTron tienen un tope de 20 MB.
+
 ## [0.17.8] - 2026-11-14
 
 ### Añadido

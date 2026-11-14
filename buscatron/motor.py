@@ -308,7 +308,8 @@ def ficha(x, lista=None):
     with bd.conecta() as c:
         f = c.execute("SELECT idioma, agotado, preventa, ts FROM fichas WHERE url=?", (x["url"],)).fetchone()
     if f and time.time() - f["ts"] < FICHA_HORAS * 3600:
-        return {"idioma": f["idioma"] or None, "agotado": None if f["agotado"] is None else bool(f["agotado"]),
+        return {"idioma": f["idioma"] if f["idioma"] in ("es", "en", "otro") else None,
+                "agotado": None if f["agotado"] is None else bool(f["agotado"]),
                 "preventa": None if f["preventa"] is None else bool(f["preventa"])}
     t = next((t for t in (lista or cfg.carga()) if t["host"] == x.get("tienda")), {})
     try:
@@ -320,7 +321,8 @@ def ficha(x, lista=None):
         st = None
     if st != 200:                 # se recuerda el fallo un rato: si no, se pediría otra vez en cada búsqueda
         with bd.conecta() as c:
-            c.execute("INSERT OR REPLACE INTO fichas(url, idioma, agotado, preventa, ts) VALUES(?,?,?,?,?)",
+            c.execute("INSERT INTO fichas(url, idioma, agotado, preventa, ts) VALUES(?,?,?,?,?) "     # el idioma ya leído se conserva
+                      "ON CONFLICT(url) DO UPDATE SET agotado=NULL, preventa=NULL, ts=excluded.ts",
                       (x["url"], "", None, None, time.time() - (FICHA_HORAS - FICHA_FALLO_HORAS) * 3600))
         return nada
     datos = extract.datos_producto(html, x["url"]) or {}
@@ -612,7 +614,8 @@ def buscar(consulta, incluir="", excluir="", ocultar_agotados=True, hosts=None, 
     except (TypeError, ValueError):
         paginas = 1
     modo = modo_idioma(castellano, idioma)
-    activas = [t for t in lista if (t["host"] in hosts if hosts is not None else t.get("activa", True))]
+    activas = [t for t in lista if (t["host"] in hosts if hosts is not None else t.get("activa", True))
+               and not t.get("bloqueo")]        # bloqueada: ni aunque la pida una página abierta desde antes
     if not segunda_mano:
         activas = [t for t in activas if t.get("tipo") != "segunda_mano"]
     manuales = [t for t in activas if t.get("manual") and t.get("plantilla")]

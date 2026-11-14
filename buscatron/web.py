@@ -25,6 +25,7 @@ _fallos = {}
 _servidor = {"host": "127.0.0.1", "puerto": 8790}
 TRABAJOS = {}                 # búsquedas en curso o recién terminadas: {id: {estado, resp, error, ts}}
 _cerrojo_trabajos = threading.Lock()
+MAX_CUERPO = 20 * 1024 * 1024    # lo más que se acepta en una petición (una página pegada entera cabe de sobra)
 VIDA_TRABAJO = 3600           # segundos que se guarda el resultado de una búsqueda para recogerlo
 
 LOGIN = """<!doctype html><html lang="es"><head><meta charset="utf-8">
@@ -274,7 +275,10 @@ class Handler(BaseHTTPRequestHandler):
         if est == "denegado":
             return self._json({"error": "acceso no permitido"}, 403)
         try:
-            cuerpo = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0))) or b"{}")
+            largo = int(self.headers.get("Content-Length", 0))
+            if largo > MAX_CUERPO:
+                return self._json({"error": "demasiado texto de una vez: pega menos resultados"}, 413)
+            cuerpo = json.loads(self.rfile.read(largo) or b"{}")
             if self.path == "/api/login":
                 return self._login(cuerpo)
             if est == "pin":
@@ -386,6 +390,8 @@ class Handler(BaseHTTPRequestHandler):
             n = importar.guarda(t["host"], consulta, items, base) if items else 0
             return {"importados": n, "ejemplos": [{"titulo": x["titulo"], "precio": x["precio"]} for x in items[:5]], "caduca_horas": importar.CADUCA_HORAS}
         if ruta == "/api/envio_detectar":     # pista a partir de la portada de la tienda; el usuario la revisa y guarda
+            if not any(t["host"] == c.get("host") for t in cfg.carga()):
+                raise ValueError("tienda no encontrada")
             st, h = fetch.get("https://" + c["host"] + "/")
             if st != 200:
                 raise ValueError(f"la portada no responde (HTTP {st}); introduce el envío a mano")
@@ -449,8 +455,8 @@ class Handler(BaseHTTPRequestHandler):
         if "activas" in c:
             for t in lista:
                 t["activa"] = t["host"] in c["activas"]
-                if t["activa"]:
-                    t.pop("bloqueo", None)        # la reactivas tú: deja de vigilarse como «te ha bloqueado»
+                if t["activa"] and t.pop("bloqueo", None):     # la reactivas tú: deja de vigilarse como «te ha bloqueado»
+                    t["suave_hasta"] = time.time() + programador.SUAVE_DIAS * 86400      # y vuelve con calma, como si volviera sola
         cfg.guarda(lista)
         return lista
 
