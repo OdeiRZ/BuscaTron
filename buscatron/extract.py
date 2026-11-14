@@ -8,6 +8,8 @@ from urllib.parse import parse_qsl, urlencode, urljoin, urlparse, urlunparse
 
 # «1.299 €» y «2.500€» llevan punto de miles (antes se leían 299 y 500); «29.99 €» y «1.50 €», punto decimal.
 PRECIO = re.compile(r"(?<![\d.,])(\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?|\d+,\d{1,2}|\d+(?:\.\d{1,2})?)\s*(?:€|eur)", re.I)
+NUM_SUELTO = re.compile(r"\d+(?:,\d{1,2})?")           # «<b>12,6</b> €»: el número y el € en trozos distintos
+ANTES_DEL_DESCUENTO = re.compile(r"\s*[-−–]\s*\d+(?:[.,]\d+)?\s*%\s*=")   # «15,75 € - 20% = 12,6 €»: el primero ya no vale
 PRECIO_ANTES = re.compile(r"(?:€|eur)\s*(\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?|\d+(?:[.,]\d{1,2})?)", re.I)
 MILES = re.compile(r"\d{1,3}(?:\.\d{3})+")
 
@@ -115,6 +117,7 @@ class _Parser(HTMLParser):
         self._sig_texto, self._sig_clase = [], []   # enlaces «Siguiente» por su texto / por su clase CSS
         self._a = None
         self._tachado = 0
+        self._suelto = None     # número sin € del trozo de texto anterior
         self._oculto = 0
         self._pila = []
         self._skip = 0
@@ -199,6 +202,11 @@ class _Parser(HTMLParser):
             self.eventos.append(("a", a["href"], txt, a["p"], a["x"], a["ini"]))
             self._a = None
 
+    def _precio(self, v):
+        self.eventos.append(("p", v))
+        if self._a is not None:
+            self._a["p"].append(v)
+
     def handle_data(self, data):
         if self._skip or self._oculto:
             return
@@ -207,16 +215,21 @@ class _Parser(HTMLParser):
         d = " ".join(data.split())
         if not d:
             return
+        suelto, self._suelto = self._suelto, None
         if not self._tachado:
+            if suelto and re.match(r"(?:€|eur\b)", d, re.I):
+                self._precio(suelto)
             for rx in (PRECIO, PRECIO_ANTES):
                 for m in rx.finditer(d):
                     if d[:m.start()].rstrip().endswith(("-", "−", "–")):      # «-2,59 €» es un descuento, no un precio
                         continue
+                    if rx is PRECIO and ANTES_DEL_DESCUENTO.match(d, m.end()):
+                        continue
                     v = precio_texto(m.group(1))
                     if v:
-                        self.eventos.append(("p", v))
-                        if self._a is not None:
-                            self._a["p"].append(v)
+                        self._precio(v)
+            if NUM_SUELTO.fullmatch(d):
+                self._suelto = precio_texto(d)
         if self._a is not None:
             self._a["x"].append(d)
         self.eventos.append(("x", d))

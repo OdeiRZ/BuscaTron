@@ -299,6 +299,44 @@ def prior_tienda(items):
     return "es" if es >= 3 and es >= 2 * otros else None
 
 
+FICHAS_POR_BUSQUEDA = 4   # fichas que se leen por tienda en cada búsqueda para saber su stock (las más baratas)
+PAUSA_FICHA = 2           # segundos entre una ficha y la siguiente de la misma tienda: nunca en ráfaga
+
+
+def stock_de_fichas(urls):
+    """{url: (agotado, preventa)} de las fichas leídas hace menos de FICHA_HORAS que lo dicen (None = no lo dice)."""
+    urls, r = list(dict.fromkeys(urls)), {}
+    with bd.conecta() as c:
+        for i in range(0, len(urls), 500):
+            trozo = urls[i:i + 500]
+            for f in c.execute("SELECT url, agotado, preventa FROM fichas WHERE ts > ? AND (agotado IS NOT NULL OR preventa IS NOT NULL) "
+                               "AND url IN (%s)" % ",".join("?" * len(trozo)), [time.time() - FICHA_HORAS * 3600] + trozo):
+                r[f["url"]] = (None if f["agotado"] is None else bool(f["agotado"]), None if f["preventa"] is None else bool(f["preventa"]))
+    return r
+
+
+def corrige_stock(res, lista):
+    """El listado de algunas tiendas no dice si queda stock: manda lo que ya se leyó en las fichas y, en las tiendas de
+    cfg.STOCK_EN_FICHA, se leen las fichas de sus resultados más baratos (pocas, de una en una y con pausa)."""
+    stock = stock_de_fichas([x["url"] for x in res])
+    pedir = {}
+    for x in sorted(res, key=lambda x: x["precio"]):
+        if x["url"] not in stock and x.get("tienda") in cfg.STOCK_EN_FICHA and len(pedir.setdefault(x["tienda"], [])) < FICHAS_POR_BUSQUEDA:
+            pedir[x["tienda"]].append(x)
+    for xs in pedir.values():
+        for i, x in enumerate(xs):
+            if i:
+                time.sleep(PAUSA_FICHA)
+            f = ficha(x, lista)
+            stock[x["url"]] = (f["agotado"], f["preventa"])
+    for x in res:
+        agotado, preventa = stock.get(x["url"], (None, None))
+        if agotado is not None:
+            x["agotado"] = agotado
+        if preventa:
+            x["preventa"] = True
+
+
 def idiomas_de_fichas(urls):
     """{url: 'es'|'en'|'otro'} de las fichas ya leídas que dicen su idioma."""
     urls, r = list(dict.fromkeys(urls)), {}
@@ -615,6 +653,8 @@ def buscar(consulta, incluir="", excluir="", ocultar_agotados=True, hosts=None, 
         x["pvp"] = pvp if pvp and pvp > x["precio"] else None
         x["descuento"] = round(100 * (1 - x["precio"] / pvp)) if x["pvp"] else None
     res = [x for x in res if not (pmin is not None and x["precio"] < pmin) and not (pmax is not None and x["precio"] > pmax)]
+    corrige_stock(res, lista)
+    res = [x for x in res if not (ocultar_agotados and x["agotado"]) and not (x.get("preventa") and not preventas)]
     for h, i in informe.items():
         if "brutos" in i:
             i["encontrados"] = sum(1 for x in res if x["tienda"] == h)

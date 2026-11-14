@@ -25,6 +25,10 @@ outlet-pc.es www.goblintrader.es""".split()
 
 
 # Buscadores que no se pueden descubrir desde la portada.
+# Tiendas cuyo listado no dice si queda stock (Zacatrus lo muestra todo como disponible): al buscar se lee la ficha de
+# sus resultados más baratos.
+STOCK_EN_FICHA = {"zacatrus.es"}
+
 CONOCIDAS = {
     "www.masqueoca.com": "https://www.masqueoca.com/tienda/buscardo.asp?txtbusqueda={q}&dondebusco=1&vertodo=1&stockneg=1",
     "www.turolgames.com": "https://www.turolgames.com/es/buscar?controller=search&search_query={q}",  # necesita navegador (pantalla de carga con JS)

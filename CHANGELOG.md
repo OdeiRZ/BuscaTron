@@ -3,6 +3,12 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.17.6] - 2026-11-14
+
+### Corregido
+- **Precios rebajados como «15,75 € - 20% = 12,6 €»** (Más que Oca): se tomaba el precio de antes de la rebaja. Ahora vale el final, y también se lee un precio con el número y el «€» en trozos distintos («<b>12,6</b> €»).
+- **Agotados que salían como disponibles en Zacatrus**: su listado no dice si queda stock. Al buscar se lee la ficha de sus 4 resultados más baratos (de una en una, con pausa, y se recuerda 6 h) y lo agotado se oculta. En todas las tiendas, lo que ya se leyó en una ficha manda sobre lo que dice el listado.
+
 ## [0.17.5] - 2026-11-14
 
 ### Cambiado
