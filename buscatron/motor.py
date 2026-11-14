@@ -12,6 +12,9 @@ PAUSA = 0.6                 # segundos entre dos peticiones seguidas a la misma 
 MAX_INTENTOS = 4            # direcciones de búsqueda que se prueban en una tienda cuyo buscador no se conoce
 REINTENTO_CAIDA = 600       # segundos sin volver a llamar a una tienda que no ha respondido a la conexión (la 1.ª vez)
 MAX_CAIDA = 86400           # …y cada vez que vuelve a fallar se espera 6 veces más (10 min, 1 h, 6 h), hasta 24 h
+RECHAZOS_PARA_ESPERAR = 2   # 403 seguidos antes de dejar de llamarla un tiempo (un 429 basta con uno)
+BLOQUEO_FALLOS = 3          # esperas seguidas por rechazo tras las que se da por bloqueada (se prueba solo su portada)
+_rechazos = {}   # {host: 403/401 seguidos}
 _caidas = {}     # {host: cuándo dejó de responder} (lo que queda en memoria; lo que manda está en la tabla «caidas»)
 
 
@@ -38,6 +41,45 @@ def limpia_caida(h):
     if _caidas.pop(h, None) is not None or caida_hasta(h):
         with bd.conecta() as c:
             c.execute("DELETE FROM caidas WHERE host=?", (h,))
+
+
+def es_rechazo(err):
+    """La tienda respondió, pero rechazando la consulta (403/401) o pidiendo esperar (429)."""
+    return bool(err) and any(f"(error {c})" in err for c in (401, 403, 429))
+
+
+def bloquea(h):
+    """Desactiva una tienda que sigue rechazando tus consultas: desde ahí solo se prueba su portada cada pocas horas
+    (programador.bloqueadas) y se reactiva sola cuando vuelve a responder."""
+    with cfg.cerrojo:
+        lista = cfg.carga()
+        t = next((t for t in lista if t["host"] == h), None)
+        if not t or t.get("bloqueo"):
+            return
+        t["activa"] = False
+        t["bloqueo"] = {"desde": time.time(), "probado": time.time()}
+        cfg.guarda(lista)
+    with bd.conecta() as c:
+        c.execute("DELETE FROM caidas WHERE host=?", (h,))
+    _caidas.pop(h, None)
+    _rechazos.pop(h, None)
+    nombre = t.get("nombre") or h
+    from . import notifica
+    notifica.envia(["telegram"], f"BuscaTron · {nombre}",
+                   f"{nombre} sigue rechazando tus consultas: la he desactivado para no alargar el bloqueo. Probaré su portada "
+                   f"cada pocas horas y, cuando vuelva a responder, la reactivo y te aviso.")
+
+
+def registra_rechazo(h, err):
+    """Un 429, o varios 403 seguidos, hacen esperar a la tienda como si no respondiera; si sigue igual, se bloquea."""
+    n = _rechazos[h] = _rechazos.get(h, 0) + 1
+    if "(error 429)" not in err and n < RECHAZOS_PARA_ESPERAR:
+        return
+    marca_caida(h)
+    with bd.conecta() as c:
+        f = c.execute("SELECT fallos FROM caidas WHERE host=?", (h,)).fetchone()
+    if f and f["fallos"] >= BLOQUEO_FALLOS:
+        bloquea(h)
 
 
 def _cuando(segundos):
@@ -152,7 +194,11 @@ def _tienda_base(t, consulta, nav=None, paginas=1):
 def _tienda_viva(t, consulta, nav, paginas, estados):
     h = t["host"]
     r = _tienda_consulta(t, consulta, nav, paginas, estados)
-    limpia_caida(h)                                          # ha respondido: se olvida que estuvo caída
+    if es_rechazo(r[2]):                                     # responde, pero rechazándote: no insistir
+        registra_rechazo(h, r[2])
+    else:
+        _rechazos.pop(h, None)
+        limpia_caida(h)                                      # ha respondido: se olvida que estuvo caída
     return r
 
 
@@ -249,6 +295,7 @@ def verifica_idioma(x, lista=None):
 
 
 FICHA_HORAS = 6       # el stock cambia: la ficha se vuelve a leer pasado este tiempo
+FICHA_FALLO_HORAS = 2     # una ficha que no se pudo leer no se vuelve a pedir hasta pasado este tiempo
 
 
 def ficha(x, lista=None):
@@ -270,8 +317,11 @@ def ficha(x, lista=None):
         else:
             st, html = fetch.get(x["url"], timeout=20)
     except Exception:
-        return nada
-    if st != 200:
+        st = None
+    if st != 200:                 # se recuerda el fallo un rato: si no, se pediría otra vez en cada búsqueda
+        with bd.conecta() as c:
+            c.execute("INSERT OR REPLACE INTO fichas(url, idioma, agotado, preventa, ts) VALUES(?,?,?,?,?)",
+                      (x["url"], "", None, None, time.time() - (FICHA_HORAS - FICHA_FALLO_HORAS) * 3600))
         return nada
     datos = extract.datos_producto(html, x["url"]) or {}
     r = {"idioma": extract.codigo_idioma(extract.idioma_pagina(html)),
@@ -593,14 +643,15 @@ def buscar(consulta, incluir="", excluir="", ocultar_agotados=True, hosts=None, 
     ahora = time.time()
     # Con el ritmo por tienda cada una espera su turno, así que se consultan más a la vez (cada hilo, una tienda distinta).
     # Una tienda que acaba de volver de un bloqueo se consulta unos días con una sola página.
+    pags = lambda t: 1 if t.get("suave_hasta", 0) > ahora else paginas
     with cf.ThreadPoolExecutor(12) as ex:
-        resultados = list(ex.map(lambda t: _tienda(t, consulta, nav, 1 if t.get("suave_hasta", 0) > ahora else paginas), activas))
+        resultados = list(ex.map(lambda t: _tienda(t, consulta, nav, pags(t)), activas))
     if nav and aj["navegador_visible"]:
         # Solo las tiendas que piden comprobar que eres humano se reintentan con ventana, de una en una,
         # para que el usuario pueda resolverlo; el resto se consulta sin que salga nada en pantalla.
         for i, (host, items, err) in enumerate(resultados):
             if err == DESAFIO:
-                resultados[i] = _tienda(por_host[host], consulta, {"visible": True}, paginas)
+                resultados[i] = _tienda(por_host[host], consulta, {"visible": True}, pags(por_host[host]))
     idioma_ficha.update(idiomas_de_fichas([x["url"] for _, items, _ in resultados for x in items]))
     for host, items, err in resultados:
         kept = 0

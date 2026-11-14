@@ -11,6 +11,7 @@ BLOQUEO_HORAS = 6          # una tienda que bloqueó tu conexión se prueba con 
 SUAVE_DIAS = 3             # al volver, unos días con una sola página por búsqueda
 ESPACIO_VIGILADAS = 10 * 60    # entre dos revisiones automáticas: así cada tienda ve unas pocas peticiones repartidas
 _ultima_revision = [0.0]
+_hilo = [None]             # la revisión automática en marcha (en su hilo, para no frenar el resto de tareas)
 
 
 def bloqueadas():
@@ -43,18 +44,34 @@ def bloqueadas():
                            f"{nombre} vuelve a responder: la he reactivado y entra otra vez en tus búsquedas y vigiladas.")
 
 
-def vigiladas(ahora=None):
+def vigiladas(ahora=None, hilo=False):
     """Revisa la vigilada que más tiempo lleva esperando, y solo si la anterior revisión automática fue hace al menos
-    ESPACIO_VIGILADAS: nunca todas seguidas (las de «Buscar ahora» no esperan)."""
+    ESPACIO_VIGILADAS y ya acabó: nunca todas seguidas (las de «Buscar ahora» no esperan). Las que ya se están revisando
+    (p. ej. con «Buscar ahora») se saltan sin gastar el turno. hilo=True: la revisión va en su propio hilo."""
     ahora = ahora or time.time()
-    pendientes = seguimiento.pendientes(ahora)
-    if not pendientes or ahora - _ultima_revision[0] < ESPACIO_VIGILADAS:
+    if _hilo[0] is not None and _hilo[0].is_alive():
         return None
-    ultima = {s["id"]: s["ultima"] for s in seguimiento.lista()}
-    sid = min(pendientes, key=lambda i: ultima.get(i, 0))
+    if ahora - _ultima_revision[0] < ESPACIO_VIGILADAS:
+        return None
+    segs = {s["id"]: s for s in seguimiento.lista()}
+    pendientes = [i for i in seguimiento.pendientes(ahora) if not segs.get(i, {}).get("revisando")]
+    if not pendientes:
+        return None
+    sid = min(pendientes, key=lambda i: segs.get(i, {}).get("ultima", 0))
     _ultima_revision[0] = ahora
-    seguimiento.revisa(sid)
+    if hilo:
+        _hilo[0] = threading.Thread(target=_revisa, args=(sid,), daemon=True, name="vigilada")
+        _hilo[0].start()
+    else:
+        seguimiento.revisa(sid)
     return sid
+
+
+def _revisa(sid):
+    try:
+        seguimiento.revisa(sid)
+    except Exception:
+        traceback.print_exc()
 
 
 def recordatorios():
@@ -86,7 +103,7 @@ def limpieza():
 
 def _bucle(pausa):
     while True:
-        for tarea in (vigiladas, recordatorios, bloqueadas, limpieza):
+        for tarea in (lambda: vigiladas(hilo=True), recordatorios, bloqueadas, limpieza):
             try:
                 tarea()
             except Exception:

@@ -45,7 +45,7 @@ class EditarMientrasSeRevisa(ConArchivos):
             return [], {}
         with mock.patch.object(motor, "buscar", side_effect=buscar):
             seguimiento.revisa(sid)
-        self.assertEqual(len(n), 3)
+        self.assertEqual(len(n), 2)      # v0.17.8: como mucho una vuelta más
 
 
 class BorrarMientrasSeRevisa(ConArchivos):

@@ -15,6 +15,7 @@ NO_SON_DE_BUSQUEDA = ("resumen",)
 DE_LA_BUSQUEDA = ("consulta", "incluir", "excluir", "pmin", "pmax", "objetivo", "bajo_historico", "sin_agotados", "castellano", "opciones")      # opciones del seguimiento que el motor no recibe
 MIN_OBSERVACIONES = 4      # mínimo de precios previos de un artículo para fiarse de su media
 REAVISO_DIAS = 30
+FICHAS_POR_AVISO = 4       # fichas que se leen por tienda antes de avisar (las más baratas; el resto, con lo ya sabido)
 _cerrojo = threading.Lock()
 _en_curso = set()
 
@@ -71,6 +72,8 @@ def guarda(d):
          "activo": 1 if d.get("activo", True) else 0}
     if not v["consulta"]:
         raise ValueError("falta la búsqueda")
+    if v["pmin"] is not None and v["pmax"] is not None and v["pmin"] > v["pmax"]:
+        raise ValueError("el precio mínimo es mayor que el máximo: no encontraría nada")
     with bd.conecta() as c:
         if d.get("id"):
             if "activo" not in d:      # editar sin decir nada de la pausa la deja como estaba
@@ -163,8 +166,8 @@ def revisa(seg_id, enviar=True):
 
 
 def _vueltas(seg_id, enviar):
-    """Revisa y, si la editaste mientras tanto, otra vez con lo nuevo (como mucho tres vueltas)."""
-    for vuelta in range(3):
+    """Revisa y, si la editaste mientras tanto, otra vez con lo nuevo (como mucho una vez más: cada vuelta consulta todas las tiendas)."""
+    for vuelta in range(2):
         r, usada = _revisa(seg_id, enviar)
         with bd.conecta() as c:
             ahora = c.execute("SELECT * FROM seguimientos WHERE id=?", (seg_id,)).fetchone()
@@ -197,7 +200,11 @@ def _revisa(seg_id, enviar):
         with bd.conecta() as c0:
             candidatos = [x for x in res if _motivo(c0, seg, {**x, "_ts": ts})]
         lista = motor.cfg.carga()
-        for x in candidatos:
+        por_tienda = {}
+        for x in sorted(candidatos, key=lambda x: x["precio"]):
+            if len(por_tienda.setdefault(x.get("tienda"), [])) < FICHAS_POR_AVISO:
+                por_tienda[x.get("tienda")].append(x)
+        for x in [x for xs in por_tienda.values() for x in xs]:
             f = motor.ficha(x, lista)
             if f["agotado"]:
                 x["agotado"] = True
@@ -227,7 +234,7 @@ def _revisa(seg_id, enviar):
                 c.execute("INSERT INTO avisos(ts,seg_id,titulo,tienda,url,precio,motivo) VALUES(?,?,?,?,?,?,?)",
                           (ts, seg_id, x["titulo"], x["tienda"], x["url"], x["precio"], motivo))
                 nuevos.append({**x, "motivo": motivo})
-            caidas = sum(1 for i in informe.values() if i.get("caida"))
+            caidas = tiendas_caidas(informe)
             n = len(nuevos)
             estado = (f"{productos(res)}, {n} aviso{'' if n == 1 else 's'} nuevo{'' if n == 1 else 's'}"
                       + (f", {caidas} tienda{'' if caidas == 1 else 's'} sin respuesta" if caidas else ""))
@@ -250,6 +257,11 @@ def _revisa(seg_id, enviar):
             c.execute("UPDATE seguimientos SET ultima=?, estado=? WHERE id=?",
                       (time.time(), f"la revisión falló: {str(e)[:120] or e.__class__.__name__}", seg_id))
         raise
+
+
+def tiendas_caidas(informe):
+    """Tiendas que no respondieron (la búsqueda abierta no es una tienda)."""
+    return sum(1 for h, i in informe.items() if i.get("caida") and h != "Búsqueda abierta")
 
 
 def euros(v):
@@ -300,7 +312,7 @@ def resumen(seg, opc, modo, res, informe, ofertas=3):
     validos = [x for x in res if not (x.get("agotado") and seg["sin_agotados"]) and not (x.get("preventa") and not opc.get("preventas"))
                and (modo == "todos" or motor.permite(x.get("idioma", "?"), x.get("idioma_seguro", False), modo))]
     grupos = agrupa(validos)
-    caidas = sum(1 for i in informe.values() if i.get("caida"))
+    caidas = tiendas_caidas(informe)
     lineas = [f"Sin avisos nuevos. Revisados {productos(res)}" + (f" ({caidas} tiendas sin respuesta)" if caidas else "") + "."]
     if grupos:
         nombres = _nombres()

@@ -3,6 +3,22 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.17.8] - 2026-11-14
+
+### Añadido
+- **Una tienda que te rechaza deja de recibir consultas**: un 429 («demasiadas consultas»), o dos 403 seguidos, la ponen en espera como si no respondiera (10 min, 1 h, 6 h…). Si sigue rechazándote tras tres esperas, se desactiva sola, te avisa por Telegram y desde ahí solo se prueba su portada cada 6 h hasta que vuelva.
+- El formulario de una vigilada rechaza un precio mínimo mayor que el máximo.
+
+### Cambiado
+- Una ficha que no se pudo leer no se vuelve a pedir en 2 h (antes, en cada búsqueda).
+- Antes de avisar se leen como mucho 4 fichas por tienda, las más baratas.
+- Las revisiones automáticas van en su propio hilo: los recordatorios y la prueba de tiendas bloqueadas no esperan a que acaben. Una vigilada que ya estás revisando con «Buscar ahora» se salta sin gastar el turno de 10 min.
+- Si editas una vigilada mientras se revisa, se repite como mucho una vez (antes, hasta dos).
+
+### Corregido
+- El reintento con ventana para resolver un captcha respetaba mal la vuelta suave (pedía todas las páginas).
+- El resumen y el estado de una vigilada contaban la búsqueda abierta como una tienda sin respuesta.
+
 ## [0.17.7] - 2026-11-14
 
 ### Añadido
