@@ -8,6 +8,9 @@ from . import ajustes, bd, fetch, importar, notifica, seguimiento, tiendas as cf
 
 LIMPIEZA_HORAS = 24
 BLOQUEO_HORAS = 6          # una tienda que bloqueó tu conexión se prueba con UNA petición a su portada cada tanto
+SUAVE_DIAS = 3             # al volver, unos días con una sola página por búsqueda
+ESPACIO_VIGILADAS = 10 * 60    # entre dos revisiones automáticas: así cada tienda ve unas pocas peticiones repartidas
+_ultima_revision = [0.0]
 
 
 def bloqueadas():
@@ -29,6 +32,7 @@ def bloqueadas():
                     if vuelve:
                         x["activa"] = True
                         x.pop("bloqueo")
+                        x["suave_hasta"] = time.time() + SUAVE_DIAS * 86400
                     else:
                         x["bloqueo"]["probado"] = time.time()
             cfg.guarda(lista)
@@ -37,6 +41,20 @@ def bloqueadas():
         if vuelve:
             notifica.envia(["telegram"], f"BuscaTron · {nombre}",
                            f"{nombre} vuelve a responder: la he reactivado y entra otra vez en tus búsquedas y vigiladas.")
+
+
+def vigiladas(ahora=None):
+    """Revisa la vigilada que más tiempo lleva esperando, y solo si la anterior revisión automática fue hace al menos
+    ESPACIO_VIGILADAS: nunca todas seguidas (las de «Buscar ahora» no esperan)."""
+    ahora = ahora or time.time()
+    pendientes = seguimiento.pendientes(ahora)
+    if not pendientes or ahora - _ultima_revision[0] < ESPACIO_VIGILADAS:
+        return None
+    ultima = {s["id"]: s["ultima"] for s in seguimiento.lista()}
+    sid = min(pendientes, key=lambda i: ultima.get(i, 0))
+    _ultima_revision[0] = ahora
+    seguimiento.revisa(sid)
+    return sid
 
 
 def recordatorios():
@@ -68,7 +86,7 @@ def limpieza():
 
 def _bucle(pausa):
     while True:
-        for tarea in (lambda: [seguimiento.revisa(sid) for sid in seguimiento.pendientes()], recordatorios, bloqueadas, limpieza):
+        for tarea in (vigiladas, recordatorios, bloqueadas, limpieza):
             try:
                 tarea()
             except Exception:

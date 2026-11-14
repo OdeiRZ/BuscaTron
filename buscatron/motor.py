@@ -299,8 +299,8 @@ def prior_tienda(items):
     return "es" if es >= 3 and es >= 2 * otros else None
 
 
-FICHAS_POR_BUSQUEDA = 4   # fichas que se leen por tienda en cada búsqueda para saber su stock (las más baratas)
-PAUSA_FICHA = 2           # segundos entre una ficha y la siguiente de la misma tienda: nunca en ráfaga
+FICHAS_POR_BUSQUEDA = 3   # fichas que se leen por tienda en cada búsqueda para saber su stock (las más baratas; cada
+                          # una espera su turno del ritmo por tienda)
 
 
 def stock_de_fichas(urls):
@@ -317,16 +317,14 @@ def stock_de_fichas(urls):
 
 def corrige_stock(res, lista):
     """El listado de algunas tiendas no dice si queda stock: manda lo que ya se leyó en las fichas y, en las tiendas de
-    cfg.STOCK_EN_FICHA, se leen las fichas de sus resultados más baratos (pocas, de una en una y con pausa)."""
+    cfg.STOCK_EN_FICHA, se leen las fichas de sus resultados más baratos (pocas y al ritmo de la tienda)."""
     stock = stock_de_fichas([x["url"] for x in res])
     pedir = {}
     for x in sorted(res, key=lambda x: x["precio"]):
         if x["url"] not in stock and x.get("tienda") in cfg.STOCK_EN_FICHA and len(pedir.setdefault(x["tienda"], [])) < FICHAS_POR_BUSQUEDA:
             pedir[x["tienda"]].append(x)
     for xs in pedir.values():
-        for i, x in enumerate(xs):
-            if i:
-                time.sleep(PAUSA_FICHA)
+        for x in xs:
             f = ficha(x, lista)
             stock[x["url"]] = (f["agotado"], f["preventa"])
     for x in res:
@@ -592,8 +590,11 @@ def buscar(consulta, incluir="", excluir="", ocultar_agotados=True, hosts=None, 
                 and clave_producto(x["titulo"]) not in ocultos)
 
     res, informe = [], {}
-    with cf.ThreadPoolExecutor(6) as ex:
-        resultados = list(ex.map(lambda t: _tienda(t, consulta, nav, paginas), activas))
+    ahora = time.time()
+    # Con el ritmo por tienda cada una espera su turno, así que se consultan más a la vez (cada hilo, una tienda distinta).
+    # Una tienda que acaba de volver de un bloqueo se consulta unos días con una sola página.
+    with cf.ThreadPoolExecutor(12) as ex:
+        resultados = list(ex.map(lambda t: _tienda(t, consulta, nav, 1 if t.get("suave_hasta", 0) > ahora else paginas), activas))
     if nav and aj["navegador_visible"]:
         # Solo las tiendas que piden comprobar que eres humano se reintentan con ventana, de una en una,
         # para que el usuario pueda resolverlo; el resto se consulta sin que salga nada en pantalla.

@@ -52,19 +52,16 @@ class StockEnFicha(unittest.TestCase):
         self.f = mock.patch.object(motor, "ficha", lambda x, lista=None: self.leidas.append(x["url"]) or
                                    {"idioma": None, "agotado": x["url"] in self.agotadas, "preventa": False})
         self.f.start()
-        self.s = mock.patch.object(motor, "PAUSA_FICHA", 0)
-        self.s.start()
 
     def tearDown(self):
         self.p.stop()
         self.f.stop()
-        self.s.stop()
 
     def test_zacatrus_lee_la_ficha_de_los_mas_baratos_y_marca_agotados(self):
         res = [item(f"https://zacatrus.es/{i}", 10 - i) for i in range(6)]       # el más barato es el 5
         self.agotadas = {"https://zacatrus.es/5"}
         motor.corrige_stock(res, [])
-        self.assertEqual(self.leidas, [f"https://zacatrus.es/{i}" for i in (5, 4, 3, 2)])   # 4 y del más barato al más caro
+        self.assertEqual(self.leidas, [f"https://zacatrus.es/{i}" for i in (5, 4, 3)])   # 3 y del más barato al más caro
         self.assertTrue(next(x for x in res if x["url"].endswith("/5"))["agotado"])
         self.assertFalse(next(x for x in res if x["url"].endswith("/0"))["agotado"])
 

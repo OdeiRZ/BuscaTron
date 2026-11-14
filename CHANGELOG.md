@@ -3,6 +3,16 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.17.7] - 2026-11-14
+
+### Añadido
+- **Ritmo máximo por tienda**: entre dos peticiones a la misma web pasan al menos 15 s, sean de una búsqueda, de sus páginas siguientes, de fichas o de la prueba de una tienda bloqueada. Las tiendas se siguen consultando a la vez (cada una a su ritmo), así que una búsqueda tarda más solo en las que piden varias páginas o fichas. Es para no parecer un programa: Dungeon Marvels bloqueó la IP de casa por una ráfaga y Ferretería Ibermadrid (detrás de Cloudflare) la rechaza desde el 14/11.
+- **Vigiladas escalonadas**: las revisiones automáticas van de una en una, con al menos 10 min entre ellas, empezando por la que más espera. «Buscar ahora» no espera.
+- **Vuelta suave**: una tienda que te bloqueó y vuelve a responder pasa 3 días con una sola página por búsqueda.
+
+### Cambiado
+- Zacatrus: se leen las fichas de sus 3 resultados más baratos (antes 4), cada una a su turno.
+
 ## [0.17.6] - 2026-11-14
 
 ### Corregido

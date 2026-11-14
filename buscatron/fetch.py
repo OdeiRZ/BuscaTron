@@ -4,12 +4,15 @@ import re
 import urllib.request
 import urllib.error
 
+from . import ritmo
+
 UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/124.0 Safari/537.36")
 
 
 def get(url, timeout=25):
-    """Devuelve (estado, texto). Lanza URLError si la red falla."""
+    """Devuelve (estado, texto). Lanza URLError si la red falla. Respeta el ritmo máximo de cada web (ritmo.py)."""
+    ritmo.espera(url)
     req = urllib.request.Request(url, headers={
         "User-Agent": UA,
         "Accept": "text/html,application/xhtml+xml",

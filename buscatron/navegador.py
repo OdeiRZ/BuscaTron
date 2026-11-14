@@ -11,7 +11,7 @@ import re
 import threading
 import time
 
-from . import tiendas as cfg
+from . import ritmo, tiendas as cfg
 
 PERFIL = os.path.join(cfg.RAIZ, "navegador_perfil")
 RUTAS = [r"%ProgramFiles%\Google\Chrome\Application\chrome.exe",
@@ -139,6 +139,7 @@ def get(url, visible=False, timeout=120, esperar_humano=0):
     """Como fetch.get pero renderizando la página. Lanza Desafio si pide comprobación humana.
     Con visible=True y esperar_humano>0 (segundos) da tiempo a que la resuelvas tú en la ventana."""
     global _hilo
+    ritmo.espera(url)
     with _cerrojo:
         if _hilo is not None and _hilo.is_alive() and _hilo.visible != visible:
             _hilo.cola.put((None, None, 0))
