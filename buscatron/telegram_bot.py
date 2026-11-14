@@ -44,7 +44,7 @@ def buscar(texto):
     if not _ocupado.acquire(blocking=False):
         return responde("Ya estoy con otra búsqueda; espera a que termine.")
     try:
-        responde(f"Buscando «{texto}» en tus tiendas… (tarda alrededor de un minuto)")
+        responde(f"Buscando «{texto}» en tus tiendas… (suele tardar 1 o 2 minutos)")
         with servicio.trabajo("telegram"):
             res, informe = motor.buscar(texto, ocultar_agotados=True, idioma="castellano")
         grupos = seguimiento.agrupa(res)

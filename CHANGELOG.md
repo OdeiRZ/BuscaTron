@@ -3,6 +3,14 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.17.10] - 2026-11-14
+
+### Corregido
+- **Lector de precios**: ya no toma por precio un número seguido de una palabra que empieza por «eur» («Expansión 2 Europa» se leía 2 €; «5 Eurogames», 5 €), lo que ahorras («Ahorra 5 €», «10 € de descuento»), el mínimo del envío gratis («Envío gratis desde 50 €») ni un «€» ya leído con el número de detrás («29,95 € 2 jugadores» daba también 2 €, y al pegar resultados se quedaba ese 2 por ser el menor). Lo pegado a mano usa el mismo lector.
+- La página decía que una búsqueda tarda «entre 10 y 40 segundos»: con el ritmo por tienda suele tardar 1 o 2 minutos. El bot de Telegram, igual.
+- La página dejaba de esperar el final de una revisión a los 5 minutos (ahora 20), así que con el ritmo por tienda a veces no salía el aviso «Revisión terminada».
+- «Próxima revisión: ahora mismo (en menos de un minuto)» ya no era cierto: las automáticas van de una en una, cada 10 min.
+
 ## [0.17.9] - 2026-11-14
 
 ### Corregido

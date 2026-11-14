@@ -621,7 +621,7 @@ function muestra(r,body,guardada){
    (pantalla bloqueada, otra app, recarga), la búsqueda sigue y se recoge al volver. */
 const esperaMs=ms=>new Promise(r=>setTimeout(r,ms));
 let buscando=null;
-function pintaBuscando(lento){$('out').innerHTML=`<div class="card carga"><div class="spin"></div><div>Buscando en tus tiendas…<br><span class="mut">Tarda entre 10 y ${lento?'90':'40'} segundos. Puedes bloquear el móvil o cambiar de app: la búsqueda sigue y verás el resultado al volver.</span></div></div>`;}
+function pintaBuscando(lento){$('out').innerHTML=`<div class="card carga"><div class="spin"></div><div>Buscando en tus tiendas…<br><span class="mut">Suele tardar 1 o 2 minutos${lento?' (algo más buscando por internet o en segunda mano)':''}: cada tienda se consulta con calma para que no te bloquee. Puedes bloquear el móvil o cambiar de app: la búsqueda sigue y verás el resultado al volver.</span></div></div>`;}
 function estadoBoton(activo){const b=$('go');b.disabled=activo;b.textContent=activo?'Buscando…':'Buscar';}
 async function sigueBusqueda(tid,body){
   buscando=tid;estadoBoton(true);let fallos=0;
@@ -860,13 +860,13 @@ function sigueRevisiones(){if(sondeo)return;let n=0,firma='';
   sondeo=setInterval(async()=>{const l=await api('seguimientos');if(!Array.isArray(l))return;n++;
     for(const s of l){if(!(s.id in esperando))continue;
       if((s.ultima||0)>esperando[s.id]&&!s.revisando){delete esperando[s.id];cargaNavAv();aviso(`Revisión terminada («${s.nombre}»): ${s.estado}`);}}
-    for(const id of Object.keys(esperando))if(!l.some(s=>s.id===+id)||n>100)delete esperando[id];   // borrada, o tarda demasiado
+    for(const id of Object.keys(esperando))if(!l.some(s=>s.id===+id)||n>400)delete esperando[id];   // borrada, o tarda demasiado (20 min: con el ritmo por tienda una revisión tarda minutos)
     const f=l.map(s=>`${s.id}:${s.revisando}:${s.ultima}:${s.id in esperando}`).join();
     const sigue=l.some(revisando);
     if(f!==firma||!sigue){firma=f;pintaSeg(l);}         // solo se repinta si algo cambia: no te mueve la lista mientras la usas
     if(!sigue){clearInterval(sondeo);sondeo=null;}},3000);}
 function proxima(s){const t=(s.ultima||0)+s.cada_horas*3600,ahora=Date.now()/1000;
-  if(!s.ultima||t<=ahora)return 'ahora mismo (en menos de un minuto, si BuscaTron está abierto)';
+  if(!s.ultima||t<=ahora)return 'en cuanto le toque (las automáticas van de una en una, cada 10 min, si BuscaTron está abierto)';
   const h=(t-ahora)/3600;return `dentro de ${h<1?Math.max(1,Math.round(h*60))+' min':String(Math.round(h*10)/10).replace('.',',')+' h'} (${new Date(t*1000).toLocaleString('es-ES',{weekday:'short',hour:'2-digit',minute:'2-digit'})})`;}
 function extrasSeg(s){const o=s.opciones||{};
   const e=[o.alguna&&`con alguna de: ${o.alguna}`,o.idioma==='estricto'&&'solo castellano confirmado',o.idioma==='todos'&&'cualquier idioma',o.preventas&&'cuenta las preventas',o.con_envio&&'con envío incluido',o.segunda_mano&&'también segunda mano',o.abierta&&`también webs fuera de tu lista (${{es:'España',ue:'UE',mundo:'cualquier país'}[o.region]||'España'})`,o.paginas&&`${o.paginas} páginas por tienda`,o.resumen&&'resumen por Telegram en cada revisión'].filter(Boolean);

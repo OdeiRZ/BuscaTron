@@ -7,11 +7,35 @@ from html.parser import HTMLParser
 from urllib.parse import parse_qsl, urlencode, urljoin, urlparse, urlunparse
 
 # «1.299 €» y «2.500€» llevan punto de miles (antes se leían 299 y 500); «29.99 €» y «1.50 €», punto decimal.
-PRECIO = re.compile(r"(?<![\d.,])(\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?|\d+,\d{1,2}|\d+(?:\.\d{1,2})?)\s*(?:€|eur)", re.I)
+PRECIO = re.compile(r"(?<![\d.,])(\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?|\d+,\d{1,2}|\d+(?:\.\d{1,2})?)\s*(?:€|eur(?:os?)?\b)", re.I)   # «eur» entero: «2 Europa» no es un precio
 NUM_SUELTO = re.compile(r"\d+(?:,\d{1,2})?")           # «<b>12,6</b> €»: el número y el € en trozos distintos
 ANTES_DEL_DESCUENTO = re.compile(r"\s*[-−–]\s*\d+(?:[.,]\d+)?\s*%\s*=")   # «15,75 € - 20% = 12,6 €»: el primero ya no vale
-PRECIO_ANTES = re.compile(r"(?:€|eur)\s*(\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?|\d+(?:[.,]\d{1,2})?)", re.I)
+PRECIO_ANTES = re.compile(r"(?:€|\beur(?:os?)?\b)\s*(\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?|\d+(?:[.,]\d{1,2})?)", re.I)
 MILES = re.compile(r"\d{1,3}(?:\.\d{3})+")
+# Cantidades en € que no son el precio del producto: lo que ahorras y el mínimo para el envío gratis.
+NO_ES_PRECIO_ANTES = re.compile(r"(?:\bahorr\w*|(?:env[ií]os?|portes)\b[^€\d]{0,30}?(?:desde|a partir de|m[aá]s de|superiores? a))\s*:?\s*$", re.I)
+NO_ES_PRECIO_DESPUES = re.compile(r"\s*(?:de\s+)?(?:descuento|dto\b|de ahorro|menos\b)", re.I)
+
+
+def precios_en(d):
+    """Precios de un trozo de texto, sin descuentos («-2,59 €», «Ahorra 5 €», «10 € de descuento»), sin el mínimo del envío
+    gratis, sin el precio de antes de un «- 20% =» y sin leer dos veces el mismo «€» («29,95 € 2 jugadores» no son 2 €)."""
+    out, usados = [], []
+    for rx in (PRECIO, PRECIO_ANTES):
+        for m in rx.finditer(d):
+            if rx is PRECIO_ANTES and any(a <= m.start() < b for a, b in usados):
+                continue
+            if rx is PRECIO:
+                usados.append(m.span())          # su «€» ya es suyo, aunque no sea un precio que valga
+            antes = d[:m.start()]
+            if antes.rstrip().endswith(("-", "−", "–")) or NO_ES_PRECIO_ANTES.search(antes) or NO_ES_PRECIO_DESPUES.match(d, m.end()):
+                continue
+            if rx is PRECIO and ANTES_DEL_DESCUENTO.match(d, m.end()):
+                continue
+            v = precio_texto(m.group(1))
+            if v:
+                out.append(v)
+    return out
 
 
 def precio_texto(s):
@@ -217,17 +241,11 @@ class _Parser(HTMLParser):
             return
         suelto, self._suelto = self._suelto, None
         if not self._tachado:
-            if suelto and re.match(r"(?:€|eur\b)", d, re.I):
+            moneda = re.match(r"(?:€|eur(?:os?)?\b)", d, re.I)
+            if suelto and moneda and not NO_ES_PRECIO_DESPUES.match(d, moneda.end()):
                 self._precio(suelto)
-            for rx in (PRECIO, PRECIO_ANTES):
-                for m in rx.finditer(d):
-                    if d[:m.start()].rstrip().endswith(("-", "−", "–")):      # «-2,59 €» es un descuento, no un precio
-                        continue
-                    if rx is PRECIO and ANTES_DEL_DESCUENTO.match(d, m.end()):
-                        continue
-                    v = precio_texto(m.group(1))
-                    if v:
-                        self._precio(v)
+            for v in precios_en(d):
+                self._precio(v)
             if NUM_SUELTO.fullmatch(d):
                 self._suelto = precio_texto(d)
         if self._a is not None:

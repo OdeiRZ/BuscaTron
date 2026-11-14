@@ -14,13 +14,7 @@ IGNORAR = ("resultado", "busqueda", "buscar", "mostrando", "ordenar", "filtrar",
 
 
 def _precios(linea):
-    out = []
-    for rx in (extract.PRECIO, extract.PRECIO_ANTES):
-        for m in rx.finditer(linea):
-            v = extract.precio_texto(m.group(1))
-            if v:
-                out.append(v)
-    return out
+    return extract.precios_en(linea)
 
 
 def _sin_precios(linea):
