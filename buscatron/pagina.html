@@ -716,7 +716,7 @@ function tarjetaRef(p,i){const a=p.amazon,q=encodeURIComponent(p.titulo);
 /* La gráfica de camelcamelcamel: BuscaTron no puede pedírsela a su web (la rechaza), pero tu navegador sí la tiene cargada. Se lee
    desde aquí (1.º tal cual, si camel lo permite; 2.º capturando esa zona de tu pestaña, con tu permiso) o la pegas tú. */
 function panelGrafica(amz,tras){let z=amz.querySelector('.pgraf');
-  if(!z){z=document.createElement('div');z.className='pgraf';z.innerHTML='<div class="res"></div>';tras.closest('.enlaces').after(z);}
+  if(!z){z=document.createElement('div');z.className='pgraf';z.innerHTML='<div class="res"></div>';const im=amz.querySelector('img.camel');if(im)im.before(z);else tras.closest('.enlaces').after(z);}
   return z;}
 async function enviaGrafica(res,url){
   res.innerHTML='<div class="carga"><div class="spin"></div>Leyendo la gráfica…</div>';
@@ -724,7 +724,10 @@ async function enviaGrafica(res,url){
   if(r.error){res.innerHTML=`<p class="err">${esc(r.error)}</p>`;return;}
   res.innerHTML=(r.frases.length?`<ul style="margin:6px 0;padding-left:18px">${r.frases.map(f=>`<li class="l" style="margin:3px 0">${esc(f)}</li>`).join('')}</ul>`
     :'<p class="err">No he conseguido leer el mínimo ni el máximo en esa imagen. Amplía la gráfica en camelcamelcamel antes de copiarla; abajo ves lo que se ha leído.</p>')
-    +`<details><summary>Texto leído de la imagen</summary><pre style="white-space:pre-wrap;font-size:12px">${esc(r.texto||'(nada)')}</pre></details>`;}
+    +`<details><summary>Texto leído de la imagen</summary><pre style="white-space:pre-wrap;font-size:12px">${esc(r.texto||'(nada)')}</pre></details>`;
+  res.style.cssText='border:2px solid var(--ac);border-radius:10px;padding:8px 12px;margin:8px 0';
+  res.scrollIntoView({block:'center',behavior:'smooth'});
+  aviso(r.frases.length?'Gráfica leída: '+r.frases[0]:'No he podido leer la gráfica: mira el aviso sobre ella');}
 async function leeGraficaCargada(b){const amz=b.closest('.amz'),img=amz.querySelector('img.camel'),res=panelGrafica(amz,b).querySelector('.res');
   if(!img||!img.complete||!img.naturalWidth){res.innerHTML='<p class="err">La gráfica no está cargada: camelcamelcamel no se la ha enseñado a tu navegador. Prueba con «Pegar gráfica».</p>';return;}
   try{    // 1.º: tal cual, si camelcamelcamel permite que una página lea sus imágenes
@@ -735,14 +738,15 @@ async function leeGraficaCargada(b){const amz=b.closest('.amz'),img=amz.querySel
   }catch(e){}
   if(!navigator.mediaDevices||!navigator.mediaDevices.getDisplayMedia){
     res.innerHTML='<p class="err">Este navegador no deja leer la gráfica desde la página (camelcamelcamel no lo permite y aquí no se puede capturar la pestaña). Usa «Pegar gráfica».</p>';return;}
-  img.scrollIntoView({block:'center'});
+  res.parentElement.scrollIntoView({block:'start'});
   res.innerHTML='<p class="l">Tu navegador te va a preguntar si compartes esta pestaña: acepta. Se usa una sola vez para leer la gráfica y se descarta.</p>';
   let flujo;
   try{flujo=await navigator.mediaDevices.getDisplayMedia({video:true,audio:false,preferCurrentTab:true,selfBrowserSurface:'include'});}
   catch(e){res.innerHTML='<p class="err">No has dado permiso para ver la pestaña. Puedes usar «Pegar gráfica».</p>';return;}
   try{
-    const v=document.createElement('video');v.srcObject=flujo;v.muted=true;await v.play();await esperaMs(500);
-    const r=img.getBoundingClientRect(),k=v.videoWidth/window.innerWidth;
+    const v=document.createElement('video');v.srcObject=flujo;v.muted=true;await v.play();
+    let r=img.getBoundingClientRect();if(r.top<0||r.bottom>window.innerHeight){img.scrollIntoView({block:'center'});await esperaMs(300);}
+    await esperaMs(500);r=img.getBoundingClientRect(),k=v.videoWidth/window.innerWidth;
     const c=document.createElement('canvas');c.width=Math.max(1,Math.round(r.width*k));c.height=Math.max(1,Math.round(r.height*k));
     c.getContext('2d').drawImage(v,r.left*k,r.top*k,r.width*k,r.height*k,0,0,c.width,c.height);
     enviaGrafica(res,c.toDataURL('image/png'));

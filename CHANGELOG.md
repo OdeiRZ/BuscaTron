@@ -3,6 +3,11 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.17.19] - 2026-11-15
+
+### Corregido
+- «Leer la gráfica»: el resultado se pintaba debajo de los botones y, al capturar la gráfica, la página se desplazaba y lo dejaba fuera de pantalla, así que parecía que no había pasado nada. Ahora el resultado sale encima de la gráfica, enmarcado, la página se lleva la vista hasta él y sale un aviso con la primera línea (o con el error).
+
 ## [0.17.18] - 2026-11-15
 
 ### Añadido
