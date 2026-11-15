@@ -3,6 +3,11 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.17.29] - 2026-11-15
+
+### Corregido
+- **«No se pudo mostrar el resumen (can't access property "replace", h is null)»** al abrir la Referencia de Amazon: pasaba en una pestaña abierta con la página de la versión anterior mientras el servidor ya mandaba productos «añadidos por enlace», que no tienen tienda; la página antigua intenta ponerle nombre a la tienda y se rompe. Ahora esos productos llevan la tienda vacía, no nula, y una página antigua los pinta bien. Reproducido con la página de la 0.17.27 contra el servidor.
+- El mensaje de error de la Referencia ya no manda solo a reiniciar BuscaTron: dice que recargues la página con Ctrl+F5 (puede que la pestaña sea de una versión anterior) y, si sigue igual, que reinicies.
 ## [0.17.28] - 2026-11-15
 
 ### Añadido

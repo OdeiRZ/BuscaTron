@@ -31,7 +31,7 @@ class Extras(ConBD):
         for ambito in ("avisos", "vigiladas"):
             l = [p for p in referencia.resumen(ambito) if p.get("extra")]
             self.assertEqual(len(l), 1)
-            self.assertEqual((l[0]["precio"], l[0]["tienda"], l[0]["amazon"]["asin"]), (None, None, "B08VW72D4F"))
+            self.assertEqual((l[0]["precio"], l[0]["tienda"], l[0]["amazon"]["asin"]), (None, "", "B08VW72D4F"))
 
     def test_con_su_historico_leido(self):
         referencia.anade_extra(ENLACE)
@@ -71,3 +71,12 @@ class Extras(ConBD):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class PaginaVieja(ConBD):
+    def test_un_añadido_no_lleva_tienda_nula(self):
+        """Una pestaña con la página anterior hace `tienda.replace(...)`: con None se rompía («h is null»)."""
+        referencia.anade_extra(ENLACE)
+        for ambito in ("avisos", "vigiladas"):
+            for p in referencia.resumen(ambito):
+                self.assertIsNotNone(p["tienda"], p["titulo"])

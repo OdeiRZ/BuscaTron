@@ -834,7 +834,7 @@ async function abreRef(ambito){if(ambito)refAmbito=ambito;const yo=++refPedido;
   const l=await api('referencia?ambito='+refAmbito).catch(e=>({error:'No se pudo hablar con BuscaTron'}));
   if(yo!==refPedido)return;
   try{pintaRef(l,cab);}catch(e){    // nunca «Preparando el resumen…» para siempre: se cuenta qué pasó
-    $('hoja3').innerHTML=cab+`<p class="err">No se pudo mostrar el resumen (${esc(e.message)}). Reinicia BuscaTron (🆕 arriba o Ajustes → Servicio) y vuelve a abrirlo.</p>`;}
+    $('hoja3').innerHTML=cab+`<p class="err">No se pudo mostrar el resumen (${esc(e.message)}). Recarga la página con Ctrl+F5 (puede que esta pestaña sea de una versión anterior); si sigue igual, reinicia BuscaTron (🆕 arriba o Ajustes → Servicio).</p>`;}
   $('hoja3').querySelector('.cierra').onclick=()=>cierraHoja('ref');
   $('hoja3').querySelectorAll('[data-ramb]').forEach(b=>b.onclick=()=>abreRef(b.dataset.ramb));
   const anade=async()=>{const v=$('ref-extra').value.trim();if(!v)return;$('ref-extra-ok').disabled=true;

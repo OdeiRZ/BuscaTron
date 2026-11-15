@@ -214,6 +214,6 @@ def resumen(ambito="avisos"):
             continue
         visto = amazon.get(url_amazon(a_))
         cand = limpio(visto or {"url": url_amazon(a_), "asin": a_, "titulo": titulo, "n": 0})
-        salida.append({"titulo": titulo, "precio": None, "tienda": None, "url": url_amazon(a_), "ts": 0, "seg_id": None, "clave": "", "asin": a_,
+        salida.append({"titulo": titulo, "precio": None, "tienda": "", "url": url_amazon(a_), "ts": 0, "seg_id": None, "clave": "", "asin": a_,
                        "vinculado": False, "extra": True, "amazon": cand, "alternativas": [], "sugerencias": []})
     return salida
