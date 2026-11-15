@@ -16,7 +16,7 @@ from hashlib import sha256
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from urllib.parse import parse_qs, urlparse
 
-from . import (ajustes, arranque, busquedas, extract, fetch, importar, motor, notifica, programador, referencia,
+from . import (ajustes, arranque, busquedas, extract, fetch, historico, importar, motor, notifica, ocr, programador, referencia,
                seguimiento, servicio, telegram_bot, tiendas as cfg)
 
 TAILSCALE = ipaddress.ip_network("100.64.0.0/10")
@@ -334,6 +334,10 @@ class Handler(BaseHTTPRequestHandler):
                 motor.ignora(c["titulo"].strip())
                 return {"clave": motor.clave_producto(c["titulo"].strip()), "ignorados": list(motor.ignorados().values())}
             return {"ignorados": list(motor.ignorados().values())}
+        if ruta == "/api/grafica":            # texto de la gráfica de camelcamelcamel que pegas tú (no se pide nada a su web)
+            texto = ocr.lee(ocr.decodifica(c.get("imagen", "")))
+            datos = historico.parsea(texto)
+            return {"texto": texto, "datos": datos, "frases": historico.frases(datos) if datos else []}
         if ruta == "/api/estado_tiendas":
             return motor.estado_tiendas()
         if ruta == "/api/objetivos":          # 🎯 precio objetivo de un producto

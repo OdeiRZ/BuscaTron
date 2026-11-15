@@ -718,12 +718,27 @@ function tarjetaRef(p,i){const a=p.amazon,q=encodeURIComponent(p.titulo);
       ${p.tienda==='www.amazon.es'&&p.url===a.url?'':`<div class="l">Es «<a href="${esc(a.url)}" target="_blank" rel="noopener">${esc(a.titulo||a.asin)}</a>»</div>`}
       <img class="camel" loading="lazy" referrerpolicy="no-referrer" alt="Gráfica de camelcamelcamel" src="${grafCamel(a.asin)}" onerror="this.remove()">
       <div class="enlaces"><a href="${camel(a.asin)}" target="_blank" rel="noopener">camelcamelcamel ↗</a><a href="${keepa(a.asin)}" target="_blank" rel="noopener">Keepa ↗</a>
-        <a href="${esc(a.url)}" target="_blank" rel="noopener">Amazon ↗</a>${a.n?`<button type="button" data-rh="${i}">📈 Lo visto por BuscaTron</button>`:''}</div>
+        <a href="${esc(a.url)}" target="_blank" rel="noopener">Amazon ↗</a><button type="button" data-graf="${i}" title="Pega la gráfica de camelcamelcamel y BuscaTron lee su mínimo y su máximo">📋 Pegar gráfica de camel</button>${a.n?`<button type="button" data-rh="${i}">📈 Lo visto por BuscaTron</button>`:''}</div>
       ${p.vinculado?'':`<details><summary>¿No es ese?</summary>${p.alternativas.map(o=>opcionAmz(o,i,!!p.clave)).join('')}<div class="enlaces">${pegar}</div></details>`}</div>`
     :`<div class="amz"><div class="l">BuscaTron no ha encontrado su ficha en Amazon con seguridad${p.sugerencias.length?'. ¿Es alguna de estas?':'.'}</div>
       ${p.sugerencias.map(o=>opcionAmz(o,i,!!p.clave)).join('')}
       <div class="enlaces">${pegar}<a href="https://es.camelcamelcamel.com/search?sq=${q}" target="_blank" rel="noopener">Buscar en camelcamelcamel ↗</a><a href="https://www.amazon.es/s?k=${q}" target="_blank" rel="noopener">Buscar en Amazon ↗</a></div></div>`;
   return `<div class="refc"><div class="t">${esc(p.titulo)}</div><div class="l">Tu mejor precio: <b>${euro(p.precio)}</b> en ${esc(nombreT(p.tienda))} · <a href="${esc(p.url)}" target="_blank" rel="noopener">ver ↗</a></div>${amz}</div>`;}
+/* Pegar la gráfica de camelcamelcamel: BuscaTron no puede pedírsela a su web (la rechaza), así que la pegas tú y se lee el texto de su leyenda */
+function abrePegarGrafica(b){const amz=b.closest('.amz');let z=amz.querySelector('.pgraf');if(z){z.remove();return;}
+  z=document.createElement('div');z.className='pgraf';
+  z.innerHTML=`<div class="zona" contenteditable="true" tabindex="0" role="textbox" aria-label="Pega aquí la gráfica" style="border:2px dashed var(--bd);border-radius:10px;padding:14px;margin:8px 0;min-height:44px;text-align:center">Abre la ficha en camelcamelcamel, clic derecho sobre su gráfica → «Copiar imagen», pulsa aquí y haz Ctrl+V.</div><div class="res"></div>`;
+  b.closest('.enlaces').after(z);const zona=z.querySelector('.zona'),res=z.querySelector('.res');zona.focus();
+  zona.addEventListener('paste',async e=>{e.preventDefault();
+    const it=[...(e.clipboardData?e.clipboardData.items:[])].find(i=>i.type.startsWith('image/'));
+    if(!it){res.innerHTML='<p class="err">Lo que has pegado no es una imagen. Copia la gráfica con clic derecho → «Copiar imagen».</p>';return;}
+    const url=await new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(fr.result);fr.readAsDataURL(it.getAsFile());});
+    res.innerHTML='<div class="carga"><div class="spin"></div>Leyendo la gráfica…</div>';
+    const r=await api('grafica',{imagen:url}).catch(()=>({error:'No se pudo hablar con BuscaTron'}));
+    if(r.error){res.innerHTML=`<p class="err">${esc(r.error)}</p>`;return;}
+    res.innerHTML=(r.frases.length?`<ul style="margin:6px 0;padding-left:18px">${r.frases.map(f=>`<li class="l" style="margin:3px 0">${esc(f)}</li>`).join('')}</ul>`
+      :'<p class="err">No he conseguido leer el mínimo ni el máximo en esa imagen. Amplía la gráfica en camelcamelcamel antes de copiarla; abajo ves lo que se ha leído.</p>')
+      +`<details><summary>Texto leído de la imagen</summary><pre style="white-space:pre-wrap;font-size:12px">${esc(r.texto||'(nada)')}</pre></details>`;});}
 async function vinculaRef(p,enlace){const r=await api('referencia',{clave:p.clave,enlace,titulo:p.titulo});
   if(r.error){aviso(r.error);return;}aviso('Vinculado: se recordará para este producto');abreRef();}
 let refPedido=0;     // si cambias de lista antes de que llegue la primera, la respuesta vieja se descarta
@@ -745,6 +760,7 @@ function pintaRef(l,cab){
     $('hoja3').innerHTML=cab+(l.length?`<div class="ref-res"><div class="stat"><b>${l.length}</b><span>Productos</span></div><div class="stat"><b>${con.length}</b><span>Vistos en Amazon</span></div><div class="stat"><b>${bajo}</b><span>Por debajo de Amazon</span></div></div>
       <div class="ref-lista">${l.map(tarjetaRef).join('')}</div>`
       :`<div class="vacio-msg">${refAmbito==='avisos'?'No tienes avisos ahora mismo.':'Tus vigiladas activas todavía no han encontrado nada.'}</div>`);
+    $('hoja3').querySelectorAll('[data-graf]').forEach(b=>b.onclick=()=>abrePegarGrafica(b));
     $('hoja3').querySelectorAll('[data-rh]').forEach(b=>b.onclick=()=>{const a=l[+b.dataset.rh].amazon;abreHist(a.url,a.titulo,'www.amazon.es');});
     $('hoja3').querySelectorAll('[data-ves]').forEach(b=>b.onclick=()=>vinculaRef(l[+b.dataset.ves],b.dataset.asin));
     $('hoja3').querySelectorAll('[data-vpega]').forEach(b=>b.onclick=()=>{const p=l[+b.dataset.vpega];

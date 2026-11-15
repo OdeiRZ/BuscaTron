@@ -3,6 +3,12 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.17.16] - 2026-11-15
+
+### Añadido
+- **📋 Pegar gráfica de camel** en cada referencia de Amazon: copias la gráfica de camelcamelcamel que ves en tu navegador (clic derecho → «Copiar imagen») y la pegas con Ctrl+V; BuscaTron lee el texto de su leyenda con el lector de Windows (es-ES), saca el **mínimo histórico y cuándo fue**, el máximo, la media y el precio actual, y dice cuánto se aleja el precio de hoy del mínimo y si el mínimo coincidió con una campaña (Black Friday, rebajas, Prime Day) que este año vuelve, con su fecha. La imagen se guarda un instante en una carpeta temporal y se borra. No se pide nada a camelcamelcamel (rechaza a los programas). Siempre enseña el texto leído. Módulos nuevos `ocr.py` y `historico.py`.
+- Lo que no puede decir con solo los extremos: cada cuánto se repite una bajada; lo dice expresamente.
+
 ## [0.17.15] - 2026-11-15
 
 ### Añadido
