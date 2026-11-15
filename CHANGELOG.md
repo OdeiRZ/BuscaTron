@@ -3,6 +3,11 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.17.18] - 2026-11-15
+
+### Añadido
+- **🖼️ Leer la gráfica** en cada referencia de Amazon: trata la gráfica de camelcamelcamel que ya tienes cargada en la página, sin copiar ni pegar. Primero intenta leerla tal cual (si camel permite que una página lea sus imágenes); si no, captura esa zona de tu propia pestaña (el navegador te pide permiso una vez) y la manda a leer. Si el navegador no puede, lo dice y queda «Pegar gráfica». El servidor no pide nada a camelcamelcamel. Solo se puede probar en un navegador real: la captura de pestaña no existe en el móvil ni en direcciones sin HTTPS.
+
 ## [0.17.17] - 2026-11-15
 
 ### Eliminado
