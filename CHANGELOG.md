@@ -3,6 +3,12 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.17.34] - 2026-11-15
+
+### Corregido
+- **Falta la gráfica de «Agentes de S.H.I.E.L.D.»**: sí se había capturado bien, pero el lector desordenó las líneas de la leyenda (el mínimo salía detrás de «Current») y BuscaTron le asignaba ese valor al precio actual. Ahora el precio actual es la entrada de la leyenda con la **fecha más reciente** (solo si el valor que dice la etiqueta es de una entrada más antigua), y el mínimo es la que sobra. También se entiende la fecha partida por el lector («Nov 1 5, 2026»).
+- Comprobado con la captura real: mínimo 42,22 € (04/03/2025), máximo 44,99 € (28/04/2026), actual 44,99 €.
+- Las imágenes de Eternal Decks y del Too Many Bones base dicen «We can't find the requested product»: no están en camelcamelcamel y no hay histórico que leer.
 ## [0.17.33] - 2026-11-15
 
 ### Corregido

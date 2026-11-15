@@ -49,7 +49,7 @@ def _anio(a):
 
 def fecha_en(texto):
     """Primera fecha reconocible de un texto, como datetime.date, o None."""
-    t = _plano(texto)
+    t = re.sub(r"(\d) (\d)([ ,.])", r"\1\2\3", _plano(texto))          # el lector a veces parte el día: «Nov 1 5, 2026»
     for i, rx in enumerate(FECHAS):
         for m in rx.finditer(t):
             try:
@@ -111,6 +111,14 @@ def parsea(texto, crudos=None):
     # Si el lector no reconoce una etiqueta (a veces falta «Lowest»), se reparten las entradas de la leyenda («€32,89 (Mar 20,
     # 2024)») que NO se han reconocido ya por su etiqueta, en el orden de la leyenda: mínimo, máximo y actual.
     libres = entradas_leyenda(t)
+    if libres:
+        # El precio actual es la entrada de la leyenda con la fecha más reciente. El lector a veces desordena las líneas (el mínimo
+        # sale detrás de «Current») y entonces la etiqueta apunta a otra entrada: manda la fecha.
+        ultima = max(libres, key=lambda e: e[1])
+        actual = out.get("actual")
+        la_suya = [e for e in libres if actual is not None and abs(e[0] - actual) < 0.005]
+        if la_suya and max(e[1] for e in la_suya) < ultima[1]:           # su valor es de una entrada más antigua: no es el actual
+            out["actual"], crudos["actual"] = ultima[0], ultima[2]
     if libres and any(k not in out for k in ("minimo", "maximo", "actual")):
         def quita(valor, fecha=None, la_ultima=False):
             idx = [i for i, (v, f, _) in enumerate(libres) if abs(v - valor) < 0.005 and (fecha is None or f.isoformat() == fecha)]

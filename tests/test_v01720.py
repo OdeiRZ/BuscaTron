@@ -233,3 +233,26 @@ class CifrasConElEuroConfundido(unittest.TestCase):
         t = CRANEO_ROJO.replace("«8,64", "7,77")
         d, _, problemas = self.leer(t)
         self.assertTrue(problemas)                                                # queda rechazada, no «reparada» a lo que sea
+
+
+# Captura REAL de «Agentes de S.H.I.E.L.D.»: el lector desordena las líneas de la leyenda (el mínimo sale detrás de «Current»), pierde el
+# «€4» del máximo y la fecha del actual lleva un punto. El precio actual es la entrada con la fecha más reciente.
+SHIELD = chr(10).join(["Fantasy Flight Games I Marvel Champions: Agentes de S.H.I.E.L.D.I Expansión", "€46", "€45", "€44", "€43", "€41", "Mar Apr",
+                       "Price typo", "Amazon", "May", "Jun", "Jul", "Sep", "Aug", "Highest", "«4,99 (Apr 28, 2026)", "Oct", "Nov", "Current",
+                       "Dec", "'26", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "€42.22 (Mar 4, 2025)", "€44,99 (Nov 15.2026)"])
+
+
+class LeyendaDesordenada(unittest.TestCase):
+    def test_shield_real(self):
+        d, cambios = historico.analiza(SHIELD)
+        self.assertEqual((d["minimo"], d["fecha_minimo"], d["maximo"], d["fecha_maximo"], d["actual"]), (42.22, "2025-03-04", 44.99, "2026-04-28", 44.99))
+        self.assertEqual(historico.valida(SHIELD, d), [])
+
+    def test_la_fecha_partida_se_entiende(self):
+        self.assertEqual(historico.fecha_en("Nov 1 5, 2026").isoformat(), "2026-11-15")
+
+    def test_una_fecha_ilegible_no_cambia_el_precio_actual(self):
+        # sin fecha legible la entrada del actual no se reconoce: se queda el que dice la etiqueta
+        t = GRANDE.replace("(Nov 1 5, 2026)", "(Nov ?? 2026)")
+        d, _ = historico.analiza(t)
+        self.assertEqual(d["actual"], 40.33)
