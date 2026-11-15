@@ -3,6 +3,11 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.17.24] - 2026-11-15
+
+### Corregido
+- **«Leer las gráficas» fallaba con «TypeError: 'getSettings' called on an object that does not implement interface MediaStreamTrack»**: al comprobar que se compartía la pestaña, `getSettings` se llamaba separado de su pista de vídeo y el navegador lo rechazaba. Es el fallo de verdad de la 0.17.21 a la 0.17.23. Ahora se llama sobre su pista. Reproducido en Chrome («Illegal invocation») y comprobado con una pestaña simulada que usa el `getSettings` real del navegador, no uno escrito a mano; también se ha comprobado el aviso al compartir la pantalla entera o una ventana.
+
 ## [0.17.23] - 2026-11-15
 
 ### Corregido

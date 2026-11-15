@@ -130,3 +130,11 @@ class EnLaReferencia(ConBD):
         self.assertTrue(por_asin["B091Q2GGMR"]["camel"]["frases"])
         self.assertFalse(any("no se puede calcular" in f for f in por_asin["B091Q2GGMR"]["camel"]["frases"]))   # el aviso va una vez, no en cada bloque
         self.assertIsNone(por_asin["B0AAAAAAAA"]["camel"])
+
+
+class PaginaSinErroresConocidos(unittest.TestCase):
+    def test_get_settings_se_llama_sobre_su_pista(self):
+        """`(pista||{}).getSettings` separado de la pista da «Illegal invocation» en el navegador (v0.17.23)."""
+        html = open(os.path.join(os.path.dirname(web.__file__), "pagina.html"), encoding="utf-8").read()
+        self.assertNotIn("||{}).getSettings", html)
+        self.assertIn("pista.getSettings()", html)

@@ -742,7 +742,7 @@ async function abreCapturaPestana(res){
   let flujo;
   try{flujo=await navigator.mediaDevices.getDisplayMedia({video:true,audio:false,preferCurrentTab:true,selfBrowserSurface:'include'});}
   catch(e){res.innerHTML=`<p class="err">No se ha podido abrir la captura de la pestaña (${esc((e.name||'error')+': '+(e.message||''))}). Si no has pulsado «Cancelar», dímelo con ese texto. Mientras, puedes usar «Pegar gráfica».</p>`;return null;}
-  const sup=((flujo.getVideoTracks()[0]||{}).getSettings||(()=>({})))().displaySurface||'';
+  const pista=flujo.getVideoTracks()[0],sup=(pista&&pista.getSettings?pista.getSettings().displaySurface:'')||'';
   if(sup&&sup!=='browser'){flujo.getTracks().forEach(t=>t.stop());
     res.innerHTML=`<p class="err">Has compartido ${sup==='monitor'?'la pantalla entera':'una ventana'} y no la pestaña: así no puedo ver solo la gráfica. Pulsa otra vez y elige <b>esta pestaña</b> (en el aviso de Chrome, «Pestaña de Chrome» → BuscaTron), no «Ventana» ni «Pantalla completa».</p>`;return null;}
   const v=document.createElement('video');v.srcObject=flujo;v.muted=true;await v.play();
