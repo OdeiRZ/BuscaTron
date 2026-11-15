@@ -335,9 +335,14 @@ class Handler(BaseHTTPRequestHandler):
                 return {"clave": motor.clave_producto(c["titulo"].strip()), "ignorados": list(motor.ignorados().values())}
             return {"ignorados": list(motor.ignorados().values())}
         if ruta == "/api/grafica":            # texto de la gráfica de camelcamelcamel que pegas tú (no se pide nada a su web)
-            texto = ocr.lee(ocr.decodifica(c.get("imagen", "")))
+            datos_img = ocr.decodifica(c.get("imagen", ""))
+            texto = ocr.lee(datos_img)
             datos = historico.parsea(texto)
-            return {"texto": texto, "datos": datos, "frases": historico.frases(datos) if datos else []}
+            problemas = historico.valida(texto, datos) if datos else []
+            px = ocr.ancho(datos_img)
+            nota = f"La imagen es pequeña ({px} px de ancho): si algo no cuadra, amplía la gráfica." if 0 < px < 900 else ""
+            return {"texto": texto, "datos": datos, "problemas": problemas, "nota": nota,
+                    "frases": historico.frases(datos) if datos and not problemas else []}
         if ruta == "/api/estado_tiendas":
             return motor.estado_tiendas()
         if ruta == "/api/objetivos":          # 🎯 precio objetivo de un producto

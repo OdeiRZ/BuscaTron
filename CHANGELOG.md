@@ -3,6 +3,13 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.17.20] - 2026-11-15
+
+### Corregido
+- **«Leer la gráfica» no leía nada**: la imagen cargada en la página es una miniatura (600 px o menos) y con esa letra el lector de Windows no lee la leyenda, o lee «03,09» donde pone «€33,09». Con una gráfica real de camelcamelcamel (Fantasy Flight MC16ES) se ha comprobado que a 1.000 px o más lee bien el mínimo, el máximo, el precio actual y sus fechas. Ahora la página pide la gráfica a 1.200×600, la pone un momento a tamaño grande y captura esa copia, no la miniatura.
+- **Una lectura dudosa ya no se enseña como cierta**: BuscaTron compara el mínimo, el máximo y el precio actual leídos con la escala de la propia gráfica (sus etiquetas €30, €35…, con un escalón de margen) y con el orden entre ellos; si no cuadran, lo dice y no da cifras. Avisa también cuando la imagen es pequeña.
+- Variable sin declarar en la captura de pestaña.
+
 ## [0.17.19] - 2026-11-15
 
 ### Corregido

@@ -58,6 +58,13 @@ def lee(datos):
     return r.stdout.strip()
 
 
+def ancho(datos):
+    """Ancho en píxeles de una imagen PNG (0 si no es PNG): las miniaturas no tienen letra legible."""
+    if datos[:8] == b"\x89PNG\r\n\x1a\n" and len(datos) >= 24:
+        return int.from_bytes(datos[16:20], "big")
+    return 0
+
+
 def decodifica(url_datos):
     """Los bytes de una imagen enviada por la página como «data:image/png;base64,…»."""
     m = re.match(r"data:image/(?:png|jpeg|jpg|webp|gif);base64,(.+)$", url_datos or "", re.S)

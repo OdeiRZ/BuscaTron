@@ -687,7 +687,7 @@ $('ref').onclick=e=>{if(e.target===$('ref'))cierraHoja('ref');};
 /* 📊 referencia de Amazon: cada producto con su equivalente en Amazon y lo que BuscaTron ha visto allí */
 let refAmbito='avisos';
 const camel=a=>`https://es.camelcamelcamel.com/product/${a}`,keepa=a=>`https://keepa.com/#!product/9-${a}`;
-const grafCamel=a=>`https://charts.camelcamelcamel.com/es/${a}/amazon.png?force=1&zero=0&w=600&h=300&desired=false&legend=1&ilt=1&tp=all&fo=0&lang=es_ES`;
+const grafCamel=a=>`https://charts.camelcamelcamel.com/es/${a}/amazon.png?force=1&zero=0&w=1200&h=600&desired=false&legend=1&ilt=1&tp=all&fo=0&lang=es_ES`;
 function veredicto(p,a){
   if(p.tienda==='www.amazon.es'&&p.url===a.url)return a.n>1&&a.actual<=a.minimo+0.005?'<span class="tag ok">Ahora en su mínimo visto</span>':'';
   if(p.precio<a.minimo-0.005)return `<span class="tag ok">${Math.round((1-p.precio/a.minimo)*100)} % por debajo de lo más barato visto en Amazon</span>`;
@@ -722,12 +722,14 @@ async function enviaGrafica(res,url){
   res.innerHTML='<div class="carga"><div class="spin"></div>Leyendo la gráfica…</div>';
   const r=await api('grafica',{imagen:url}).catch(()=>({error:'No se pudo hablar con BuscaTron'}));
   if(r.error){res.innerHTML=`<p class="err">${esc(r.error)}</p>`;return;}
-  res.innerHTML=(r.frases.length?`<ul style="margin:6px 0;padding-left:18px">${r.frases.map(f=>`<li class="l" style="margin:3px 0">${esc(f)}</li>`).join('')}</ul>`
-    :'<p class="err">No he conseguido leer el mínimo ni el máximo en esa imagen. Amplía la gráfica en camelcamelcamel antes de copiarla; abajo ves lo que se ha leído.</p>')
+  const nota=r.nota?`<p class="mut" style="margin:4px 0">${esc(r.nota)}</p>`:'';
+  res.innerHTML=(r.frases.length?`<ul style="margin:6px 0;padding-left:18px">${r.frases.map(f=>`<li class="l" style="margin:3px 0">${esc(f)}</li>`).join('')}</ul>`+nota
+    :(r.problemas&&r.problemas.length?`<p class="err">Lectura dudosa, no la doy por buena: ${esc(r.problemas.join(' '))} Prueba otra vez, con la gráfica más grande.</p>`+nota
+      :'<p class="err">No he conseguido leer el mínimo ni el máximo en esa imagen. Abajo ves lo que se ha leído.</p>'+nota))
     +`<details><summary>Texto leído de la imagen</summary><pre style="white-space:pre-wrap;font-size:12px">${esc(r.texto||'(nada)')}</pre></details>`;
   res.style.cssText='border:2px solid var(--ac);border-radius:10px;padding:8px 12px;margin:8px 0';
   res.scrollIntoView({block:'center',behavior:'smooth'});
-  aviso(r.frases.length?'Gráfica leída: '+r.frases[0]:'No he podido leer la gráfica: mira el aviso sobre ella');}
+  aviso(r.frases.length?'Gráfica leída: '+r.frases[0]:'No he podido leer la gráfica con seguridad: mira el aviso sobre ella');}
 async function leeGraficaCargada(b){const amz=b.closest('.amz'),img=amz.querySelector('img.camel'),res=panelGrafica(amz,b).querySelector('.res');
   if(!img||!img.complete||!img.naturalWidth){res.innerHTML='<p class="err">La gráfica no está cargada: camelcamelcamel no se la ha enseñado a tu navegador. Prueba con «Pegar gráfica».</p>';return;}
   try{    // 1.º: tal cual, si camelcamelcamel permite que una página lea sus imágenes
@@ -743,14 +745,21 @@ async function leeGraficaCargada(b){const amz=b.closest('.amz'),img=amz.querySel
   let flujo;
   try{flujo=await navigator.mediaDevices.getDisplayMedia({video:true,audio:false,preferCurrentTab:true,selfBrowserSurface:'include'});}
   catch(e){res.innerHTML='<p class="err">No has dado permiso para ver la pestaña. Puedes usar «Pegar gráfica».</p>';return;}
+  let ov=null;
   try{
     const v=document.createElement('video');v.srcObject=flujo;v.muted=true;await v.play();
-    let r=img.getBoundingClientRect();if(r.top<0||r.bottom>window.innerHeight){img.scrollIntoView({block:'center'});await esperaMs(300);}
-    await esperaMs(500);r=img.getBoundingClientRect(),k=v.videoWidth/window.innerWidth;
+    // La miniatura no tiene letra legible: la gráfica se pone un momento a tamaño grande y se captura esa copia
+    ov=document.createElement('div');ov.style.cssText='position:fixed;left:0;top:0;z-index:99999;background:#fff;line-height:0';
+    const grande=new Image();grande.src=img.src;grande.style.cssText=`display:block;max-width:none;height:auto;width:${Math.min(1200,window.innerWidth)}px`;
+    ov.appendChild(grande);document.body.appendChild(ov);
+    await (grande.decode?grande.decode().catch(()=>{}):esperaMs(300));
+    await esperaMs(700);
+    const r=grande.getBoundingClientRect(),k=v.videoWidth/window.innerWidth;
     const c=document.createElement('canvas');c.width=Math.max(1,Math.round(r.width*k));c.height=Math.max(1,Math.round(r.height*k));
     c.getContext('2d').drawImage(v,r.left*k,r.top*k,r.width*k,r.height*k,0,0,c.width,c.height);
-    enviaGrafica(res,c.toDataURL('image/png'));
-  }finally{flujo.getTracks().forEach(t=>t.stop());}}
+    const url=c.toDataURL('image/png');ov.remove();ov=null;
+    enviaGrafica(res,url);
+  }finally{if(ov)ov.remove();flujo.getTracks().forEach(t=>t.stop());}}
 function abrePegarGrafica(b){const amz=b.closest('.amz');let z=amz.querySelector('.pgraf .zona');
   if(z){z.closest('.pgraf').remove();return;}
   const p=panelGrafica(amz,b);

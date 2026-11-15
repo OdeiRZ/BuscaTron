@@ -86,6 +86,32 @@ def parsea(texto):
     return out
 
 
+def escala_eje(texto):
+    """(mínimo, máximo, escalón) de la escala vertical de la gráfica, por sus etiquetas («€30», «€35»…), o None."""
+    nums = sorted({float(n) for n in re.findall(r"(?m)^\s*[€E]\s?(\d{1,5})\s*$", texto or "")})
+    if len(nums) < 2:
+        return None
+    return nums[0], nums[-1], min(y - x for x, y in zip(nums, nums[1:]))
+
+
+def valida(texto, d):
+    """Motivos para no fiarse de lo leído (lista vacía si todo cuadra). Una lectura mala que parece buena es peor que
+    ninguna: con la letra pequeña «€33,09» se lee «03,09»."""
+    out = []
+    esc = escala_eje(texto)
+    if esc:
+        lo, hi, m = esc          # un escalón de margen: a veces el lector se salta una etiqueta del eje
+        for clave, nombre in (("minimo", "el mínimo"), ("maximo", "el máximo"), ("actual", "el precio actual")):
+            v = d.get(clave)
+            if v is not None and not lo - m <= v <= hi + m:
+                out.append(f"{nombre} leído ({euros(v)}) queda fuera de la escala de la gráfica ({euros(lo)} a {euros(hi)}).")
+    if d.get("minimo") is not None and d.get("maximo") is not None and d["minimo"] > d["maximo"]:
+        out.append("el mínimo leído es mayor que el máximo.")
+    if None not in (d.get("minimo"), d.get("maximo"), d.get("actual")) and not d["minimo"] <= d["actual"] <= d["maximo"]:
+        out.append("el precio actual queda fuera del rango entre el mínimo y el máximo leídos.")
+    return out
+
+
 # Campañas de ofertas: (nombre, ventana en el año que pasó, fecha de este año)
 def _campanas(anio):
     """[(nombre, desde, hasta, día de la campaña)] de ese año."""
