@@ -69,3 +69,8 @@ class Endpoint(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class EscalaDelLector(unittest.TestCase):
+    def test_las_imagenes_grandes_casi_no_se_amplian(self):
+        self.assertEqual((ocr.escala_para(600), ocr.escala_para(1200), ocr.escala_para(1920), ocr.escala_para(3000)), (3, 3, 2, 1))

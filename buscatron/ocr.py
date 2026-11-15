@@ -7,7 +7,7 @@ import re
 import subprocess
 import tempfile
 
-ESCALA = 3                      # el texto de una gráfica es pequeño: se amplía antes de leerlo
+ESCALA = 3                      # el texto de una gráfica es pequeño: se amplía antes de leerlo (menos si la imagen ya es grande)
 MAX_BYTES = 8 * 1024 * 1024
 GUION = r"""
 param($ruta, $escala)
@@ -36,6 +36,11 @@ def disponible():
     return os.name == "nt"
 
 
+def escala_para(px):
+    """Cuánto se amplía una imagen de `px` de ancho antes de leerla: las pequeñas, mucho; las grandes, casi nada."""
+    return ESCALA if px < 1400 else 2 if px < 2400 else 1
+
+
 def lee(datos):
     """Texto que se lee en una imagen (bytes PNG/JPG). Lanza ValueError si no se puede."""
     if not disponible():
@@ -49,7 +54,7 @@ def lee(datos):
         with open(script, "w", encoding="utf-8-sig") as f:
             f.write(GUION)
         try:
-            r = subprocess.run(["powershell", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File", script, ruta, str(ESCALA)],
+            r = subprocess.run(["powershell", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File", script, ruta, str(escala_para(ancho(datos)))],
                                capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=60, creationflags=0x08000000)
         except (OSError, subprocess.SubprocessError) as e:
             raise ValueError(f"no se pudo ejecutar el lector de texto ({str(e)[:60]})")

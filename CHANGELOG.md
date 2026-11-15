@@ -3,6 +3,12 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.17.21] - 2026-11-15
+
+### Corregido
+- **«Leer la gráfica» capturaba la ventana o la pantalla entera** (el texto leído traía la barra de marcadores, la dirección y otras páginas) y la gráfica quedaba desplazada y cortada, sin su leyenda. Ahora pide compartir la pestaña, y si lo compartido no es una pestaña no lo usa: lo dice y explica qué elegir («Pestaña de Chrome», no «Ventana» ni «Pantalla completa»). Así tampoco se lee nada de tu pantalla que no sea la gráfica.
+- El lector de texto amplía menos las imágenes que ya son grandes (más rápido y sin pasarse del límite de Windows).
+
 ## [0.17.20] - 2026-11-15
 
 ### Corregido

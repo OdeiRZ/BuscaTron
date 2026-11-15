@@ -743,8 +743,13 @@ async function leeGraficaCargada(b){const amz=b.closest('.amz'),img=amz.querySel
   res.parentElement.scrollIntoView({block:'start'});
   res.innerHTML='<p class="l">Tu navegador te va a preguntar si compartes esta pestaña: acepta. Se usa una sola vez para leer la gráfica y se descarta.</p>';
   let flujo;
-  try{flujo=await navigator.mediaDevices.getDisplayMedia({video:true,audio:false,preferCurrentTab:true,selfBrowserSurface:'include'});}
+  try{flujo=await navigator.mediaDevices.getDisplayMedia({video:{displaySurface:'browser'},audio:false,preferCurrentTab:true,selfBrowserSurface:'include',monitorTypeSurfaces:'exclude'});}
   catch(e){res.innerHTML='<p class="err">No has dado permiso para ver la pestaña. Puedes usar «Pegar gráfica».</p>';return;}
+  // Solo vale compartir LA PESTAÑA: con una ventana o la pantalla entera se ve también el navegador (barras, marcadores…), la gráfica
+  // queda desplazada y además se leería lo que haya en tu pantalla.
+  const sup=((flujo.getVideoTracks()[0]||{}).getSettings||(()=>({})))().displaySurface||'';
+  if(sup&&sup!=='browser'){flujo.getTracks().forEach(t=>t.stop());
+    res.innerHTML=`<p class="err">Has compartido ${sup==='monitor'?'la pantalla entera':'una ventana'} y no la pestaña: así no puedo ver solo la gráfica. Pulsa otra vez «Leer la gráfica» y elige <b>esta pestaña</b> (en el aviso de Chrome, «Pestaña de Chrome» → BuscaTron), no «Ventana» ni «Pantalla completa».</p>`;return;}
   let ov=null;
   try{
     const v=document.createElement('video');v.srcObject=flujo;v.muted=true;await v.play();
