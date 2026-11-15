@@ -3,6 +3,11 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.17.11] - 2026-11-15
+
+### Corregido
+- **Títulos de tarjeta entera**: cuando el enlace de una tienda envuelve toda la tarjeta (Outlet-PC), el título era todo su texto: las direcciones de las imágenes, «Producto nuevo», los precios y al final el nombre. Ahora es solo el nombre del producto (el trozo entre precios que contiene la búsqueda), y se han corregido los títulos ya guardados así.
+
 ## [0.17.10] - 2026-11-14
 
 ### Corregido

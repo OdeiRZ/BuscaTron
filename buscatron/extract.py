@@ -121,6 +121,21 @@ def limpia_titulo(t):
     return t
 
 
+URL_SUELTA = re.compile(r"(?:https?:)?//\S+")
+
+
+def titulo_de_tarjeta(t, palabras=()):
+    """El nombre del producto cuando el enlace envuelve toda la tarjeta (Outlet-PC: «https://…jpg https://…jpg Producto
+    nuevo 49,99 € 89,00 € Talla: 45 - Under Armour…»): sin direcciones de imágenes y, si hay precios dentro, el trozo más
+    largo entre ellos que siga conteniendo la búsqueda. Un título normal queda igual."""
+    t = " ".join(URL_SUELTA.sub(" ", t).split())
+    if not PRECIO.search(t) or "Estado:" in t:      # Vinted lleva sus precios al final y se trata aparte
+        return t
+    trozos = [" ".join(x.split()).strip(" -–·|:") for x in PRECIO.split(t)[::2]]       # split con grupo: los números van en medio
+    buenos = [x for x in trozos if len(x) >= 4 and all(encaja(normaliza(x), w) for w in palabras)]
+    return max(buenos, key=len) if buenos else t
+
+
 def a_numero(s):
     s = str(s).strip()
     if "," in s:
@@ -312,6 +327,7 @@ def analiza(html, base, consulta, ventana=40, con_estado=False):
         vistos.add(url)
         if titulo.endswith(("...", "…")) and len(titulo_desde_url(e[1])) > len(titulo):
             titulo = titulo_desde_url(e[1])
+        titulo = titulo_de_tarjeta(titulo, palabras)
         detalle = re.search(r"Estado:\s*([^,]+)", titulo)         # Vinted: «Título, Marca: X, Estado: Muy bueno, 1.00 €»
         titulo = limpia_titulo(re.split(r",\s*(?:Marca|Estado|Tama[ñn]o):", titulo)[0].strip())
         marca = re.match(r"\s*(producto agotado|agotado|sin stock|fuera de stock)\s*[:\-–]?\s*", titulo, re.I)
