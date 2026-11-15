@@ -3,6 +3,14 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.17.30] - 2026-11-15
+
+### Añadido
+- **Resumen del histórico de Amazon en Vigiladas**: cada búsqueda vigilada, activa o en pausa (vistas «Todas», «Activas» y «En pausa»), enseña una línea con el mínimo más bajo y el máximo más alto históricos de Amazon de los productos que encontró en su última revisión, con el producto y la fecha; y en «Más detalles», el mínimo, el máximo y el precio de hoy de cada producto. Solo sale si algún producto tiene ya su histórico leído de camelcamelcamel. Se refresca al terminar «Leer las gráficas que faltan». Nuevo /api/historico_vigiladas.
+- **Al añadir un enlace de Amazon en la Referencia, se elige de qué producto es**: un desplegable con los productos de tus listas. Si eliges uno, el enlace se une a ese producto (vínculo) en vez de crear un bloque aparte; «Producto aparte» sigue siendo para los que no están en ninguna lista.
+
+### Corregido
+- Los enlaces de La Tiranía del Cráneo Rojo y Agentes de S.H.I.E.L.D. se habían añadido como bloques aparte aunque ya existían como productos de la vigilada «Campañas y Héroes Reunidos 2»: ahora están vinculados a ellos (igual que Motivos Siniestros) y los duplicados se han quitado.
 ## [0.17.29] - 2026-11-15
 
 ### Corregido

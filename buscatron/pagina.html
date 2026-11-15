@@ -810,6 +810,7 @@ async function leeTodasInterno(l){
   informeTodas=`<div class="${fallos.length?'err':'ok'}" style="margin:6px 0"><b>${hechas} de ${pend.length} leídas y guardadas.</b>`+
     (fallos.length?` No se han guardado ${fallos.length}:<ul style="margin:4px 0;padding-left:18px">${fallos.map(f=>`<li>${esc(f)}</li>`).join('')}</ul>`:'')+`</div>`;
   aviso(`Listo: ${hechas} leídas y guardadas`+(fallos.length?`, ${fallos.length} sin guardar (mira la lista)`:''));
+  cargaSeg().catch(()=>{});
   abreRef();}
 function abrePegarGrafica(b){const amz=b.closest('.amz');let z=amz.querySelector('.pgraf .zona');
   if(z){z.closest('.pgraf').remove();return;}
@@ -827,7 +828,7 @@ let refPedido=0;     // si cambias de lista antes de que llegue la primera, la r
 async function abreRef(ambito){if(ambito)refAmbito=ambito;const yo=++refPedido;
   const sel=`<div class="ref-sel" role="group" aria-label="Productos">${[['avisos','De tus avisos'],['vigiladas','De lo que encuentran tus vigiladas']].map(([k,v])=>`<button type="button" class="chip ${k===refAmbito?'on':''}" data-ramb="${k}" aria-pressed="${k===refAmbito}">${v}</button>`).join('')}</div>`;
   const cab=`<button type="button" class="cierra" aria-label="Cerrar">✕</button><h3>📊 Referencia de Amazon</h3>
-    <div class="enlaces" style="margin:8px 0"><input type="text" id="ref-extra" placeholder="Pega aquí el enlace de un juego de Amazon (aunque no esté en stock)" autocomplete="off" style="flex:1;min-width:220px"><button type="button" id="ref-extra-ok">➕ Añadir</button></div>
+    <div class="enlaces" style="margin:8px 0"><input type="text" id="ref-extra" placeholder="Pega aquí el enlace de un juego de Amazon (aunque no esté en stock)" autocomplete="off" style="flex:1;min-width:220px"><select id="ref-extra-prod" title="Si el enlace es de un producto que ya tienes, elígelo: se une a él en vez de crear otro" style="max-width:100%"><option value="">Producto aparte (no está en mis listas)</option></select><button type="button" id="ref-extra-ok">➕ Añadir</button></div>
     <p class="ayuda" style="margin-top:4px">Cada producto con su equivalente en Amazon y lo que BuscaTron ha visto allí en tus búsquedas. Para el histórico de años, abre camelcamelcamel o Keepa: no dejan leer sus datos automáticamente, pero sus fichas están a un toque.</p>${sel}`;
   $('hoja3').innerHTML=cab+'<div class="carga" style="margin:22px 0"><div class="spin"></div>Preparando el resumen…</div>';
   if(!$('ref').classList.contains('v'))abreHoja('ref');
@@ -838,8 +839,9 @@ async function abreRef(ambito){if(ambito)refAmbito=ambito;const yo=++refPedido;
   $('hoja3').querySelector('.cierra').onclick=()=>cierraHoja('ref');
   $('hoja3').querySelectorAll('[data-ramb]').forEach(b=>b.onclick=()=>abreRef(b.dataset.ramb));
   const anade=async()=>{const v=$('ref-extra').value.trim();if(!v)return;$('ref-extra-ok').disabled=true;
-    const r=await api('referencia',{extra:v}).catch(()=>({error:'No se pudo hablar con BuscaTron'}));$('ref-extra-ok').disabled=false;
-    if(r.error){aviso(r.error);return;}aviso('Añadido: '+r.titulo);abreRef();};
+    const sel=$('ref-extra-prod'),clave=sel.value,tit=clave?sel.selectedOptions[0].dataset.t:'';
+    const r=await api('referencia',clave?{clave,enlace:v,titulo:tit}:{extra:v}).catch(()=>({error:'No se pudo hablar con BuscaTron'}));$('ref-extra-ok').disabled=false;
+    if(r.error){aviso(r.error);return;}aviso(clave?'Unido a «'+tit.slice(0,40)+'»':'Añadido: '+r.titulo);abreRef();};
   $('ref-extra-ok').onclick=anade;$('ref-extra').onkeydown=e=>{if(e.key==='Enter')anade();};}
 let informeTodas='';
 function leerTodasHtml(l){const n=l.filter(p=>p.amazon&&p.amazon.asin&&!p.amazon.camel).length,t=l.filter(p=>p.amazon&&p.amazon.asin).length;
@@ -853,6 +855,9 @@ function pintaRef(l,cab){
       :`<div class="vacio-msg">${refAmbito==='avisos'?'No tienes avisos ahora mismo.':'Tus vigiladas activas todavía no han encontrado nada.'}</div>`);
     if($('leer-todas'))$('leer-todas').onclick=()=>leeTodas(l);
     $('hoja3').querySelectorAll('[data-xquita]').forEach(b=>b.onclick=async e=>{e.preventDefault();await api('referencia',{quitar_extra:b.dataset.xquita});aviso('Quitado');abreRef();});
+    const sp=$('ref-extra-prod');if(sp){const vistos=new Set();
+      l.filter(p=>!p.extra&&p.clave&&!vistos.has(p.clave)&&vistos.add(p.clave)).sort((a,b)=>a.titulo.localeCompare(b.titulo,'es')).forEach(p=>{
+        const o=new Option('Es: '+p.titulo.slice(0,60)+(p.amazon&&p.amazon.asin?'':'  (sin ficha de Amazon)'),p.clave);o.dataset.t=p.titulo;sp.add(o);});}
     $('hoja3').querySelectorAll('[data-leer]').forEach(b=>b.onclick=()=>leeGraficaCargada(b));
     $('hoja3').querySelectorAll('[data-graf]').forEach(b=>b.onclick=()=>abrePegarGrafica(b));
     $('hoja3').querySelectorAll('[data-rh]').forEach(b=>b.onclick=()=>{const a=l[+b.dataset.rh].amazon;abreHist(a.url,a.titulo,'www.amazon.es');});
@@ -936,7 +941,15 @@ $('sf').onsubmit=async e=>{e.preventDefault();
   if(r.error){aviso(r.error);return;}const id=+$('s-id').value,s=Array.isArray(r)&&r.find(x=>x.id===id);
   limpiaSeg();$('sf-det').open=false;pintaSeg(r);
   aviso(s&&s.revisando?'Guardada. Se está revisando: si has cambiado la búsqueda o sus filtros, al terminar se revisa otra vez con los cambios':'Búsqueda vigilada guardada');};
-async function cargaSeg(){pintaSeg(await api('seguimientos'));}
+let histAmz={};     // {id de vigilada: productos con su histórico de Amazon (camelcamelcamel) ya leído}
+async function cargaSeg(){const [l,h]=await Promise.all([api('seguimientos'),api('historico_vigiladas').catch(()=>({}))]);
+  histAmz=h&&!h.error?h:{};pintaSeg(l);}
+const fechaCorta=f=>f?f.split('-').reverse().join('/'):'';
+function histAmzResumen(s){const it=histAmz[s.id]||[];if(!it.length)return '';
+  const mn=it.reduce((a,b)=>b.minimo<a.minimo?b:a),mx=it.reduce((a,b)=>b.maximo>a.maximo?b:a),corto=t=>esc(t.length>38?t.slice(0,38)+'…':t);
+  return `<div class="l hist-amz">📈 <b>Histórico en Amazon</b> (${it.length} producto${it.length===1?'':'s'} con historial): mínimo más bajo <b>${euro(mn.minimo)}</b> (${corto(mn.titulo)}${mn.fecha_minimo?', '+fechaCorta(mn.fecha_minimo):''}) · máximo más alto <b>${euro(mx.maximo)}</b> (${corto(mx.titulo)}${mx.fecha_maximo?', '+fechaCorta(mx.fecha_maximo):''})</div>`;}
+function histAmzLista(s){const it=histAmz[s.id]||[];if(!it.length)return '';
+  return `<div class="l" style="margin-top:6px"><b>Histórico de Amazon, producto a producto</b></div>`+it.map(x=>`<div class="l">${esc(x.titulo)}: mín <b>${euro(x.minimo)}</b>${x.fecha_minimo?` (${fechaCorta(x.fecha_minimo)})`:''} · máx <b>${euro(x.maximo)}</b>${x.fecha_maximo?` (${fechaCorta(x.fecha_maximo)})`:''}${x.actual!=null?` · hoy ${euro(x.actual)}`:''}</div>`).join('');}
 const ORDEN_SEG={creacion:'Orden en que las creaste',recientes:'Las últimas creadas primero',nombre:'Nombre: de la A a la Z',activas:'Activas primero, luego en pausa',proxima:'La próxima en revisarse primero',revisada:'Las que llevan más sin revisarse primero'};
 let ordenSeg='creacion';try{const o=localStorage.getItem('bt-orden-seg');if(o in ORDEN_SEG)ordenSeg=o;}catch(e){}
 function ordenaSegs(l,modo){const az=(a,b)=>a.nombre.localeCompare(b.nombre,'es',{sensitivity:'base',numeric:true}),c=[...l];
@@ -961,8 +974,9 @@ function tarjetaSeg(s){
   <div class="l">🔎 «${esc(s.consulta)}»${rango}</div>
   <div class="l">🎯 Te avisa si ${reglas}</div>
   <div class="l">🕘 ${s.ultima?`Revisada ${relativo(s.ultima)}`:'Todavía sin revisar'}${s.estado?`: ${esc(s.estado)}`:''}</div>
+  ${histAmzResumen(s)}
   ${revisando(s)?'<div class="l">🔄 Revisándose ahora mismo…</div>':s.activo?`<div class="l">🔄 Próxima revisión ${proxima(s)}</div>`:''}
-  <details><summary>Más detalles</summary>${filtros}${extrasSeg(s)}<div class="l">📬 Avisos en: ${esc(canales)}</div>
+  <details><summary>Más detalles</summary>${histAmzLista(s)}${filtros}${extrasSeg(s)}<div class="l">📬 Avisos en: ${esc(canales)}</div>
     <div class="l">⏱️ ${s.activo?`Se revisa sola cada ${String(s.cada_horas).replace('.',',')} h`:'En pausa: no se revisa sola'} · última revisión: ${fecha(s.ultima)}</div></details>
   <div class="acciones">${revisando(s)?'<button class="mini" disabled>Buscando… (hasta 1 min)</button>':`<button class="mini" onclick="revisa(${s.id},this)" title="Busca ya en tus tiendas y te avisa si hay algo">🔄 Buscar ahora</button>`}
   <button class="sec mini" onclick="editaSeg(${s.id})">✏️ Editar</button>

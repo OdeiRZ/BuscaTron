@@ -217,3 +217,42 @@ def resumen(ambito="avisos"):
         salida.append({"titulo": titulo, "precio": None, "tienda": "", "url": url_amazon(a_), "ts": 0, "seg_id": None, "clave": "", "asin": a_,
                        "vinculado": False, "extra": True, "amazon": cand, "alternativas": [], "sugerencias": []})
     return salida
+
+
+def por_vigilada():
+    """{id de la vigilada: [{titulo, asin, minimo, fecha_minimo, maximo, fecha_maximo, actual}]} de los productos que encontró en
+    su última revisión y tienen histórico de camelcamelcamel ya leído. Vale para las vigiladas activas y las que están en pausa;
+    las que no tienen ningún producto con historial no aparecen."""
+    camel = historico.todos()
+    if not camel:
+        return {}
+    with bd.conecta() as c:
+        amazon = _amazon(c)
+        excl = {sid: exc for sid, exc in c.execute("SELECT id, excluir FROM seguimientos")}
+        vinculos = {k: a for k, a in c.execute("SELECT clave, asin FROM vinculos_amazon")}
+        filas = {}
+        for sid, ts in c.execute("SELECT s.id, MAX(p.ts) FROM seguimientos s JOIN precios p ON p.seg_id=s.id GROUP BY s.id").fetchall():
+            filas[sid] = c.execute("SELECT titulo, precio, tienda, url FROM precios WHERE seg_id=? AND ts=? AND agotado=0", (sid, ts)).fetchall()
+    ocultos = set(motor.ignorados())
+    idiomas = motor.idiomas_de_fichas(list(amazon))
+    out = {}
+    for sid, rows in filas.items():
+        grupos = {}
+        for titulo, precio, tienda, url in rows:
+            k = motor.clave_producto(titulo)
+            if k not in ocultos and (k not in grupos or precio < grupos[k]["precio"]):
+                grupos[k] = {"titulo": titulo, "precio": precio, "tienda": tienda, "url": url}
+        items, vistos = [], set()
+        for k, p in grupos.items():
+            a_ = vinculos.get(k)
+            if not a_:
+                cands = _candidatos(p, amazon, excl.get(sid), idiomas)
+                a_ = cands[0]["asin"] if cands else None
+            d = camel.get(a_)
+            if not d or a_ in vistos or d.get("minimo") is None or d.get("maximo") is None:
+                continue
+            vistos.add(a_)
+            items.append({"titulo": p["titulo"], "asin": a_, **{f: d.get(f) for f in ("minimo", "fecha_minimo", "maximo", "fecha_maximo", "actual")}})
+        if items:
+            out[sid] = sorted(items, key=lambda x: extract.normaliza(x["titulo"]))
+    return out

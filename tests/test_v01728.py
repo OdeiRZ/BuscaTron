@@ -80,3 +80,37 @@ class PaginaVieja(ConBD):
         for ambito in ("avisos", "vigiladas"):
             for p in referencia.resumen(ambito):
                 self.assertIsNotNone(p["tienda"], p["titulo"])
+
+
+class ResumenEnVigiladas(ConBD):
+    def prepara(self):
+        import time
+        from buscatron import seguimiento
+        a, b, c = seguimiento.guarda({"consulta": "uno"}), seguimiento.guarda({"consulta": "dos", "activo": False}), seguimiento.guarda({"consulta": "tres"})
+        ahora = time.time()
+        with bd.conecta() as con:
+            fila = ("INSERT INTO precios(ts,consulta,tienda,titulo,url,precio,agotado,seg_id,preventa,clave) VALUES(?,?,?,?,?,?,0,?,0,?)")
+            con.executemany(fila, [
+                (ahora, "uno", "www.amazon.es", "Marvel Champions Era de Apocalipsis expansion", "https://www.amazon.es/dp/B0CZPDLZ6L", 40.0, a, "k1"),
+                (ahora - 99999, "dos", "www.amazon.es", "Marvel Champions Civil War expansion", "https://www.amazon.es/dp/B0G6FKDBNN", 44.0, b, "k2"),
+                (ahora, "tres", "www.amazon.es", "Marvel Champions Titan Loco expansion", "https://www.amazon.es/dp/B0971J1K8Q", 41.0, c, "k3")])
+        historico.guarda("B0CZPDLZ6L", {"minimo": 30.68, "fecha_minimo": "2025-11-20", "maximo": 44.99, "fecha_maximo": "2026-08-10", "actual": 40.0})
+        historico.guarda("B0G6FKDBNN", {"minimo": 44.0, "maximo": 44.99, "actual": 44.0})
+        return a, b, c
+
+    def test_activas_y_en_pausa_con_historial_y_sin_el_resto(self):
+        a, b, c = self.prepara()
+        r = referencia.por_vigilada()
+        self.assertEqual(set(r), {a, b})                     # la tercera no tiene historial leído: no sale
+        self.assertEqual((r[a][0]["minimo"], r[a][0]["maximo"]), (30.68, 44.99))
+        self.assertEqual(r[b][0]["asin"], "B0G6FKDBNN")      # la que está en pausa también
+
+    def test_sin_ningun_historial_no_devuelve_nada(self):
+        self.prepara()
+        with bd.conecta() as con:
+            con.execute("DELETE FROM camel_extremos")
+        self.assertEqual(referencia.por_vigilada(), {})
+
+    def test_endpoint_get(self):
+        a, b, c = self.prepara()
+        self.assertEqual(set(referencia.por_vigilada()), {a, b})
