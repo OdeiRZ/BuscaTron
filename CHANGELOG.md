@@ -3,6 +3,13 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.17.23] - 2026-11-15
+
+### Corregido
+- **«Leer las gráficas que faltan» no hacía nada en Chrome**: volvían a pedirse las condiciones de captura de pestaña con las que sí se puede dar el permiso (las añadidas en la 0.17.21 podían hacer que el navegador las rechazara sin que se viera). Lo de compartir solo la pestaña se comprueba después, como antes.
+- Cualquier fallo de la captura se enseña con su nombre técnico, el botón no se puede pulsar dos veces seguidas y mientras espera tu permiso sale un aviso con indicador, no una línea gris.
+- Comprobado de punta a punta (navegador en segundo plano, copia de la base de datos, pestaña simulada y la gráfica real de ejemplo): las 14 gráficas se leen y se guardan en unos 40 s y salen en sus bloques. Lo que no se puede simular es el permiso real de tu navegador.
+
 ## [0.17.22] - 2026-11-15
 
 ### Añadido

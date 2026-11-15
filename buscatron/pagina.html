@@ -740,8 +740,8 @@ async function abreCapturaPestana(res){
   if(!navigator.mediaDevices||!navigator.mediaDevices.getDisplayMedia){
     res.innerHTML='<p class="err">Este navegador no deja capturar la pestaña (hace falta Chrome o Edge en el ordenador, y BuscaTron abierto con HTTPS o desde localhost). Usa «Pegar gráfica».</p>';return null;}
   let flujo;
-  try{flujo=await navigator.mediaDevices.getDisplayMedia({video:{displaySurface:'browser'},audio:false,preferCurrentTab:true,selfBrowserSurface:'include',monitorTypeSurfaces:'exclude'});}
-  catch(e){res.innerHTML='<p class="err">No has dado permiso para ver la pestaña. Puedes usar «Pegar gráfica».</p>';return null;}
+  try{flujo=await navigator.mediaDevices.getDisplayMedia({video:true,audio:false,preferCurrentTab:true,selfBrowserSurface:'include'});}
+  catch(e){res.innerHTML=`<p class="err">No se ha podido abrir la captura de la pestaña (${esc((e.name||'error')+': '+(e.message||''))}). Si no has pulsado «Cancelar», dímelo con ese texto. Mientras, puedes usar «Pegar gráfica».</p>`;return null;}
   const sup=((flujo.getVideoTracks()[0]||{}).getSettings||(()=>({})))().displaySurface||'';
   if(sup&&sup!=='browser'){flujo.getTracks().forEach(t=>t.stop());
     res.innerHTML=`<p class="err">Has compartido ${sup==='monitor'?'la pantalla entera':'una ventana'} y no la pestaña: así no puedo ver solo la gráfica. Pulsa otra vez y elige <b>esta pestaña</b> (en el aviso de Chrome, «Pestaña de Chrome» → BuscaTron), no «Ventana» ni «Pantalla completa».</p>`;return null;}
@@ -776,10 +776,14 @@ async function leeGraficaCargada(b){const amz=b.closest('.amz'),img=amz.querySel
   catch(e){res.innerHTML='<p class="err">No se pudo capturar la gráfica. Puedes usar «Pegar gráfica».</p>';}
   finally{cap.flujo.getTracks().forEach(t=>t.stop());}}
 /* «Leer las gráficas que faltan»: un solo permiso para todas. Lo leído queda guardado en cada producto: solo hay que repetirlo con los nuevos. */
-async function leeTodas(l){
+async function leeTodas(l){const b=$('leer-todas');if(!b||b.disabled)return;b.disabled=true;
+  try{await leeTodasInterno(l);}
+  catch(e){const m=$('leer-todas-msg');if(m)m.innerHTML=`<p class="err">Algo ha fallado: ${esc((e.name||'error')+': '+(e.message||''))}</p>`;}
+  finally{b.disabled=false;}}
+async function leeTodasInterno(l){
   const msg=$('leer-todas-msg'),pend=l.map((p,i)=>({p,i})).filter(({p})=>p.amazon&&p.amazon.asin&&!p.amazon.camel);
   if(!pend.length){msg.textContent='No falta ninguna: todas las fichas de Amazon ya tienen su histórico leído.';return;}
-  msg.innerHTML=`<span class="mut">Tu navegador te va a preguntar si compartes la pestaña: elige <b>esta pestaña</b> y acepta; vale para las ${pend.length} gráficas.</span>`;
+  msg.innerHTML=`<div class="carga" style="margin:6px 0"><div class="spin"></div><div><b>Esperando tu permiso.</b> Mira el aviso de tu navegador (arriba): elige <b>esta pestaña</b> y pulsa «Compartir». Vale para las ${pend.length} gráficas.</div></div>`;
   const cap=await abreCapturaPestana(msg);if(!cap)return;
   let hechas=0,dudosas=0,k=0;
   try{
