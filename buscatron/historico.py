@@ -90,7 +90,7 @@ def parsea(texto):
 
 def escala_eje(texto):
     """(mínimo, máximo, escalón) de la escala vertical de la gráfica, por sus etiquetas («€30», «€35»…), o None."""
-    nums = sorted({float(n) for n in re.findall(r"(?m)^\s*[€E]\s?(\d{1,5})\s*$", texto or "")})
+    nums = sorted({float(n) for n in re.findall(r"(?m)^\s*[€E(C]\s?(\d{1,5})\s*$", texto or "")})
     if len(nums) < 2:
         return None
     return nums[0], nums[-1], min(y - x for x, y in zip(nums, nums[1:]))

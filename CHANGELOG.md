@@ -3,6 +3,11 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.17.26] - 2026-11-15
+
+### Corregido
+- **«Leer las gráficas que faltan» no guardaba ninguna (0 de 5)**: lo que anotó BuscaTron de lo leído lo mostró. La captura que da el navegador trae sus barras (dirección, pestañas, marcadores) y la gráfica queda desplazada hacia abajo; el recorte por coordenadas le cortaba el pie, que es donde están el mínimo y el máximo. Ahora se manda el fotograma entero, sin recortar, y el lector busca las etiquetas (Lowest, Highest, Current) donde estén; el texto de las barras sobra pero no molesta. Reproducido con una captura del mismo formato (barras arriba y gráfica debajo): 14 de 14 guardadas.
+- El lector amplía la imagen según su tamaño total (hasta 3 veces, sin pasar de 9.000 px) y las etiquetas del eje que se leen «(45» o «C45» también cuentan para comprobar la escala.
 ## [0.17.25] - 2026-11-15
 
 ### Añadido

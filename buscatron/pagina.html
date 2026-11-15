@@ -756,9 +756,10 @@ async function fotoGrande(v,src,rotulo,espera){
   try{
     await (grande.decode?grande.decode():new Promise((ok,ko)=>{grande.onload=ok;grande.onerror=ko;}));
     await esperaMs(espera||1200);      // la captura llega comprimida: al principio el texto sale borroso
-    const r=grande.getBoundingClientRect(),k=v.videoWidth/window.innerWidth;
-    const c=document.createElement('canvas');c.width=Math.max(1,Math.round(r.width*k));c.height=Math.max(1,Math.round(r.height*k));
-    c.getContext('2d').drawImage(v,r.left*k,r.top*k,r.width*k,r.height*k,0,0,c.width,c.height);
+    // Se manda el fotograma ENTERO, sin recortar por coordenadas: si lo capturado trae las barras del navegador, la gráfica queda
+    // desplazada y un recorte le cortaría el pie (donde está la leyenda con el mínimo y el máximo). El lector busca las etiquetas.
+    const c=document.createElement('canvas');c.width=v.videoWidth||window.innerWidth;c.height=v.videoHeight||window.innerHeight;
+    c.getContext('2d').drawImage(v,0,0,c.width,c.height);
     return c.toDataURL('image/png');
   }finally{ov.remove();}}
 async function leeGraficaCargada(b){const amz=b.closest('.amz'),img=amz.querySelector('img.camel'),res=panelGrafica(amz,b).querySelector('.res'),asin=b.dataset.asin||'';

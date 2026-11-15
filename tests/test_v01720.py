@@ -73,7 +73,7 @@ if __name__ == "__main__":
 
 class EscalaDelLector(unittest.TestCase):
     def test_las_imagenes_grandes_casi_no_se_amplian(self):
-        self.assertEqual((ocr.escala_para(600), ocr.escala_para(1200), ocr.escala_para(1920), ocr.escala_para(3000)), (3, 3, 2, 1))
+        self.assertEqual((ocr.escala_para(600), ocr.escala_para(1200, 600), ocr.escala_para(1920, 1080), ocr.escala_para(3840, 2160)), (3, 3, 3, 2))
 
 
 import tempfile  # noqa: E402

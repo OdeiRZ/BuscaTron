@@ -36,9 +36,17 @@ def disponible():
     return os.name == "nt"
 
 
-def escala_para(px):
-    """Cuánto se amplía una imagen de `px` de ancho antes de leerla: las pequeñas, mucho; las grandes, casi nada."""
-    return ESCALA if px < 1400 else 2 if px < 2400 else 1
+def alto(datos):
+    """Alto en píxeles de una imagen PNG (0 si no es PNG)."""
+    if datos[:8] == b"\x89PNG\r\n\x1a\n" and len(datos) >= 24:
+        return int.from_bytes(datos[20:24], "big")
+    return 0
+
+
+def escala_para(ancho_px, alto_px=0):
+    """Cuánto se amplía una imagen antes de leerla: hasta ESCALA veces, sin pasar de ~9.000 px en ningún lado (el lector de
+    Windows no admite más de 10.000)."""
+    return max(1, min(ESCALA, 9000 // max(ancho_px, alto_px, 1)))
 
 
 def lee(datos):
@@ -54,7 +62,7 @@ def lee(datos):
         with open(script, "w", encoding="utf-8-sig") as f:
             f.write(GUION)
         try:
-            r = subprocess.run(["powershell", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File", script, ruta, str(escala_para(ancho(datos)))],
+            r = subprocess.run(["powershell", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File", script, ruta, str(escala_para(ancho(datos), alto(datos)))],
                                capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=60, creationflags=0x08000000)
         except (OSError, subprocess.SubprocessError) as e:
             raise ValueError(f"no se pudo ejecutar el lector de texto ({str(e)[:60]})")
