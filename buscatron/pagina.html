@@ -695,6 +695,17 @@ function veredicto(p,a){
   return `<span class="tag ko">Amazon está más barato ahora (${euro(a.actual)})</span>`;}
 const opcionAmz=(o,i,vincular=true)=>`<div class="l">${o.n?euro(o.actual)+' · ':''}<a href="${esc(o.url)}" target="_blank" rel="noopener">${esc(o.titulo||o.asin)}</a> · <a href="${camel(o.asin)}" target="_blank" rel="noopener">camel ↗</a>
   ${vincular?`<button type="button" class="sec mini" data-ves="${i}" data-asin="${esc(o.asin)}" style="margin-left:4px">Es este</button>`:''}</div>`;
+function sparkline(pts){if(!pts||pts.length<2)return '';const W=300,H=54,xs=pts.map(p=>p.ts),ys=pts.map(p=>p.precio),x0=Math.min(...xs),x1=Math.max(...xs),y0=Math.min(...ys),y1=Math.max(...ys);
+  const X=t=>x1>x0?6+(t-x0)/(x1-x0)*(W-12):W/2,Y=v=>y1>y0?H-6-(v-y0)/(y1-y0)*(H-12):H/2;
+  const mn=pts.find(p=>p.precio===y0),mx=pts.find(p=>p.precio===y1);
+  return `<svg class="spark" viewBox="0 0 ${W} ${H}" role="img" aria-label="Precio diario visto por BuscaTron" style="width:100%;max-width:420px;height:54px;display:block;margin:6px 0">
+    <polyline fill="none" stroke="currentColor" stroke-width="1.6" opacity=".75" points="${pts.map(p=>X(p.ts).toFixed(1)+','+Y(p.precio).toFixed(1)).join(' ')}"/>
+    ${y1>y0?`<circle cx="${X(mn.ts).toFixed(1)}" cy="${Y(mn.precio).toFixed(1)}" r="3.5" fill="#16a34a"/><circle cx="${X(mx.ts).toFixed(1)}" cy="${Y(mx.precio).toFixed(1)}" r="3.5" fill="#dc2626"/>`:''}</svg>`;}
+function analisisHtml(an){if(!an)return '';
+  const fi={insuficiente:'ko',baja:'ko',media:'',alta:'ok'}[an.fiabilidad]||'';
+  return `<details class="analisis" open><summary>📈 Análisis del precio <span class="tag ${fi}">fiabilidad ${esc(an.fiabilidad)}</span></summary>
+    ${sparkline(an.puntos)}<ul style="margin:6px 0 2px;padding-left:18px">${an.frases.map(f=>`<li class="l" style="margin:3px 0">${esc(f)}</li>`).join('')}</ul>
+    <p class="mut" style="margin:4px 0 0;font-size:12px">Solo cuenta lo que BuscaTron ha visto. Para el histórico de años, abre camelcamelcamel o Keepa con los enlaces de abajo.</p></details>`;}
 function tarjetaRef(p,i){const a=p.amazon,q=encodeURIComponent(p.titulo);
   p.sugerencias=p.sugerencias||[];p.alternativas=p.alternativas||[];      // un BuscaTron sin reiniciar no los manda
   const otro=a&&(a.idioma==='otro'||a.idioma==='en');
@@ -702,7 +713,7 @@ function tarjetaRef(p,i){const a=p.amazon,q=encodeURIComponent(p.titulo);
     :'<span class="mut">Para vincularlo a mano, reinicia BuscaTron (🆕 arriba).</span>';
   const vinc=p.vinculado?`<div class="l">🔗 Vinculado a mano · <a href="#" data-vquita="${i}">quitar el vínculo</a></div>`:'';
   const amz=a?`<div class="amz">${a.n?`<div class="l">En Amazon: <b>${euro(a.actual)}</b> ahora · lo más barato visto <b>${euro(a.minimo)}</b>${a.maximo>a.minimo?` · lo más caro ${euro(a.maximo)}`:''} · ${a.n} precio${a.n===1?'':'s'} desde el ${fecha(a.desde).split(',')[0]}</div>
-      <div class="meta">${veredicto(p,a)}${otro?'<span class="tag ko">Esa ficha de Amazon no está en castellano</span>':''}</div>`
+      <div class="meta">${veredicto(p,a)}${otro?'<span class="tag ko">Esa ficha de Amazon no está en castellano</span>':''}</div>${analisisHtml(a.analisis)}`
       :`<div class="l">BuscaTron todavía no tiene precios suyos: mira su histórico en camelcamelcamel o Keepa.</div>`}${vinc}
       ${p.tienda==='www.amazon.es'&&p.url===a.url?'':`<div class="l">Es «<a href="${esc(a.url)}" target="_blank" rel="noopener">${esc(a.titulo||a.asin)}</a>»</div>`}
       <img class="camel" loading="lazy" referrerpolicy="no-referrer" alt="Gráfica de camelcamelcamel" src="${grafCamel(a.asin)}" onerror="this.remove()">

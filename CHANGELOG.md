@@ -3,6 +3,14 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.17.15] - 2026-11-15
+
+### Añadido
+- **Análisis del precio en la referencia de Amazon** (📊): para cada ficha de Amazon, con lo que BuscaTron ha visto de ella, enseña mínimo y máximo con sus fechas, media y mediana, en qué punto del recorrido está hoy, las bajadas de al menos un 4 % que ha tenido, una gráfica diaria, y una **estimación de cuándo puede repetirse una bajada o el mínimo** (por los días que suelen pasar entre ellas). Dice su **fiabilidad** (insuficiente, baja, media o alta): hacen falta al menos 3 bajadas y 14 días de datos para estimar, y no da fecha si no los hay. Añade como pista general la próxima fecha de ofertas (Black Friday, Cyber Monday, rebajas, Prime Day). Módulo nuevo `analisis.py`.
+
+### Cambiado
+- La vigilada «Vantage» descarta «stonemaier»: la ficha de Amazon es la edición inglesa y Amazon no dice su idioma, solo la editorial la delata.
+
 ## [0.17.14] - 2026-11-15
 
 ### Corregido
