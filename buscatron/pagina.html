@@ -716,7 +716,7 @@ function tarjetaRef(p,i){const a=p.amazon,q=encodeURIComponent(p.titulo);
     :`<div class="amz"><div class="l">BuscaTron no ha encontrado su ficha en Amazon con seguridad${p.sugerencias.length?'. ¿Es alguna de estas?':'.'}</div>
       ${p.sugerencias.map(o=>opcionAmz(o,i,!!p.clave)).join('')}
       <div class="enlaces">${pegar}<a href="https://es.camelcamelcamel.com/search?sq=${q}" target="_blank" rel="noopener">Buscar en camelcamelcamel ↗</a><a href="https://www.amazon.es/s?k=${q}" target="_blank" rel="noopener">Buscar en Amazon ↗</a></div></div>`;
-  return `<div class="refc"><div class="t">${esc(p.titulo)}</div>${p.extra?`<div class="l">Añadido por ti · ninguna de tus tiendas lo tiene a la venta ahora · <a href="#" data-xquita="${esc(p.asin)}">quitar</a></div>`
+  return `<div class="refc"><div class="t">${esc(p.titulo)}</div>${p.extra?`<div class="l">Añadido por ti · ${(p.vigiladas||[]).length?'su histórico sale en Vigiladas, en «'+esc(p.vigiladas.join('», «'))+'»':'no encaja con ninguna de tus vigiladas (mira sus filtros)'} · <a href="#" data-xquita="${esc(p.asin)}">quitar</a></div>`
       :`<div class="l">Tu mejor precio: <b>${euro(p.precio)}</b> en ${esc(nombreT(p.tienda))} · <a href="${esc(p.url)}" target="_blank" rel="noopener">ver ↗</a></div>`}${amz}</div>`;}
 /* La gráfica de camelcamelcamel: BuscaTron no puede pedírsela a su web (la rechaza), pero tu navegador sí la tiene cargada. Se lee
    desde aquí (1.º tal cual, si camel lo permite; 2.º capturando esa zona de tu pestaña, con tu permiso) o la pegas tú. */

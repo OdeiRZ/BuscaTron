@@ -39,7 +39,7 @@ def _plano(t):
     return "".join(c for c in t if not unicodedata.combining(c))
 
 
-FECHA_SUELTA = re.compile(r"\b\d{1,2}[ ./-]+[a-z]{3,5}\.?[ ,.\-/]*\d{2,4}\b|\b[a-z]{3,5}\.? \d{1,2},? ?\d{4}\b|\b\d{1,2}[/.\-]\d{1,2}[/.\-]\d{2,4}\b")
+FECHA_SUELTA = re.compile(r"\b\d{1,2}[ ./-]+[a-z]{3,5}\.?[ ,.\-/]*\d{2,4}\b|\b[a-z]{3,5}\.? \d{1,2}[ ,.]*\d{4}\b|\b\d{1,2}[/.\-]\d{1,2}[/.\-]\d{2,4}\b")
 
 
 def _anio(a):
@@ -63,21 +63,31 @@ def fecha_en(texto):
     return None
 
 
-ENTRADA = re.compile(r"(\d{1,3}(?:\.\d{3})*[.,]\d{2}|\d+[.,]\d{2})\s*\(([^)]{5,24})\)")
+TOKEN = re.compile(r"([«(€]?)\s?(\d[\d.,]{2,9})")
+ENTRADA = re.compile(r"([«(€]?)\s?(\d[\d.,]{2,9})\s*\(([^)]{5,24})\)")
+
+
+def _cifras(num):
+    """Las cifras de un importe de la leyenda: camelcamelcamel siempre lo escribe con dos decimales, así que «4222», «42.22» y
+    «42,22» son el mismo 42,22 (el lector a veces pierde la coma)."""
+    d = re.sub(r"\D", "", num)
+    return d if len(d) >= 3 else None
 
 
 def entradas_leyenda(t):
-    """[(importe, fecha)] de las entradas «€32,89 (Mar 20, 2024)» de la leyenda, en el orden en que salen en el texto."""
+    """[(importe, fecha, (prefijo, cifras))] de las entradas «€32,89 (Mar 20, 2024)» de la leyenda, en el orden en que salen."""
     out = []
     for m in ENTRADA.finditer(t):
-        f, v = fecha_en(m.group(2)), extract.precio_texto(m.group(1))
-        if f and v:
-            out.append((v, f))
+        f, d = fecha_en(m.group(3)), _cifras(m.group(2))
+        if f and d:
+            out.append((int(d) / 100, f, (m.group(1), d)))
     return out
 
 
-def parsea(texto):
-    """{minimo, fecha_minimo, maximo, fecha_maximo, media, actual} de lo que se haya podido leer (lo que falte no aparece)."""
+def parsea(texto, crudos=None):
+    """{minimo, fecha_minimo, maximo, fecha_maximo, media, actual} de lo que se haya podido leer (lo que falte no aparece).
+    crudos (un dict, opcional): se rellena con el texto crudo de cada importe, para repararlo (repara)."""
+    crudos = {} if crudos is None else crudos
     t = _plano(texto)
     marcas = []
     for clave, patron in ETIQUETAS:
@@ -89,13 +99,12 @@ def parsea(texto):
         if clave in out and not clave.startswith("fecha"):
             continue
         tramo = t[fin:marcas[i + 1][0] if i + 1 < len(marcas) else len(t)]
-        mi = IMPORTE.search(re.sub(r"\b\d{1,2}[ ./-][a-z]{3,5}\.? ?\d{2,4}\b|\b\d{1,2}[/.\-]\d{1,2}[/.\-]\d{2,4}\b", " ", tramo))
-        if not mi:
+        mi = TOKEN.search(FECHA_SUELTA.sub(" ", tramo))
+        d = _cifras(mi.group(2)) if mi else None
+        if not d:
             continue
-        v = extract.precio_texto(mi.group(1))
-        if not v:
-            continue
-        out[clave] = v
+        out[clave] = int(d) / 100
+        crudos[clave] = (mi.group(1), d)
         f = fecha_en(tramo)
         if f and clave in ("minimo", "maximo"):
             out["fecha_" + clave] = f.isoformat()
@@ -104,7 +113,7 @@ def parsea(texto):
     libres = entradas_leyenda(t)
     if libres and any(k not in out for k in ("minimo", "maximo", "actual")):
         def quita(valor, fecha=None, la_ultima=False):
-            idx = [i for i, (v, f) in enumerate(libres) if abs(v - valor) < 0.005 and (fecha is None or f.isoformat() == fecha)]
+            idx = [i for i, (v, f, _) in enumerate(libres) if abs(v - valor) < 0.005 and (fecha is None or f.isoformat() == fecha)]
             if idx:
                 libres.pop(max(idx, key=lambda i: libres[i][1]) if la_ultima else idx[0])
         if "maximo" in out:
@@ -116,13 +125,14 @@ def parsea(texto):
         faltan = [k for k in ("minimo", "maximo", "actual") if k not in out]
         hoy = datetime.date.today()
         while faltan and libres:
-            v, f = libres.pop(0)
+            v, f, tok = libres.pop(0)
             if len(libres) + 1 < len(faltan):             # entradas de menos: la del precio actual es de hoy; si no, por el orden
                 clave = "actual" if "actual" in faltan and (hoy - f).days <= 3 else next((k for k in faltan if k != "actual"), "actual")
             else:
                 clave = faltan[0]
             faltan.remove(clave)
             out[clave] = v
+            crudos[clave] = tok
             if clave != "actual":
                 out["fecha_" + clave] = f.isoformat()
     return out
@@ -130,7 +140,7 @@ def parsea(texto):
 
 def escala_eje(texto):
     """(mínimo, máximo, escalón) de la escala vertical de la gráfica, por sus etiquetas («€30», «€35»…), o None."""
-    nums = sorted({float(n) for n in re.findall(r"(?m)^\s*[€E(C]\s?(\d{1,5})\s*$", texto or "")})
+    nums = sorted({float(n) for n in re.findall(r"(?m)^\s*[€E(C]\s?(\d{2,5})\s*$", texto or "")})
     if len(nums) < 2:
         return None
     return nums[0], nums[-1], min(y - x for x, y in zip(nums, nums[1:]))
@@ -159,7 +169,32 @@ def parecido(v, s):
     return (len(dv) < len(ds) and ds.endswith(dv.lstrip("0") or dv)) or (len(dv) == len(ds) and sum(a != b for a, b in zip(dv, ds)) == 1)
 
 
-def repara(texto, d):
+def candidatos_cifra(pref, d):
+    """Lecturas posibles de un importe mal leído, solo las de errores del lector que se repiten: confunde el «€» con la cifra siguiente
+    («€4» sale como «, «€3» como 0 y «€5» como 6: «€48,64» sale «8,64», «€33,73» sale «03,73», «€52,06» sale «62,06»). Si ninguna
+    cuadra con la escala y con las otras cifras, no se inventa nada."""
+    c = []
+    if pref == "«":
+        c.append(int("4" + d) / 100)
+    if d[0] == "0":
+        c.append(int("3" + d[1:]) / 100)
+    c.append(int(d) / 100)
+    if d[0] == "6":
+        c.append(int("5" + d[1:]) / 100)
+    return c
+
+
+def coherente(clave, v, d):
+    """¿`v` cuadra con las otras cifras? El máximo no baja del mínimo ni del actual; el mínimo no sube del máximo ni del actual."""
+    o = {k: d.get(k) for k in ("minimo", "maximo", "actual") if k != clave and d.get(k) is not None}
+    if clave == "maximo":
+        return all(v >= x for k, x in o.items())
+    if clave == "minimo":
+        return all(v <= x for k, x in o.items())
+    return o.get("minimo", v) <= v <= o.get("maximo", v)
+
+
+def repara(texto, d, crudos=None):
     """Corrige las cifras de la leyenda que quedan fuera de la escala de la gráfica con la etiqueta lateral que se les parece
     y sí cabe en la escala. Devuelve (datos, [lo que se ha corregido])."""
     esc = escala_eje(texto)
@@ -177,6 +212,17 @@ def repara(texto, d):
         if len(c) == 1:
             out[clave] = c[0]
             cambios.append(f"{nombre}: la leyenda se leyó {euros(v)} y la etiqueta de la gráfica dice {euros(c[0])}")
+    if crudos:                                # cifras mal leídas: la lectura que cabe en la escala y cuadra con las otras
+        for _ in range(2):
+            for clave, nombre in (("actual", "el precio actual"), ("maximo", "el máximo"), ("minimo", "el mínimo")):
+                v, tok = out.get(clave), crudos.get(clave)
+                if v is None or not tok or (dentro(v) and coherente(clave, v, out)):
+                    continue
+                validas = [x for x in candidatos_cifra(*tok) if dentro(x) and coherente(clave, x, out)]
+                elegida = validas[0] if validas else None
+                if elegida is not None and abs(elegida - v) > 0.004:
+                    cambios.append(f"{nombre}: la leyenda se leyó {euros(v)} y por la escala y las otras cifras es {euros(elegida)}")
+                    out[clave] = elegida
     if out.get("actual") is None and out.get("minimo") is not None and out.get("maximo") is not None:
         # el precio actual no se leyó en la leyenda: es la etiqueta lateral que no es ni el mínimo ni el máximo
         resto = {s for s in candidatos if abs(s - out["minimo"]) > 0.005 and abs(s - out["maximo"]) > 0.005}
@@ -192,6 +238,13 @@ def es_grafica(texto):
     página, con otros históricos, y a guardarlo como si fuera de un producto."""
     t = (texto or "").lower()
     return escala_eje(texto) is not None and any(k in t for k in ("price type", "lowest", "highest", "current"))
+
+
+def analiza(texto):
+    """(datos, [cifras corregidas]) de un texto de gráfica: lo lee y repara las cifras que el lector estropeó."""
+    crudos = {}
+    d = parsea(texto, crudos)
+    return repara(texto, d, crudos)
 
 
 def valida(texto, d):

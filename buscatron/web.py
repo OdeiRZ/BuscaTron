@@ -343,7 +343,7 @@ class Handler(BaseHTTPRequestHandler):
         if ruta == "/api/grafica":            # texto de la gráfica de camelcamelcamel que pegas tú (no se pide nada a su web)
             datos_img = ocr.decodifica(c.get("imagen", ""))
             texto = ocr.lee(datos_img)
-            datos, reparado = historico.repara(texto, historico.parsea(texto))
+            datos, reparado = historico.analiza(texto)
             problemas = historico.valida(texto, datos)
             px = ocr.ancho(datos_img)
             nota = f"La imagen es pequeña ({px} px de ancho): si algo no cuadra, amplía la gráfica." if 0 < px < 900 else ""

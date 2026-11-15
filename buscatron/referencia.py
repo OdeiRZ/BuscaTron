@@ -203,6 +203,7 @@ def resumen(ambito="avisos", estado="activas"):
         excl = {sid: exc for sid, exc in c.execute("SELECT id, excluir FROM seguimientos")}
         vinculos = {k: a for k, a in c.execute("SELECT clave, asin FROM vinculos_amazon")}
         extras = [(a, t) for a, t in c.execute("SELECT asin, titulo FROM ref_extra ORDER BY ts")]
+        segs_todas = [dict(s) for s in c.execute("SELECT * FROM seguimientos")]
     idiomas = motor.idiomas_de_fichas(list(amazon) + [p["url"] for p in prods])
     prods = [p for p in prods if idiomas.get(p["url"]) not in ("en", "otro")]     # su ficha ya dijo que no está en castellano
 
@@ -239,44 +240,47 @@ def resumen(ambito="avisos", estado="activas"):
         visto = amazon.get(url_amazon(a_))
         cand = limpio(visto or {"url": url_amazon(a_), "asin": a_, "titulo": titulo, "n": 0})
         salida.append({"titulo": titulo, "precio": None, "tienda": "", "url": url_amazon(a_), "ts": 0, "seg_id": None, "clave": "", "asin": a_,
-                       "vinculado": False, "extra": True, "amazon": cand, "alternativas": [], "sugerencias": []})
+                       "vinculado": False, "extra": True, "amazon": cand, "alternativas": [], "sugerencias": [],
+                       "vigiladas": [x["nombre"] for x in segs_todas if seguimiento.cumple(x, titulo)]})
     return salida
 
 
+def titulos_conocidos(c, amazon):
+    """{asin: {títulos}}: cómo se llama cada ficha de Amazon según lo que BuscaTron sabe de ella (su título en Amazon, el producto al
+    que la vinculaste, el nombre que le pusiste al añadirla por enlace)."""
+    t = {}
+    for a in amazon.values():
+        t.setdefault(a["asin"], set()).add(a["titulo"])
+    for _, a_, titulo in c.execute("SELECT clave, asin, titulo FROM vinculos_amazon"):
+        if titulo:
+            t.setdefault(a_, set()).add(titulo)
+    for a_, titulo in c.execute("SELECT asin, titulo FROM ref_extra"):
+        t.setdefault(a_, set()).add(titulo)
+    return t
+
+
 def por_vigilada():
-    """{id de la vigilada: [{titulo, asin, minimo, fecha_minimo, maximo, fecha_maximo, actual}]} de los productos que encontró en
-    su última revisión y tienen histórico de camelcamelcamel ya leído. Vale para las vigiladas activas y las que están en pausa;
-    las que no tienen ningún producto con historial no aparecen."""
+    """{id de la vigilada: [{titulo, asin, minimo, fecha_minimo, maximo, fecha_maximo, actual}]}: los productos de Amazon con histórico
+    de camelcamelcamel ya leído cuyo nombre cumple los filtros de esa vigilada (activa o en pausa). Da igual que ahora tenga stock, o
+    que la vigilada haya encontrado algo en su última revisión: un juego agotado sigue teniendo su historial. Las vigiladas sin ningún
+    producto con historial no aparecen."""
     camel = historico.todos()
     if not camel:
         return {}
     with bd.conecta() as c:
         amazon = _amazon(c)
-        excl = {sid: exc for sid, exc in c.execute("SELECT id, excluir FROM seguimientos")}
-        vinculos = {k: a for k, a in c.execute("SELECT clave, asin FROM vinculos_amazon")}
-        filas = {}
-        for titulo, precio, tienda, url, ts, sid in _de_vigiladas(c, "todas"):
-            filas.setdefault(sid, []).append((titulo, precio, tienda, url))
-    ocultos = set(motor.ignorados())
-    idiomas = motor.idiomas_de_fichas(list(amazon))
+        titulos = titulos_conocidos(c, amazon)
+        segs = [dict(s) for s in c.execute("SELECT * FROM seguimientos")]
     out = {}
-    for sid, rows in filas.items():
-        grupos = {}
-        for titulo, precio, tienda, url in rows:
-            k = motor.clave_producto(titulo)
-            if k not in ocultos and (k not in grupos or precio < grupos[k]["precio"]):
-                grupos[k] = {"titulo": titulo, "precio": precio, "tienda": tienda, "url": url}
-        items, vistos = [], set()
-        for k, p in grupos.items():
-            a_ = vinculos.get(k)
-            if not a_:
-                cands = _candidatos(p, amazon, excl.get(sid), idiomas)
-                a_ = cands[0]["asin"] if cands else None
-            d = camel.get(a_)
-            if not d or a_ in vistos or d.get("minimo") is None or d.get("maximo") is None:
+    for seg in segs:
+        seg["opciones"] = seguimiento.opciones_de(seg)
+        items = []
+        for a_, d in camel.items():
+            if d.get("minimo") is None or d.get("maximo") is None:
                 continue
-            vistos.add(a_)
-            items.append({"titulo": p["titulo"], "asin": a_, **{f: d.get(f) for f in ("minimo", "fecha_minimo", "maximo", "fecha_maximo", "actual")}})
+            tit = next((t for t in sorted(titulos.get(a_, ()), key=len) if seguimiento.cumple(seg, t)), None)
+            if tit:
+                items.append({"titulo": tit, "asin": a_, **{f: d.get(f) for f in ("minimo", "fecha_minimo", "maximo", "fecha_maximo", "actual")}})
         if items:
-            out[sid] = sorted(items, key=lambda x: extract.normaliza(x["titulo"]))
+            out[seg["id"]] = sorted(items, key=lambda x: extract.normaliza(x["titulo"]))
     return out

@@ -51,6 +51,9 @@ class GraficaReal(unittest.TestCase):
         self.assertEqual(ocr.ancho(b"no es png"), 0)
 
 
+ILEGIBLE = PEQUENA.replace("03,09", "7,77")       # el mínimo no se lee y ninguna lectura conocida cabe en la escala: no se inventa
+
+
 class Endpoint(unittest.TestCase):
     def llama(self, texto, ancho):
         with mock.patch.object(ocr, "lee", lambda b: texto), mock.patch.object(ocr, "decodifica", lambda u: png(ancho)):
@@ -61,10 +64,14 @@ class Endpoint(unittest.TestCase):
         self.assertTrue(r["frases"] and not r["problemas"] and not r["nota"])
 
     def test_dudosa_no_da_frases_y_explica(self):
-        r = self.llama(PEQUENA, 600)
+        r = self.llama(ILEGIBLE, 600)
         self.assertEqual(r["frases"], [])
         self.assertTrue(r["problemas"])
         self.assertIn("pequeña", r["nota"])
+
+    def test_la_lectura_pequeña_con_el_euro_confundido_se_repara(self):
+        r = self.llama(PEQUENA, 600)                   # «03,09» era «€33,09»
+        self.assertEqual((r["datos"]["minimo"], r["problemas"]), (33.09, []))
 
 
 if __name__ == "__main__":
@@ -105,7 +112,7 @@ class Guardado(ConBD):
         self.assertEqual((d["minimo"], d["fecha_minimo"], d["maximo"], d["actual"]), (33.09, "2026-08-02", 48.98, 40.33))
 
     def test_una_dudosa_no_se_guarda(self):
-        self.assertFalse(self.llama(PEQUENA, 600, "B091Q2GGMR")["guardado"])
+        self.assertFalse(self.llama(ILEGIBLE, 600, "B091Q2GGMR")["guardado"])
         self.assertEqual(historico.todos(), {})
 
     def test_sin_producto_no_se_guarda(self):
@@ -186,3 +193,43 @@ class CapturasReales(unittest.TestCase):
 
     def test_importes_sueltos_con_la_coma_perdida_y_letras_confundidas(self):
         self.assertEqual(historico.importes_sueltos("€5Z95\n(32,89\n----- €5206\n€50\n(45"), [52.95, 32.89, 52.06])
+
+
+# Lo que el lector sacó de dos capturas REALES de tu navegador (recortes de 1050 px): la leyenda sale con el «€» confundido con la
+# cifra siguiente y, en una, sin la coma; las etiquetas laterales salen cortadas («€4») y no sirven. Valores: los que se ven en las imágenes.
+CRANEO_ROJO = chr(10).join(["Asmodee Marvel Champions - La Tiranía de Cráneo Rojo", "(4", "€45", "€40", "€35", "€30", "May Jul Sep", "Price typo", "Amazon",
+                          "Nov '22 Mar May", "€33,73 (Mar 27, 2023)", "Jul", "Sep Nov 23 Mar", "Highest", "«8,64 (Nov 4, 2024)", "May Jul Sep Nov", "Current",
+                          "€44,99 (Nov 15.2026)", "24", "Mar"])
+NO_TEMERE = chr(10).join(["€46", "€45", "€44", "€43", "€41", "Price typo", "Amazon", "Asmodee Marvel Champions No temeré ningún Mal, Expansión, Juego de Cartas",
+                        "(4", "Oct", "Nov", "€42.22 (Sep 9, 2026)", "Sep", "Highest", "«4,99 (Sep 3, 2026)", "Current", "€4222 (Nov 15.2026)"])
+
+
+class CifrasConElEuroConfundido(unittest.TestCase):
+    def leer(self, texto):
+        d, cambios = historico.analiza(texto)
+        return d, cambios, historico.valida(texto, d)
+
+    def test_craneo_rojo_real(self):
+        d, cambios, problemas = self.leer(CRANEO_ROJO)
+        self.assertEqual((d["minimo"], d["fecha_minimo"], d["maximo"], d["fecha_maximo"], d["actual"]), (33.73, "2023-03-27", 48.64, "2024-11-04", 44.99))
+        self.assertEqual(problemas, [])
+        self.assertTrue(cambios and "8,64" in cambios[0] and "48,64" in cambios[0])
+
+    def test_no_temere_real_sin_la_coma_y_con_la_fecha_con_punto(self):
+        d, cambios, problemas = self.leer(NO_TEMERE)
+        self.assertEqual((d["minimo"], d["fecha_minimo"], d["maximo"], d["fecha_maximo"], d["actual"]), (42.22, "2026-09-09", 44.99, "2026-09-03", 42.22))
+        self.assertEqual(problemas, [])          # «Nov 15.2026» ya no se lee como el número 15.202
+
+    def test_la_etiqueta_lateral_cortada_no_estropea_la_escala(self):
+        self.assertEqual(historico.escala_eje(CRANEO_ROJO), (30.0, 45.0, 5.0))      # «(4» no cuenta como etiqueta del eje
+
+    def test_las_tres_confusiones_conocidas(self):
+        self.assertEqual(historico.candidatos_cifra("«", "864")[0], 48.64)
+        self.assertEqual(historico.candidatos_cifra("", "0373")[0], 33.73)
+        self.assertIn(52.06, historico.candidatos_cifra("", "6206"))
+
+    def test_no_inventa_cifras(self):
+        self.assertEqual(historico.candidatos_cifra("", "777"), [7.77])            # sin una confusión conocida, no hay otra lectura
+        t = CRANEO_ROJO.replace("«8,64", "7,77")
+        d, _, problemas = self.leer(t)
+        self.assertTrue(problemas)                                                # queda rechazada, no «reparada» a lo que sea

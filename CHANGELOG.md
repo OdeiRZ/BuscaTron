@@ -3,6 +3,11 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.17.33] - 2026-11-15
+
+### Corregido
+- **Los mínimos y máximos de Cráneo Rojo y de «No temeré ningún mal» no salían aunque la gráfica se capturaba bien**: el lector de texto confunde el «€» con la cifra que le sigue (`€48,64` sale `«8,64`, `€33,73` sale `03,73`, `€52,06` sale `62,06`) y a veces pierde la coma (`€4222` por `€42,22`), y además tomaba la fecha `Nov 15.2026` por el número 15.202 («precio actual de 15.202 €»). BuscaTron rechazaba esas lecturas por absurdas, con razón. Ahora repara cada cifra con las lecturas que corresponden a esos tres errores conocidos y se queda con la que cabe en la escala de la gráfica y cuadra con las otras dos (el máximo no baja del mínimo ni del actual…); si ninguna cuadra, **no inventa nada** y la rechaza. Las fechas con punto se leen bien y las etiquetas laterales cortadas («(4») ya no estropean la escala.
+- Comprobado con las dos capturas reales de tu navegador (imágenes que BuscaTron conservó en capturas_fallidas/): Cráneo Rojo, mínimo 33,73 € (27/03/2023), máximo 48,64 € (04/11/2024), actual 44,99 €; No temeré ningún mal, mínimo 42,22 € (09/09/2026), máximo 44,99 € (03/09/2026), actual 42,22 €.
 ## [0.17.32] - 2026-11-15
 
 ### Corregido

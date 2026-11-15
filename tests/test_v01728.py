@@ -89,8 +89,8 @@ class ResumenEnVigiladas(ConBD):
     def prepara(self):
         import time
         from buscatron import seguimiento
-        a, b, c = (seguimiento.guarda({"consulta": "marvel champions"}), seguimiento.guarda({"consulta": "marvel champions", "activo": False}),
-                   seguimiento.guarda({"consulta": "marvel champions"}))
+        a, b, c = (seguimiento.guarda({"consulta": "era de apocalipsis"}), seguimiento.guarda({"consulta": "civil war", "activo": False}),
+                   seguimiento.guarda({"consulta": "titan loco"}))
         ahora = time.time()
         with bd.conecta() as con:
             fila = ("INSERT INTO precios(ts,consulta,tienda,titulo,url,precio,agotado,seg_id,preventa,clave) VALUES(?,?,?,?,?,?,0,?,0,?)")
@@ -184,7 +184,9 @@ class FiltrosActuales(ConBD):
         historico.guarda("B0BJPCXYHW", {"minimo": 40.0, "maximo": 70.0, "actual": 63.42})
         self.assertIn(sid, referencia.por_vigilada())
         seguimiento.guarda({"id": sid, "consulta": "too many bones", "pmin": 90})
-        self.assertNotIn(sid, referencia.por_vigilada())
+        self.assertIn(sid, referencia.por_vigilada())            # el histórico de un juego no depende de su precio de hoy
+        seguimiento.guarda({"id": sid, "consulta": "too many bones", "excluir": "add-on"})
+        self.assertNotIn(sid, referencia.por_vigilada())          # …pero sí de lo que la vigilada descarta
 
 
 PAGINA_DE_BUSCATRON = ("BuscaTron • Comparador de pre X\nhttp://127.0.0.1:8790/#seguir\nReferencia de Amazon\n14 búsquedas vigiladas: 4 activas, 10 en pausa\n"
@@ -252,3 +254,31 @@ class CapturasFallidas(ConBD):
             for i in range(15):
                 historico.conserva_captura(f"B0000000{i:02d}", b"x", False, maximo=12)
         self.assertEqual(len(os.listdir(os.path.join(raiz, "capturas_fallidas"))), 12)
+
+
+class HistoricoPorNombre(ConBD):
+    """El histórico de Amazon va a las vigiladas cuyo nombre y filtros encajan con el producto, aunque ahora esté agotado."""
+
+    def test_una_vigilada_sin_productos_encontrados_tiene_el_historico_de_su_juego(self):
+        from buscatron import seguimiento
+        vig = seguimiento.guarda({"consulta": "No Temeré Ningún Mal", "incluir": "Marvel Champions", "pmax": 39, "activo": False})
+        otra = seguimiento.guarda({"consulta": "Vantage"})
+        referencia.anade_extra("https://www.amazon.es/Asmodee-Champions-Expansi%C3%B3n-Jugadores-Minutos/dp/B0H83RMJLS", "Marvel Champions: No temeré ningún mal")
+        historico.guarda("B0H83RMJLS", {"minimo": 38.0, "fecha_minimo": "2026-01-10", "maximo": 45.0, "actual": 44.99})
+        r = referencia.por_vigilada()
+        self.assertEqual([x["asin"] for x in r[vig]], ["B0H83RMJLS"])       # sin stock, sin productos hallados y en pausa: sale
+        self.assertNotIn(otra, r)
+
+    def test_un_producto_vinculado_usa_el_nombre_del_producto_al_que_se_unio(self):
+        from buscatron import seguimiento
+        vig = seguimiento.guarda({"consulta": "Los Más Buscados de la Galaxia", "incluir": "Marvel Champions"})
+        referencia.vincula("clave x", "B091Q2GGMR", "Asmodee Marvel Champions: Los Más Buscados de la Galaxia")
+        historico.guarda("B091Q2GGMR", {"minimo": 33.09, "maximo": 48.98, "actual": 40.33})
+        self.assertIn(vig, referencia.por_vigilada())
+
+    def test_el_bloque_de_un_añadido_dice_en_que_vigiladas_va(self):
+        from buscatron import seguimiento
+        seguimiento.guarda({"consulta": "No Temeré Ningún Mal", "incluir": "Marvel Champions"})
+        referencia.anade_extra("https://www.amazon.es/x/dp/B0H83RMJLS", "Marvel Champions: No temeré ningún mal")
+        e = [p for p in referencia.resumen("vigiladas", "todas") if p.get("extra")][0]
+        self.assertEqual(e["vigiladas"], ["No Temeré Ningún Mal"])
