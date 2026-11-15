@@ -3,6 +3,11 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.17.13] - 2026-11-15
+
+### Añadido
+- **Búsqueda por internet con tu clave de Brave Search** (Ajustes → «🔎 Búsqueda por internet»). Con clave, la búsqueda abierta pregunta a la API oficial de Brave (2 consultas por búsqueda, con el filtro de relevancia) en vez de a Bing, que a un programa le devuelve resultados sin relación. Sin clave, o si la clave falla o se queda sin límite, usa Bing como antes y lo dice en el informe de la búsqueda. La clave se guarda enmascarada, como el token de Telegram.
+
 ## [0.17.12] - 2026-11-15
 
 ### Corregido

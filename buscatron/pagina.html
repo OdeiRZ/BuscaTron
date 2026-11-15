@@ -418,6 +418,11 @@ kbd{font:600 11px/1 system-ui,sans-serif;padding:2px 5px;border:1px solid var(--
     <p class="ayuda" id="red-pin"></p>
   </div>
   <div class="card">
+    <h2>🔎 Búsqueda por internet</h2>
+    <p class="ayuda" style="margin-top:0">Para encontrar tiendas que no tienes en tu lista, BuscaTron usa Brave Search con tu propia clave (gratuita en <b>brave.com/search/api</b>). Sin clave usa Bing, que da resultados poco fiables. Se activa con «Buscar también en internet» en una búsqueda o en una vigilada.</p>
+    <div><label for="a-clave">Clave de Brave Search</label><input type="password" id="a-clave" autocomplete="off" autocapitalize="none"></div>
+  </div>
+  <div class="card">
     <h2>🌐 Navegador</h2>
     <p class="ayuda" style="margin-top:0" id="a-nav-info">Algunas tiendas solo enseñan sus productos a un navegador de verdad (Amazon, Turol Games). Para ellas BuscaTron abre tu Chrome en segundo plano, sin ventana. Solo se usa cuando la lectura normal no encuentra nada.</p>
     <label class="sw"><input type="checkbox" id="a-nav"> Usar Chrome para las tiendas que lo necesiten</label>
@@ -947,7 +952,7 @@ $('srv-reiniciar').onclick=()=>saleSrv('reiniciar');$('srv-cerrar').onclick=()=>
 setInterval(()=>{if(document.visibilityState==='visible')cargaServicio();},60000);
 
 /* ajustes */
-async function cargaAjustes(){cargaServicio();const a=await api('ajustes');$('a-token').value=a.telegram_token;$('a-chat').value=a.telegram_chat;
+async function cargaAjustes(){cargaServicio();const a=await api('ajustes');$('a-token').value=a.telegram_token;$('a-chat').value=a.telegram_chat;$('a-clave').value=a.busqueda_clave||'';
   $('a-srv').value=a.smtp_servidor;$('a-pto').value=a.smtp_puerto;$('a-usr').value=a.smtp_usuario;$('a-clv').value=a.smtp_clave;$('a-dst').value=a.correo_destino;
   $('a-nav').checked=!!a.usar_navegador;$('a-navvis').checked=!!a.navegador_visible;$('a-nav').disabled=!a.navegador_disponible;
   if(!a.navegador_disponible)$('a-nav-info').textContent='No disponible: hace falta Chrome o Edge instalado y el complemento Playwright (pip install playwright).';
@@ -986,7 +991,7 @@ async function cargaRed(){const r=await api('red');if(r.error)return;
     ?'En el móvil, conectado a la misma Wi-Fi, abre la dirección de «red local» (suele empezar por 192.168). Si no carga, ejecuta una vez permitir_acceso_movil.bat como administrador.'
     :'BuscaTron está abierto solo para este equipo. Ábrelo con BuscaTron.bat (o sin --host 127.0.0.1) para usarlo desde el móvil.';
   $('red-pin').textContent=r.pin?'El móvil pedirá el PIN una vez (se recuerda 30 días). Este equipo no lo necesita.':'Sin PIN, cualquier dispositivo de tu red local podría usar BuscaTron. Se recomienda ponerlo.';}
-const ajustesForm=()=>({telegram_token:$('a-token').value,telegram_chat:$('a-chat').value,smtp_servidor:$('a-srv').value,
+const ajustesForm=()=>({busqueda_clave:$('a-clave').value.trim(),telegram_token:$('a-token').value,telegram_chat:$('a-chat').value,smtp_servidor:$('a-srv').value,
   smtp_puerto:Number($('a-pto').value)||587,smtp_usuario:$('a-usr').value,smtp_clave:$('a-clv').value,correo_destino:$('a-dst').value,
   usar_navegador:$('a-nav').checked,navegador_visible:$('a-navvis').checked,pin:$('a-pin').value,paginas:Number($('a-pag').value)||3});
 const msg=(t,ok)=>{$('a-msg').className=ok?'ok':'err';$('a-msg').textContent=t;};
