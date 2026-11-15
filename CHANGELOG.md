@@ -3,6 +3,14 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.17.28] - 2026-11-15
+
+### Añadido
+- **Añadir a la Referencia de Amazon un producto por su enlace, tenga o no stock**: campo «Pega aquí el enlace de un juego de Amazon» arriba de la Referencia. El producto sale con su bloque (marcado «Añadido por ti») aunque ninguna de tus tiendas lo venda ahora, con la gráfica de camelcamelcamel y su histórico, y «Leer las gráficas que faltan» lo lee como los demás. El nombre sale del propio enlace; se puede quitar. Tabla ef_extra.
+- La pantalla de «Leer las gráficas» es más tranquila: fondo gris con barra de avance.
+
+### Corregido
+- El recuadro del histórico de camel no salía en los productos sin precios de BuscaTron (los vinculados a mano y los añadidos por enlace). Los vinculados a mano que BuscaTron aún no había visto tampoco traían su histórico.
 ## [0.17.27] - 2026-11-15
 
 ### Corregido

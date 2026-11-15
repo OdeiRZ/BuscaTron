@@ -5,6 +5,7 @@ Hay fichas de Amazon cuyo título no dice qué es («Fantasy MC16ES Flight Games
 Galaxia): para esas se sugieren parecidas y se puede vincular a mano pegando su enlace (se recuerda)."""
 import re
 import time
+import urllib.parse
 import urllib.request
 
 from . import bd, extract, historico, motor
@@ -49,6 +50,29 @@ def vincula(clave, enlace, titulo=""):
     with bd.conecta() as c:
         c.execute("INSERT OR REPLACE INTO vinculos_amazon(clave, asin, titulo, ts) VALUES(?,?,?,?)", (clave, a, titulo, time.time()))
     return a
+
+
+def titulo_de_enlace(enlace):
+    """El nombre que lleva un enlace de Amazon antes de «/dp/» («…/Marvel-Champions-Tiranía-Cráneo-Rojo/dp/B08VW72D4F»)."""
+    m = re.search(r"amazon\.[a-z.]+/([^/?#]+)/(?:dp|gp/product)/", enlace or "")
+    return urllib.parse.unquote(m.group(1)).replace("-", " ").strip() if m else ""
+
+
+def anade_extra(enlace, titulo=""):
+    """Añade a la referencia un producto de Amazon por su enlace, tenga o no stock: así tiene su bloque (y su histórico de
+    camelcamelcamel) aunque ninguna de tus tiendas lo venda ahora."""
+    a = asin_de_enlace(enlace)
+    if not a:
+        raise ValueError("No encuentro el producto en ese enlace: pega el de su ficha de Amazon (amazon.es/…/dp/… o amzn.eu/d/…)")
+    titulo = (titulo or titulo_de_enlace(enlace) or a).strip()[:160]
+    with bd.conecta() as c:
+        c.execute("INSERT OR REPLACE INTO ref_extra(asin, titulo, ts) VALUES(?,?,?)", (a, titulo, time.time()))
+    return {"asin": a, "titulo": titulo}
+
+
+def quita_extra(asin_):
+    with bd.conecta() as c:
+        c.execute("DELETE FROM ref_extra WHERE asin=?", (asin_,))
 
 
 def desvincula(clave):
@@ -154,6 +178,7 @@ def resumen(ambito="avisos"):
         prods = _productos(c, ambito)
         excl = {sid: exc for sid, exc in c.execute("SELECT id, excluir FROM seguimientos")}
         vinculos = {k: a for k, a in c.execute("SELECT clave, asin FROM vinculos_amazon")}
+        extras = [(a, t) for a, t in c.execute("SELECT asin, titulo FROM ref_extra ORDER BY ts")]
     idiomas = motor.idiomas_de_fichas(list(amazon) + [p["url"] for p in prods])
     prods = [p for p in prods if idiomas.get(p["url"]) not in ("en", "otro")]     # su ficha ya dijo que no está en castellano
 
@@ -162,7 +187,7 @@ def resumen(ambito="avisos"):
     def limpio(a):
         d = camel.get(a.get("asin"))
         return {k: v for k, v in a.items() if k != "palabras"} | {
-            "idioma": idiomas.get(a["url"]),
+            "idioma": idiomas.get(a["url"]) if "idioma" not in a else a["idioma"],
             "camel": {**d, "frases": historico.frases(d, aviso=False)} if d else None}
     salida, referencias = [], set()
     for p in prods:
@@ -170,7 +195,7 @@ def resumen(ambito="avisos"):
         vin = vinculos.get(p["clave"])
         if vin:                    # vinculado a mano: manda, aunque BuscaTron todavía no tenga precios suyos
             a = amazon.get(url_amazon(vin))
-            cands = [limpio(a) if a else {"url": url_amazon(vin), "asin": vin, "titulo": "", "n": 0, "idioma": idiomas.get(url_amazon(vin))}]
+            cands = [limpio(a or {"url": url_amazon(vin), "asin": vin, "titulo": "", "n": 0})]
         else:
             cands = [limpio(a) for a in _candidatos(p, amazon, excl.get(p["seg_id"]), idiomas)]
         salida.append({**p, "asin": asin(p["url"]) if p["tienda"] == AMAZON else None, "vinculado": bool(vin),
@@ -181,4 +206,14 @@ def resumen(ambito="avisos"):
         if not x["amazon"]:
             x["sugerencias"] = [limpio(a) for a in _sugerencias(x, amazon, excl.get(x["seg_id"]), referencias)]
     # un producto de Amazon que ya sale como referencia de otro no se repite como producto aparte
-    return [x for x in salida if not (x["tienda"] == AMAZON and x["url"] in referencias)]
+    salida = [x for x in salida if not (x["tienda"] == AMAZON and x["url"] in referencias)]
+    # los añadidos por enlace (sin stock en tus tiendas): su bloque con el histórico, salvo que ya salgan arriba
+    ya = {x["amazon"]["asin"] for x in salida if x["amazon"] and x["amazon"].get("asin")}
+    for a_, titulo in extras:
+        if a_ in ya:
+            continue
+        visto = amazon.get(url_amazon(a_))
+        cand = limpio(visto or {"url": url_amazon(a_), "asin": a_, "titulo": titulo, "n": 0})
+        salida.append({"titulo": titulo, "precio": None, "tienda": None, "url": url_amazon(a_), "ts": 0, "seg_id": None, "clave": "", "asin": a_,
+                       "vinculado": False, "extra": True, "amazon": cand, "alternativas": [], "sugerencias": []})
+    return salida

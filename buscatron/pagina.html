@@ -689,6 +689,7 @@ let refAmbito='avisos';
 const camel=a=>`https://es.camelcamelcamel.com/product/${a}`,keepa=a=>`https://keepa.com/#!product/9-${a}`;
 const grafCamel=a=>`https://charts.camelcamelcamel.com/es/${a}/amazon.png?force=1&zero=0&w=1200&h=600&desired=false&legend=1&ilt=1&tp=all&fo=0&lang=es_ES`;
 function veredicto(p,a){
+  if(p.extra)return '';
   if(p.tienda==='www.amazon.es'&&p.url===a.url)return a.n>1&&a.actual<=a.minimo+0.005?'<span class="tag ok">Ahora en su mínimo visto</span>':'';
   if(p.precio<a.minimo-0.005)return `<span class="tag ok">${Math.round((1-p.precio/a.minimo)*100)} % por debajo de lo más barato visto en Amazon</span>`;
   if(p.precio<=a.actual+0.005)return '<span class="tag ok">Más barato que Amazon ahora</span>';
@@ -705,17 +706,18 @@ function tarjetaRef(p,i){const a=p.amazon,q=encodeURIComponent(p.titulo);
     :'<span class="mut">Para vincularlo a mano, reinicia BuscaTron (🆕 arriba).</span>';
   const vinc=p.vinculado?`<div class="l">🔗 Vinculado a mano · <a href="#" data-vquita="${i}">quitar el vínculo</a></div>`:'';
   const amz=a?`<div class="amz">${a.n?`<div class="l">En Amazon: <b>${euro(a.actual)}</b> ahora · lo más barato visto <b>${euro(a.minimo)}</b>${a.maximo>a.minimo?` · lo más caro ${euro(a.maximo)}`:''} · ${a.n} precio${a.n===1?'':'s'} desde el ${fecha(a.desde).split(',')[0]}</div>
-      <div class="meta">${veredicto(p,a)}${otro?'<span class="tag ko">Esa ficha de Amazon no está en castellano</span>':''}</div>${a.camel?camelHtml(a.camel):''}`
-      :`<div class="l">BuscaTron todavía no tiene precios suyos: mira su histórico en camelcamelcamel o Keepa.</div>`}${vinc}
+      <div class="meta">${veredicto(p,a)}${otro?'<span class="tag ko">Esa ficha de Amazon no está en castellano</span>':''}</div>`
+      :`<div class="l">BuscaTron todavía no tiene precios suyos: mira su histórico en camelcamelcamel o Keepa.</div>`}${a.camel?camelHtml(a.camel):''}${vinc}
       ${p.tienda==='www.amazon.es'&&p.url===a.url?'':`<div class="l">Es «<a href="${esc(a.url)}" target="_blank" rel="noopener">${esc(a.titulo||a.asin)}</a>»</div>`}
       <img class="camel" loading="lazy" referrerpolicy="no-referrer" alt="Gráfica de camelcamelcamel" src="${grafCamel(a.asin)}" onerror="this.remove()">
       <div class="enlaces"><a href="${camel(a.asin)}" target="_blank" rel="noopener">camelcamelcamel ↗</a><a href="${keepa(a.asin)}" target="_blank" rel="noopener">Keepa ↗</a>
         <a href="${esc(a.url)}" target="_blank" rel="noopener">Amazon ↗</a><button type="button" data-leer="${i}" data-asin="${esc(a.asin)}" title="BuscaTron lee la gráfica de camelcamelcamel que ya ves cargada aquí">🖼️ Leer la gráfica</button><button type="button" data-graf="${i}" data-asin="${esc(a.asin)}" title="Si no, copia la gráfica de camelcamelcamel y pégala aquí">📋 Pegar gráfica</button>${a.n?`<button type="button" data-rh="${i}">📈 Lo visto por BuscaTron</button>`:''}</div>
-      ${p.vinculado?'':`<details><summary>¿No es ese?</summary>${p.alternativas.map(o=>opcionAmz(o,i,!!p.clave)).join('')}<div class="enlaces">${pegar}</div></details>`}</div>`
+      ${p.vinculado||p.extra?'':`<details><summary>¿No es ese?</summary>${p.alternativas.map(o=>opcionAmz(o,i,!!p.clave)).join('')}<div class="enlaces">${pegar}</div></details>`}</div>`
     :`<div class="amz"><div class="l">BuscaTron no ha encontrado su ficha en Amazon con seguridad${p.sugerencias.length?'. ¿Es alguna de estas?':'.'}</div>
       ${p.sugerencias.map(o=>opcionAmz(o,i,!!p.clave)).join('')}
       <div class="enlaces">${pegar}<a href="https://es.camelcamelcamel.com/search?sq=${q}" target="_blank" rel="noopener">Buscar en camelcamelcamel ↗</a><a href="https://www.amazon.es/s?k=${q}" target="_blank" rel="noopener">Buscar en Amazon ↗</a></div></div>`;
-  return `<div class="refc"><div class="t">${esc(p.titulo)}</div><div class="l">Tu mejor precio: <b>${euro(p.precio)}</b> en ${esc(nombreT(p.tienda))} · <a href="${esc(p.url)}" target="_blank" rel="noopener">ver ↗</a></div>${amz}</div>`;}
+  return `<div class="refc"><div class="t">${esc(p.titulo)}</div>${p.extra?`<div class="l">Añadido por ti · ninguna de tus tiendas lo tiene a la venta ahora · <a href="#" data-xquita="${esc(p.asin)}">quitar</a></div>`
+      :`<div class="l">Tu mejor precio: <b>${euro(p.precio)}</b> en ${esc(nombreT(p.tienda))} · <a href="${esc(p.url)}" target="_blank" rel="noopener">ver ↗</a></div>`}${amz}</div>`;}
 /* La gráfica de camelcamelcamel: BuscaTron no puede pedírsela a su web (la rechaza), pero tu navegador sí la tiene cargada. Se lee
    desde aquí (1.º tal cual, si camel lo permite; 2.º capturando esa zona de tu pestaña, con tu permiso) o la pegas tú. */
 function panelGrafica(amz,tras){let z=amz.querySelector('.pgraf');
@@ -748,11 +750,12 @@ async function abreCapturaPestana(res){
   const v=document.createElement('video');v.srcObject=flujo;v.muted=true;await v.play();
   return {flujo,v};}
 /* La miniatura no tiene letra legible: la gráfica se pone un momento a tamaño grande, tapando la página, y se captura esa copia */
-async function fotoGrande(v,src,rotulo,espera){
-  const ov=document.createElement('div');ov.style.cssText='position:fixed;left:0;top:0;right:0;bottom:0;z-index:99999;background:#fff;line-height:1.4;font:14px system-ui,sans-serif;color:#444';
+async function fotoGrande(v,src,rotulo,espera,avance){
+  const ov=document.createElement('div');ov.style.cssText='position:fixed;left:0;top:0;right:0;bottom:0;z-index:99999;background:#f4f5f8;line-height:1.4;font:14px system-ui,sans-serif;color:#444';
   const grande=new Image();grande.src=src;grande.style.cssText=`display:block;max-width:none;height:auto;width:${Math.min(1200,window.innerWidth)}px`;
   const txt=document.createElement('div');txt.style.cssText='padding:10px 16px';txt.textContent=rotulo||'Leyendo la gráfica…';
-  ov.appendChild(grande);ov.appendChild(txt);document.body.appendChild(ov);
+  const barra=document.createElement('div');barra.style.cssText='height:6px;background:#dfe2ee';barra.innerHTML=`<div style="height:6px;width:${Math.round(100*(avance||0))}%;background:#4f46e5"></div>`;
+  ov.appendChild(barra);ov.appendChild(grande);ov.appendChild(txt);document.body.appendChild(ov);
   try{
     await (grande.decode?grande.decode():new Promise((ok,ko)=>{grande.onload=ok;grande.onerror=ko;}));
     await esperaMs(espera||1200);      // la captura llega comprimida: al principio el texto sale borroso
@@ -793,7 +796,7 @@ async function leeTodasInterno(l){
       let r={error:'no se ha podido capturar'},ultimo='';
       for(const espera of [1200,3000]){        // si la primera lectura no cuadra, se repite con más espera
         try{
-          const url=await fotoGrande(cap.v,img?img.src:grafCamel(asin),`Leyendo ${k+1} de ${pend.length}: ${p.titulo.slice(0,60)}  ·  es normal que se vea así: no cambies de pestaña ni toques nada hasta que acabe`,espera);
+          const url=await fotoGrande(cap.v,img?img.src:grafCamel(asin),`Leyendo ${k+1} de ${pend.length}: ${p.titulo.slice(0,60)}  ·  es normal que se vea así: no cambies de pestaña ni toques nada hasta que acabe`,espera,k/pend.length);
           r=await api('grafica',{imagen:url,asin}).catch(()=>({error:'no se pudo hablar con BuscaTron'}));
         }catch(e){r={error:(e.name||'error')+': '+(e.message||'')};}
         if(r.guardado)break;
@@ -824,6 +827,7 @@ let refPedido=0;     // si cambias de lista antes de que llegue la primera, la r
 async function abreRef(ambito){if(ambito)refAmbito=ambito;const yo=++refPedido;
   const sel=`<div class="ref-sel" role="group" aria-label="Productos">${[['avisos','De tus avisos'],['vigiladas','De lo que encuentran tus vigiladas']].map(([k,v])=>`<button type="button" class="chip ${k===refAmbito?'on':''}" data-ramb="${k}" aria-pressed="${k===refAmbito}">${v}</button>`).join('')}</div>`;
   const cab=`<button type="button" class="cierra" aria-label="Cerrar">✕</button><h3>📊 Referencia de Amazon</h3>
+    <div class="enlaces" style="margin:8px 0"><input type="text" id="ref-extra" placeholder="Pega aquí el enlace de un juego de Amazon (aunque no esté en stock)" autocomplete="off" style="flex:1;min-width:220px"><button type="button" id="ref-extra-ok">➕ Añadir</button></div>
     <p class="ayuda" style="margin-top:4px">Cada producto con su equivalente en Amazon y lo que BuscaTron ha visto allí en tus búsquedas. Para el histórico de años, abre camelcamelcamel o Keepa: no dejan leer sus datos automáticamente, pero sus fichas están a un toque.</p>${sel}`;
   $('hoja3').innerHTML=cab+'<div class="carga" style="margin:22px 0"><div class="spin"></div>Preparando el resumen…</div>';
   if(!$('ref').classList.contains('v'))abreHoja('ref');
@@ -832,18 +836,23 @@ async function abreRef(ambito){if(ambito)refAmbito=ambito;const yo=++refPedido;
   try{pintaRef(l,cab);}catch(e){    // nunca «Preparando el resumen…» para siempre: se cuenta qué pasó
     $('hoja3').innerHTML=cab+`<p class="err">No se pudo mostrar el resumen (${esc(e.message)}). Reinicia BuscaTron (🆕 arriba o Ajustes → Servicio) y vuelve a abrirlo.</p>`;}
   $('hoja3').querySelector('.cierra').onclick=()=>cierraHoja('ref');
-  $('hoja3').querySelectorAll('[data-ramb]').forEach(b=>b.onclick=()=>abreRef(b.dataset.ramb));}
+  $('hoja3').querySelectorAll('[data-ramb]').forEach(b=>b.onclick=()=>abreRef(b.dataset.ramb));
+  const anade=async()=>{const v=$('ref-extra').value.trim();if(!v)return;$('ref-extra-ok').disabled=true;
+    const r=await api('referencia',{extra:v}).catch(()=>({error:'No se pudo hablar con BuscaTron'}));$('ref-extra-ok').disabled=false;
+    if(r.error){aviso(r.error);return;}aviso('Añadido: '+r.titulo);abreRef();};
+  $('ref-extra-ok').onclick=anade;$('ref-extra').onkeydown=e=>{if(e.key==='Enter')anade();};}
 let informeTodas='';
 function leerTodasHtml(l){const n=l.filter(p=>p.amazon&&p.amazon.asin&&!p.amazon.camel).length,t=l.filter(p=>p.amazon&&p.amazon.asin).length;
   return `<div class="card" style="margin:10px 0"><button type="button" id="leer-todas" ${n?'':'class="sec"'}>🖼️ ${n?`Leer las gráficas que faltan (${n})`:'Todas las gráficas están leídas'}</button>
     <span class="l" style="margin-left:8px">${t-n} de ${t} con su histórico guardado. Se hace una vez; solo hay que repetirlo con los productos nuevos.</span><div id="leer-todas-msg" class="l" style="margin-top:6px">${informeTodas}</div></div>`;}
 function pintaRef(l,cab){
   if(!Array.isArray(l)){$('hoja3').innerHTML=cab+`<p class="err">${esc(l.error||'No se pudo preparar el resumen. ¿BuscaTron está actualizado y abierto?')}</p>`;}
-  else{const con=l.filter(p=>p.amazon),bajo=con.filter(p=>!(p.tienda==='www.amazon.es'&&p.url===p.amazon.url)&&p.precio<p.amazon.minimo-0.005).length;
+  else{const con=l.filter(p=>p.amazon&&!p.extra),bajo=con.filter(p=>!(p.tienda==='www.amazon.es'&&p.url===p.amazon.url)&&p.precio<p.amazon.minimo-0.005).length;
     $('hoja3').innerHTML=cab+(l.length?`<div class="ref-res"><div class="stat"><b>${l.length}</b><span>Productos</span></div><div class="stat"><b>${con.length}</b><span>Vistos en Amazon</span></div><div class="stat"><b>${bajo}</b><span>Por debajo de Amazon</span></div></div>
       ${leerTodasHtml(l)}<div class="ref-lista">${l.map(tarjetaRef).join('')}</div>`
       :`<div class="vacio-msg">${refAmbito==='avisos'?'No tienes avisos ahora mismo.':'Tus vigiladas activas todavía no han encontrado nada.'}</div>`);
     if($('leer-todas'))$('leer-todas').onclick=()=>leeTodas(l);
+    $('hoja3').querySelectorAll('[data-xquita]').forEach(b=>b.onclick=async e=>{e.preventDefault();await api('referencia',{quitar_extra:b.dataset.xquita});aviso('Quitado');abreRef();});
     $('hoja3').querySelectorAll('[data-leer]').forEach(b=>b.onclick=()=>leeGraficaCargada(b));
     $('hoja3').querySelectorAll('[data-graf]').forEach(b=>b.onclick=()=>abrePegarGrafica(b));
     $('hoja3').querySelectorAll('[data-rh]').forEach(b=>b.onclick=()=>{const a=l[+b.dataset.rh].amazon;abreHist(a.url,a.titulo,'www.amazon.es');});

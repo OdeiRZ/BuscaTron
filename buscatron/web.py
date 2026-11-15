@@ -318,6 +318,11 @@ class Handler(BaseHTTPRequestHandler):
         if ruta == "/api/buscar":
             return busca(c)
         if ruta == "/api/referencia":         # vincular a mano un producto con su ficha de Amazon (o quitar el vínculo)
+            if c.get("extra"):                # añadir un producto de Amazon por su enlace, tenga o no stock
+                return referencia.anade_extra(c["extra"], c.get("titulo", ""))
+            if c.get("quitar_extra"):
+                referencia.quita_extra(c["quitar_extra"])
+                return {"ok": True}
             if c.get("quitar"):
                 referencia.desvincula(c["clave"])
                 return {"ok": True}
