@@ -747,8 +747,18 @@ async function abreCapturaPestana(res){
   const pista=flujo.getVideoTracks()[0],sup=(pista&&pista.getSettings?pista.getSettings().displaySurface:'')||'';
   if(sup&&sup!=='browser'){flujo.getTracks().forEach(t=>t.stop());
     res.innerHTML=`<p class="err">Has compartido ${sup==='monitor'?'la pantalla entera':'una ventana'} y no la pestaña: así no puedo ver solo la gráfica. Pulsa otra vez y elige <b>esta pestaña</b> (en el aviso de Chrome, «Pestaña de Chrome» → BuscaTron), no «Ventana» ni «Pantalla completa».</p>`;return null;}
-  const v=document.createElement('video');v.srcObject=flujo;v.muted=true;await v.play();
-  return {flujo,v};}
+  const v=document.createElement('video');v.srcObject=flujo;v.muted=true;v.autoplay=true;v.setAttribute('playsinline','');
+  v.style.cssText='position:fixed;left:0;bottom:0;width:2px;height:2px;opacity:.01;pointer-events:none';document.body.appendChild(v);   // dentro de la página
+  await v.play();
+  let ic=null;try{if(typeof ImageCapture!=='undefined'&&pista)ic=new ImageCapture(pista);}catch(e){}
+  return {flujo,v,ic};}
+function cierraCaptura(cap){try{cap.flujo.getTracks().forEach(t=>t.stop());}catch(e){}try{cap.v.remove();}catch(e){}}
+/* Un fotograma de la captura: lo más fiable es pedírselo a la pista; si no se puede, se lee del vídeo. */
+async function fotograma(cap){
+  if(cap.ic){try{const b=await cap.ic.grabFrame();const c=document.createElement('canvas');c.width=b.width;c.height=b.height;
+      const x=c.getContext('2d',{willReadFrequently:true});x.drawImage(b,0,0);if(b.close)b.close();if(c.width&&c.height)return {c,x};}catch(e){cap.ic=null;}}
+  const w=cap.v.videoWidth,h=cap.v.videoHeight;if(!w||!h)return null;
+  const c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d',{willReadFrequently:true});x.drawImage(cap.v,0,0);return {c,x};}
 /* La miniatura no tiene letra legible: la gráfica se pone un momento a tamaño grande, tapando la página, y se captura esa copia */
 /* Una marca magenta junto a la gráfica dice dos cosas en la captura: que el fotograma YA trae la pantalla de lectura (el navegador a veces
    entrega fotogramas viejos o vacíos) y dónde está, aunque la captura incluya las barras del navegador. Se espera a verla y se recorta
@@ -758,7 +768,7 @@ function buscaMarca(x,w,h){
   for(let yy=0;yy<h;yy+=2){for(let xx=0;xx<w;xx+=2){const i=(yy*w+xx)*4;
     if(d[i]>200&&d[i+1]<90&&d[i+2]>200){n++;if(xx<x0)x0=xx;if(xx>x1)x1=xx;if(yy<y0)y0=yy;if(yy>y1)y1=yy;}}}
   return n>150&&x1-x0>20?{x:x0,y:y0,w:x1-x0+1}:null;}
-async function fotoGrande(v,src,rotulo,espera,avance){
+async function fotoGrande(cap,src,rotulo,espera,avance){
   const ov=document.createElement('div');ov.id='bt-lectura';ov.style.cssText='position:fixed;left:0;top:0;right:0;bottom:0;z-index:99999;background:#f4f5f8;line-height:1.4;font:14px system-ui,sans-serif;color:#444';
   const cab=document.createElement('div');cab.style.cssText='display:flex;align-items:center;gap:12px;height:48px';
   const marca=document.createElement('div');marca.id='bt-marca';marca.style.cssText='width:40px;height:40px;background:#ff00ff;flex:none';
@@ -768,10 +778,11 @@ async function fotoGrande(v,src,rotulo,espera,avance){
   ov.appendChild(cab);ov.appendChild(barra);ov.appendChild(grande);document.body.appendChild(ov);
   try{
     await (grande.decode?grande.decode():new Promise((ok,ko)=>{grande.onload=ok;grande.onerror=ko;}));
-    for(let i=0;i<18;i++){                                   // hasta ~8 s esperando a que el fotograma ya traiga la pantalla de lectura
+    let ultimo=null;
+    for(let i=0;i<14;i++){                                   // hasta ~6 s esperando a que el fotograma ya traiga la pantalla de lectura
       await esperaMs(i===0?(espera||800):400);
-      const w=v.videoWidth,h=v.videoHeight;if(!w||!h)continue;
-      const c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d',{willReadFrequently:true});x.drawImage(v,0,0);
+      const f=await fotograma(cap);if(!f)continue;
+      const c=f.c,x=f.x,w=c.width,h=c.height;ultimo=c;
       const caja=buscaMarca(x,w,h);if(!caja)continue;
       const k=caja.w/40,r=grande.getBoundingClientRect(),m=marca.getBoundingClientRect();
       const sx=Math.max(0,Math.round(caja.x+(r.left-m.left)*k)),sy=Math.max(0,Math.round(caja.y+(r.top-m.top)*k));
@@ -779,7 +790,10 @@ async function fotoGrande(v,src,rotulo,espera,avance){
       o.getContext('2d').drawImage(c,sx,sy,o.width,o.height,0,0,o.width,o.height);
       return o.toDataURL('image/png');
     }
-    throw new Error('la captura no llegó a mostrar la pantalla de lectura (¿cambiaste de pestaña o de ventana?)');
+    // La marca no se vio (puede ser que el navegador entregara fotogramas viejos, o que el color llegara cambiado por la compresión del
+    // vídeo): se manda el último fotograma ENTERO y BuscaTron comprueba si de verdad trae una gráfica; si no, no se guarda nada.
+    if(ultimo)return ultimo.toDataURL('image/png');
+    throw new Error('la captura no entregó ningún fotograma (¿cambiaste de pestaña o de ventana?)');
   }finally{ov.remove();}}
 async function leeGraficaCargada(b){const amz=b.closest('.amz'),img=amz.querySelector('img.camel'),res=panelGrafica(amz,b).querySelector('.res'),asin=b.dataset.asin||'';
   if(!img||!img.complete||!img.naturalWidth){res.innerHTML='<p class="err">La gráfica no está cargada: camelcamelcamel no se la ha enseñado a tu navegador. Prueba con «Pegar gráfica».</p>';return;}
@@ -792,9 +806,9 @@ async function leeGraficaCargada(b){const amz=b.closest('.amz'),img=amz.querySel
   res.parentElement.scrollIntoView({block:'start'});
   res.innerHTML='<p class="l">Tu navegador te va a preguntar si compartes esta pestaña: elige <b>esta pestaña</b> y acepta. Se usa una sola vez y se descarta.</p>';
   const cap=await abreCapturaPestana(res);if(!cap)return;
-  try{enviaGrafica(res,await fotoGrande(cap.v,img.src),asin);}
+  try{enviaGrafica(res,await fotoGrande(cap,img.src),asin);}
   catch(e){res.innerHTML='<p class="err">No se pudo capturar la gráfica. Puedes usar «Pegar gráfica».</p>';}
-  finally{cap.flujo.getTracks().forEach(t=>t.stop());}}
+  finally{cierraCaptura(cap);}}
 /* «Leer las gráficas que faltan»: un solo permiso para todas. Lo leído queda guardado en cada producto: solo hay que repetirlo con los nuevos. */
 async function leeTodas(l){const b=$('leer-todas');if(!b||b.disabled)return;b.disabled=true;
   try{await leeTodasInterno(l);}
@@ -812,7 +826,7 @@ async function leeTodasInterno(l){
       let r={error:'no se ha podido capturar'},ultimo='';
       for(const espera of [1200,3000]){        // si la primera lectura no cuadra, se repite con más espera
         try{
-          const url=await fotoGrande(cap.v,img?img.src:grafCamel(asin),`Leyendo ${k+1} de ${pend.length}: ${p.titulo.slice(0,60)}  ·  es normal que se vea así: no cambies de pestaña ni toques nada hasta que acabe`,espera,k/pend.length);
+          const url=await fotoGrande(cap,img?img.src:grafCamel(asin),`Leyendo ${k+1} de ${pend.length}: ${p.titulo.slice(0,60)}  ·  es normal que se vea así: no cambies de pestaña ni toques nada hasta que acabe`,espera,k/pend.length);
           r=await api('grafica',{imagen:url,asin}).catch(()=>({error:'no se pudo hablar con BuscaTron'}));
         }catch(e){r={error:(e.name||'error')+': '+(e.message||'')};}
         if(r.guardado)break;
@@ -822,7 +836,7 @@ async function leeTodasInterno(l){
       else fallos.push(`${p.titulo.slice(0,50)}: ${r.error||(r.problemas&&r.problemas.length?r.problemas[0]:'no he encontrado el mínimo y el máximo en la imagen')}`);
       await esperaMs(1500);        // sin prisa: son imágenes de camelcamelcamel que carga tu navegador
     }
-  }finally{cap.flujo.getTracks().forEach(t=>t.stop());}
+  }finally{cierraCaptura(cap);}
   informeTodas=`<div class="${fallos.length?'err':'ok'}" style="margin:6px 0"><b>${hechas} de ${pend.length} leídas y guardadas.</b>`+
     (fallos.length?` No se han guardado ${fallos.length}:<ul style="margin:4px 0;padding-left:18px">${fallos.map(f=>`<li>${esc(f)}</li>`).join('')}</ul>`:'')+`</div>`;
   aviso(`Listo: ${hechas} leídas y guardadas`+(fallos.length?`, ${fallos.length} sin guardar (mira la lista)`:''));

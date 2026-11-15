@@ -229,3 +229,6 @@ navegador_perfil/
 buscatron.log
 buscatron.log.*
 .venv/
+
+# imágenes de gráficas que no se pudieron leer (solo en tu equipo)
+capturas_fallidas/

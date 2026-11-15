@@ -14,9 +14,12 @@ ENLACE = "https://www.amazon.es/Marvel-Champions-Tiran%C3%ADa-Cr%C3%A1neo-Rojo/d
 class ConBD(unittest.TestCase):
     def setUp(self):
         self.p = mock.patch.object(bd, "RUTA", os.path.join(tempfile.mkdtemp(), "t.db"))
+        self.p2 = mock.patch.object(historico, "cfg_raiz", lambda: tempfile.mkdtemp())      # las capturas fallidas, a una carpeta temporal
         self.p.start()
+        self.p2.start()
 
     def tearDown(self):
+        self.p2.stop()
         self.p.stop()
 
 
@@ -231,3 +234,21 @@ class SoloJuegos(unittest.TestCase):
         seg = {"consulta": "Vantage", "incluir": "", "excluir": "", "pmin": None, "pmax": None, "opciones": "{}"}
         self.assertFalse(seguimiento.cumple(seg, "Rociador Berthoud Vantage", 135.0, "www.amazon.es"))
         self.assertTrue(seguimiento.cumple(seg, "Vantage", 81.0, "zacatrus.es"))
+
+
+class CapturasFallidas(ConBD):
+    def test_lo_que_no_se_guarda_deja_su_imagen_y_lo_guardado_la_borra(self):
+        raiz = tempfile.mkdtemp()
+        with mock.patch.object(historico, "cfg_raiz", lambda: raiz):
+            historico.conserva_captura("B0BJPCXYHW", b"imagen", False)
+            ruta = os.path.join(raiz, "capturas_fallidas", "B0BJPCXYHW.png")
+            self.assertEqual(open(ruta, "rb").read(), b"imagen")
+            historico.conserva_captura("B0BJPCXYHW", b"imagen", True)
+            self.assertFalse(os.path.exists(ruta))
+
+    def test_solo_se_guardan_las_ultimas(self):
+        raiz = tempfile.mkdtemp()
+        with mock.patch.object(historico, "cfg_raiz", lambda: raiz):
+            for i in range(15):
+                historico.conserva_captura(f"B0000000{i:02d}", b"x", False, maximo=12)
+        self.assertEqual(len(os.listdir(os.path.join(raiz, "capturas_fallidas"))), 12)

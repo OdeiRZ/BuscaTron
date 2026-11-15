@@ -3,6 +3,12 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.17.32] - 2026-11-15
+
+### Corregido
+- **«Leer las gráficas que faltan» daba 0 de 8 en un navegador real** («la captura no llegó a mostrar la pantalla de lectura»): ninguna imagen llegaba al servidor, el fallo ocurría entero en el navegador al buscar la marca magenta en la captura. Ahora la captura es más robusta: el vídeo de la captura va dentro de la página (uno suelto puede dejar de recibir fotogramas), el fotograma se pide a la propia pista de vídeo (ImageCapture) y, si la marca no se ve, **no se rinde**: manda el último fotograma entero y BuscaTron comprueba si trae de verdad una gráfica (si no, no se guarda nada). Probado con un navegador y tres casos: marca visible con retraso y escala 1,25 (7 de 7), marca invisible pero gráfica visible (7 de 7) y pestaña que no muestra nada (0 de 7, sin guardar nada).
+- Lo que no se puede guardar deja su imagen en capturas_fallidas/ (solo en tu equipo, ignorada por git, las últimas 12; se borra al guardarse bien) para poder ver qué recibió BuscaTron. El informe dice el motivo concreto («la imagen no parece una gráfica de camelcamelcamel…») en vez de uno genérico.
+- Las pruebas escribían la carpeta capturas_fallidas en la carpeta real: ahora usan una temporal.
 ## [0.17.31] - 2026-11-15
 
 ### Corregido

@@ -344,7 +344,7 @@ class Handler(BaseHTTPRequestHandler):
             datos_img = ocr.decodifica(c.get("imagen", ""))
             texto = ocr.lee(datos_img)
             datos, reparado = historico.repara(texto, historico.parsea(texto))
-            problemas = historico.valida(texto, datos) if datos else []
+            problemas = historico.valida(texto, datos)
             px = ocr.ancho(datos_img)
             nota = f"La imagen es pequeña ({px} px de ancho): si algo no cuadra, amplía la gráfica." if 0 < px < 900 else ""
             asin = referencia.asin(f"/dp/{c.get('asin', '')}")
@@ -352,6 +352,7 @@ class Handler(BaseHTTPRequestHandler):
             if guardado:                       # leído una vez: queda en la referencia de ese producto
                 historico.guarda(asin, datos)
             if asin:
+                historico.conserva_captura(asin, datos_img, guardado)
                 historico.anota_lectura(asin, texto, problemas or ([] if datos else ["no se ha encontrado el mínimo ni el máximo"]), px, guardado)
             return {"texto": texto, "datos": datos, "problemas": problemas, "nota": nota, "guardado": guardado, "reparado": reparado,
                     "frases": historico.frases(datos) if datos and not problemas else []}

@@ -84,9 +84,12 @@ from buscatron import bd, referencia, seguimiento  # noqa: E402
 class ConBD(unittest.TestCase):
     def setUp(self):
         self.p = mock.patch.object(bd, "RUTA", os.path.join(tempfile.mkdtemp(), "t.db"))
+        self.p2 = mock.patch.object(historico, "cfg_raiz", lambda: tempfile.mkdtemp())      # capturas fallidas: carpeta temporal
         self.p.start()
+        self.p2.start()
 
     def tearDown(self):
+        self.p2.stop()
         self.p.stop()
 
 

@@ -6,6 +6,7 @@ import datetime
 import re
 import unicodedata
 
+import os
 import time
 
 from . import bd, extract
@@ -250,6 +251,31 @@ def guarda(asin, d):
     with bd.conecta() as c:
         c.execute("INSERT OR REPLACE INTO camel_extremos(asin, minimo, fecha_minimo, maximo, fecha_maximo, media, actual, ts) VALUES(?,?,?,?,?,?,?,?)",
                   (asin, *[d.get(k) for k in CLAVES], time.time()))
+
+
+def conserva_captura(asin, imagen, guardado, maximo=12):
+    """Si una gráfica no se pudo guardar, deja su imagen en la carpeta capturas_fallidas (solo esa imagen, local, las últimas
+    `maximo`) para poder ver qué recibió BuscaTron; si se guardó, se borra la de una vez anterior."""
+    carpeta = os.path.join(cfg_raiz(), "capturas_fallidas")
+    ruta = os.path.join(carpeta, f"{asin}.png")
+    try:
+        if guardado:
+            if os.path.exists(ruta):
+                os.remove(ruta)
+            return
+        os.makedirs(carpeta, exist_ok=True)
+        with open(ruta, "wb") as f:
+            f.write(imagen)
+        viejas = sorted((os.path.join(carpeta, n) for n in os.listdir(carpeta)), key=os.path.getmtime)
+        for v in viejas[:-maximo]:
+            os.remove(v)
+    except OSError:
+        pass
+
+
+def cfg_raiz():
+    from . import tiendas
+    return tiendas.RAIZ
 
 
 def anota_lectura(asin, texto, problemas, ancho, guardado):
