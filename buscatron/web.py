@@ -337,7 +337,7 @@ class Handler(BaseHTTPRequestHandler):
         if ruta == "/api/grafica":            # texto de la gráfica de camelcamelcamel que pegas tú (no se pide nada a su web)
             datos_img = ocr.decodifica(c.get("imagen", ""))
             texto = ocr.lee(datos_img)
-            datos = historico.parsea(texto)
+            datos, reparado = historico.repara(texto, historico.parsea(texto))
             problemas = historico.valida(texto, datos) if datos else []
             px = ocr.ancho(datos_img)
             nota = f"La imagen es pequeña ({px} px de ancho): si algo no cuadra, amplía la gráfica." if 0 < px < 900 else ""
@@ -347,7 +347,7 @@ class Handler(BaseHTTPRequestHandler):
                 historico.guarda(asin, datos)
             if asin:
                 historico.anota_lectura(asin, texto, problemas or ([] if datos else ["no se ha encontrado el mínimo ni el máximo"]), px, guardado)
-            return {"texto": texto, "datos": datos, "problemas": problemas, "nota": nota, "guardado": guardado,
+            return {"texto": texto, "datos": datos, "problemas": problemas, "nota": nota, "guardado": guardado, "reparado": reparado,
                     "frases": historico.frases(datos) if datos and not problemas else []}
         if ruta == "/api/estado_tiendas":
             return motor.estado_tiendas()

@@ -3,6 +3,12 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.17.27] - 2026-11-15
+
+### Corregido
+- **«Leer las gráficas que faltan» rechazaba las cinco (0 de 5)**: la leyenda de la captura sale con la letra deformada («€44,99» se leía «4,99», «€52,06» se leía «62,06», «€31,48» se leía «01,48») y el control de escala hacía bien en rechazarlo. Ahora, si una cifra de la leyenda queda fuera de la escala de la gráfica, se sustituye por la de las etiquetas de colores de la derecha que se le parezca y sí quepa en ella (se leen mucho mejor), y el informe dice qué cifra se corrigió. También entiende la coma perdida («€5Z95» = 52,95) y la fecha «Nov 15.2026».
+- Cuando falta una etiqueta (a veces el lector no ve «Lowest»), las entradas de la leyenda («€32,89 (Mar 20, 2024)») se reparten solo entre lo que no se reconoció ya por su etiqueta, en el orden de la leyenda; antes el mínimo se llevaba la cifra del máximo.
+- Comprobado con las lecturas reales de cinco capturas (guardadas en camel_lecturas): las cinco dan mínimo, máximo, actual y fechas coherentes con las etiquetas de la gráfica.
 ## [0.17.26] - 2026-11-15
 
 ### Corregido

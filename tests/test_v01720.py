@@ -138,3 +138,48 @@ class PaginaSinErroresConocidos(unittest.TestCase):
         html = open(os.path.join(os.path.dirname(web.__file__), "pagina.html"), encoding="utf-8").read()
         self.assertNotIn("||{}).getSettings", html)
         self.assertIn("pista.getSettings()", html)
+
+
+# Lo que el lector sacó de capturas REALES de la pantalla (solo las líneas de la gráfica): la leyenda sale con la letra deformada
+# («4,99» por «44,99», «62,06» por «52,06», «01,48» por «31,48»), a veces sin «Lowest», y las etiquetas de colores de la derecha
+# salen bien. Valores esperados: los de las etiquetas laterales.
+CAPTURAS = {
+    "heroes": ("Fantasy Flight Games - Marvel Champions: Héroes Reunidos 2\n----- €5206\n(44,99\n(31,48\n€55\n€50\n(45\n€40\n€35\n€30\n"
+               "Highest\n62,06 (Aug 29, 2026)\nPrice type\nAmazon\n01,48 (Nov 20, 2025)\nCurrent\n€44.99 (Nov 15.2026)",
+               (31.48, "2025-11-20", 52.06, "2026-08-29", 44.99)),
+    "proxima": ("Marvel Champions LCG - La próXima evolución\n(43,49\n€50\n€45\n(40\n€35\n€30\n€25\n------ €48,96\nHighest\n«8,96 (Sep 24.2024)\n"
+                "Current\n€43.49 (Nov 15.2026)\nPrice type\nAmazon\n€29,99 (Mar 10, 2026)",
+                (29.99, "2026-03-10", 48.96, "2024-09-24", 43.49)),
+    "sombra": ("€55\n€50\n(45\n€40\n€35\n€30\nPrice type\nAmazon\n€32.89 (Mar 20, 2024)\nHighest\n62,95 (Oct 1, 2024)\n"
+               "Current\n€44.99 (Nov 15.2026)\n€5Z95\n(32,89\n(44,99",
+               (32.89, "2024-03-20", 52.95, "2024-10-01", 44.99)),
+    "civil": ("€70\n€60\n€50\n€40\n€30\n€20\nPrice type\nAmazon\n€44,99 (Dec 14, 2025)\nHighest\n«4,99 (Dec 14.2025)\nCurrent\n€44.99 (Nov 15.2026)\n€44,99",
+              (44.99, "2025-12-14", 44.99, "2025-12-14", 44.99)),
+}
+
+
+class CapturasReales(unittest.TestCase):
+    def test_cada_captura_da_sus_extremos_y_pasa_el_control(self):
+        for nombre, (texto, esperado) in CAPTURAS.items():
+            d, _ = historico.repara(texto, historico.parsea(texto))
+            self.assertEqual((d.get("minimo"), d.get("fecha_minimo"), d.get("maximo"), d.get("fecha_maximo"), d.get("actual")), esperado, nombre)
+            self.assertEqual(historico.valida(texto, d), [], nombre)
+
+    def test_se_dice_que_cifra_se_corrigio(self):
+        texto = CAPTURAS["proxima"][0]
+        _, cambios = historico.repara(texto, historico.parsea(texto))
+        self.assertTrue(cambios and "8,96" in cambios[0] and "48,96" in cambios[0])
+
+    def test_lo_que_ya_cuadra_no_se_toca(self):
+        d, cambios = historico.repara(GRANDE, historico.parsea(GRANDE))
+        self.assertEqual((d["minimo"], d["maximo"], cambios), (33.09, 48.98, []))
+
+    def test_parecido(self):
+        self.assertTrue(historico.parecido(4.99, 44.99))      # se perdió la primera cifra
+        self.assertTrue(historico.parecido(62.95, 52.95))     # una cifra distinta
+        self.assertTrue(historico.parecido(1.48, 31.48))
+        self.assertFalse(historico.parecido(30.68, 0.68))
+        self.assertFalse(historico.parecido(40.00, 44.99))
+
+    def test_importes_sueltos_con_la_coma_perdida_y_letras_confundidas(self):
+        self.assertEqual(historico.importes_sueltos("€5Z95\n(32,89\n----- €5206\n€50\n(45"), [52.95, 32.89, 52.06])

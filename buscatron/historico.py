@@ -17,7 +17,7 @@ ETIQUETAS = (("minimo", r"mas bajo|lowest|minimo|precio minimo|min\b"), ("maximo
 IMPORTE = re.compile(r"(\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?|\d+,\d{1,2}|\d+\.\d{2}|\d+)")
 MES = r"(ene|jan|feb|mar|abr|apr|may|jun|jul|ago|aug|sep|set|oct|nov|dic|dec)[a-z]*"
 FECHAS = (re.compile(r"\b(\d{1,2})[ .\-/]+" + MES + r"\.?[ ,.\-/]+(\d{2,4})\b"),          # 12 nov. 2026 · 12-nov-26
-          re.compile(r"\b" + MES + r"\.?[ ]+(\d{1,2}),?[ ]+(\d{4})\b"),                    # nov 12, 2026
+          re.compile(r"\b" + MES + r"\.?[ ]+(\d{1,2})[ ,.]+(\d{4})\b"),                    # nov 12, 2026
           re.compile(r"\b(\d{1,2})[/.\-](\d{1,2})[/.\-](\d{2,4})\b"))                    # 12/11/2026
 
 
@@ -62,6 +62,19 @@ def fecha_en(texto):
     return None
 
 
+ENTRADA = re.compile(r"(\d{1,3}(?:\.\d{3})*[.,]\d{2}|\d+[.,]\d{2})\s*\(([^)]{5,24})\)")
+
+
+def entradas_leyenda(t):
+    """[(importe, fecha)] de las entradas «€32,89 (Mar 20, 2024)» de la leyenda, en el orden en que salen en el texto."""
+    out = []
+    for m in ENTRADA.finditer(t):
+        f, v = fecha_en(m.group(2)), extract.precio_texto(m.group(1))
+        if f and v:
+            out.append((v, f))
+    return out
+
+
 def parsea(texto):
     """{minimo, fecha_minimo, maximo, fecha_maximo, media, actual} de lo que se haya podido leer (lo que falte no aparece)."""
     t = _plano(texto)
@@ -85,6 +98,26 @@ def parsea(texto):
         f = fecha_en(tramo)
         if f and clave in ("minimo", "maximo"):
             out["fecha_" + clave] = f.isoformat()
+    # Si el lector no reconoce una etiqueta (a veces falta «Lowest»), se reparten las entradas de la leyenda («€32,89 (Mar 20,
+    # 2024)») que NO se han reconocido ya por su etiqueta, en el orden de la leyenda: mínimo, máximo y actual.
+    libres = entradas_leyenda(t)
+    if len(libres) >= 3 and any(k not in out for k in ("minimo", "maximo", "actual")):
+        def quita(valor, fecha=None, la_ultima=False):
+            idx = [i for i, (v, f) in enumerate(libres) if abs(v - valor) < 0.005 and (fecha is None or f.isoformat() == fecha)]
+            if idx:
+                libres.pop(max(idx, key=lambda i: libres[i][1]) if la_ultima else idx[0])
+        if "maximo" in out:
+            quita(out["maximo"], out.get("fecha_maximo"))
+        if "actual" in out:
+            quita(out["actual"], la_ultima=True)          # la del precio actual es la fecha más reciente
+        if "minimo" in out:
+            quita(out["minimo"], out.get("fecha_minimo"))
+        for clave in [k for k in ("minimo", "maximo", "actual") if k not in out]:
+            if libres:
+                v, f = libres.pop(0)
+                out[clave] = v
+                if clave != "actual":
+                    out["fecha_" + clave] = f.isoformat()
     return out
 
 
@@ -94,6 +127,50 @@ def escala_eje(texto):
     if len(nums) < 2:
         return None
     return nums[0], nums[-1], min(y - x for x, y in zip(nums, nums[1:]))
+
+
+CONFUSIONES = str.maketrans("ZOolIS", "200115")      # lo que el lector suele confundir: Z→2, O→0, l→1, S→5
+SUELTO = re.compile(r"(?m)^[\s\-–—]*[€(C«]?\s?(?:(\d{1,3}|[0-9ZOolIS]{1,3})[.,]([0-9ZOolIS]{2})|([0-9ZOolIS]{2,3})([0-9ZOolIS]{2}))\s*$")
+
+
+def importes_sueltos(texto):
+    """Importes que están solos en su línea (las etiquetas de colores a la derecha de la gráfica: el máximo, el actual y el
+    mínimo, en letra grande, que se leen mucho mejor que la leyenda). Admite la coma perdida («€5Z95» = 52,95)."""
+    out = []
+    for m in SUELTO.finditer(texto or ""):
+        ent, cts = (m.group(1), m.group(2)) if m.group(1) else (m.group(3), m.group(4))
+        try:
+            out.append(float(ent.translate(CONFUSIONES) + "." + cts.translate(CONFUSIONES)))
+        except ValueError:
+            continue
+    return out
+
+
+def parecido(v, s):
+    """¿Se lee `v` donde pone `s`? Mismo final (se perdió la primera cifra: «4,99» por «44,99») o una sola cifra distinta."""
+    dv, ds = f"{v:.2f}".replace(".", ""), f"{s:.2f}".replace(".", "")
+    return (len(dv) < len(ds) and ds.endswith(dv.lstrip("0") or dv)) or (len(dv) == len(ds) and sum(a != b for a, b in zip(dv, ds)) == 1)
+
+
+def repara(texto, d):
+    """Corrige las cifras de la leyenda que quedan fuera de la escala de la gráfica con la etiqueta lateral que se les parece
+    y sí cabe en la escala. Devuelve (datos, [lo que se ha corregido])."""
+    esc = escala_eje(texto)
+    if not esc:
+        return d, []
+    lo, hi, paso = esc
+    dentro = lambda x: lo - paso <= x <= hi + paso      # noqa: E731
+    candidatos = {s for s in importes_sueltos(texto) if dentro(s)}
+    out, cambios = dict(d), []
+    for clave, nombre in (("minimo", "el mínimo"), ("maximo", "el máximo"), ("actual", "el precio actual")):
+        v = d.get(clave)
+        if v is None or dentro(v):
+            continue
+        c = [s for s in candidatos if parecido(v, s)]
+        if len(c) == 1:
+            out[clave] = c[0]
+            cambios.append(f"{nombre}: la leyenda se leyó {euros(v)} y la etiqueta de la gráfica dice {euros(c[0])}")
+    return out, cambios
 
 
 def valida(texto, d):
