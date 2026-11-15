@@ -209,7 +209,8 @@ def repara(texto, d, crudos=None):
     if not esc:
         return d, []
     lo, hi, paso = esc
-    dentro = lambda x: lo - paso <= x <= hi + paso      # noqa: E731
+    dentro = lambda x: lo - paso <= x <= hi + paso      # noqa: E731   (con un escalón de margen: a veces el lector se salta una etiqueta)
+    dentro_estricto = lambda x: lo * 0.995 <= x <= hi * 1.005      # noqa: E731   (la escala de camel siempre abarca todos los datos)
     candidatos = {s for s in importes_sueltos(texto) if dentro(s)}
     out, cambios = dict(d), []
     for clave, nombre in (("minimo", "el mínimo"), ("maximo", "el máximo"), ("actual", "el precio actual")):
@@ -224,10 +225,14 @@ def repara(texto, d, crudos=None):
         for _ in range(2):
             for clave, nombre in (("actual", "el precio actual"), ("maximo", "el máximo"), ("minimo", "el mínimo")):
                 v, tok = out.get(clave), crudos.get(clave)
-                if v is None or not tok or (dentro(v) and coherente(clave, v, out)):
+                if v is None or not tok:
                     continue
                 validas = [x for x in candidatos_cifra(*tok) if dentro(x) and coherente(clave, x, out)]
-                elegida = validas[0] if validas else None
+                estrictas = [x for x in validas if dentro_estricto(x)]
+                elegida = (estrictas or validas or [None])[0]       # entre dos lecturas, la que cabe SIN margen en la escala
+                bien = dentro(v) and coherente(clave, v, out)
+                if bien and not (elegida is not None and dentro_estricto(elegida) and not dentro_estricto(v)):
+                    continue
                 if elegida is not None and abs(elegida - v) > 0.004:
                     cambios.append(f"{nombre}: la leyenda se leyó {euros(v)} y por la escala y las otras cifras es {euros(elegida)}")
                     out[clave] = elegida

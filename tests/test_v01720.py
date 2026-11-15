@@ -256,3 +256,23 @@ class LeyendaDesordenada(unittest.TestCase):
         t = GRANDE.replace("(Nov 1 5, 2026)", "(Nov ?? 2026)")
         d, _ = historico.analiza(t)
         self.assertEqual(d["actual"], 40.33)
+
+
+# Captura REAL de «Motivos Siniestros»: la escala llega hasta €60 y el lector leyó el máximo «€58,72» como «68,72» (€5 -> 6). Una escala de
+# camel abarca todos los datos, así que 68,72 es imposible; entre las dos lecturas posibles gana la que cabe sin margen.
+MOTIVOS = chr(10).join(["Fantasy Flight Games Marvel Champions - Motivos Siniestros", "€60", "€50", "€40", "€30", "May Jul", "Price typo", "Amazon", "sep",
+                        "Nov '23 Mar", "€33,48 (Nov 20, 2025)", "May Jul Sep Nov", "Highest", "68,72 (Oct 4, 2025)", "24 Mar May", "Current",
+                        "€44,99 (Nov 15.2026)", "Jul", "Sep", "Nov", "'25", "Mar"])
+
+
+class EscalaSinMargen(unittest.TestCase):
+    def test_motivos_siniestros_real(self):
+        d, cambios = historico.analiza(MOTIVOS)
+        self.assertEqual((d["minimo"], d["maximo"], d["fecha_maximo"], d["actual"]), (33.48, 58.72, "2025-10-04", 44.99))
+        self.assertTrue(cambios and "68,72" in cambios[0] and "58,72" in cambios[0])
+        self.assertEqual(historico.valida(MOTIVOS, d), [])
+
+    def test_si_falta_la_etiqueta_de_arriba_no_se_toca_un_valor_bueno(self):
+        # la escala leída llega a 45 aunque la real llega a 50: el máximo 48,98 es de verdad y no tiene lectura alternativa
+        d, cambios = historico.analiza(GRANDE)
+        self.assertEqual((d["maximo"], cambios), (48.98, []))

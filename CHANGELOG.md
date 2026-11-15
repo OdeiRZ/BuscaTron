@@ -3,6 +3,10 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.17.35] - 2026-11-15
+
+### Corregido
+- **Un máximo imposible se guardó como bueno**: el de Motivos Siniestros (68,72 €) con una escala que llega a €60. El lector leyó «€58,72» como «68,72» (el «€5» se lee «6»), y el margen de un escalón por arriba de la comprobación de escala lo dejó pasar. Ahora, si hay dos lecturas posibles de una cifra, gana la que cabe **dentro** de la escala sin margen (la escala de camelcamelcamel abarca siempre todos los datos); el margen solo vale cuando no hay otra lectura (la etiqueta de más arriba del eje a veces no se lee). Auditadas las nueve lecturas guardadas con texto: solo cambia esa, a 58,72 €, y está corregida en tus datos.
 ## [0.17.34] - 2026-11-15
 
 ### Corregido
