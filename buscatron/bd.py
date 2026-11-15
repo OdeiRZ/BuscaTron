@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS objetivos(clave TEXT PRIMARY KEY, titulo TEXT, precio
 CREATE TABLE IF NOT EXISTS vinculos_amazon(clave TEXT PRIMARY KEY, asin TEXT, titulo TEXT, ts REAL);
 CREATE TABLE IF NOT EXISTS caidas(host TEXT PRIMARY KEY, desde REAL, fallos INTEGER);
 CREATE TABLE IF NOT EXISTS camel_extremos(asin TEXT PRIMARY KEY, minimo REAL, fecha_minimo TEXT, maximo REAL, fecha_maximo TEXT, media REAL, actual REAL, ts REAL);
+CREATE TABLE IF NOT EXISTS camel_lecturas(asin TEXT PRIMARY KEY, texto TEXT, problemas TEXT, ancho INTEGER, guardado INTEGER, ts REAL);
 CREATE TABLE IF NOT EXISTS recordatorios(host TEXT, ts_importado REAL, PRIMARY KEY(host, ts_importado));
 CREATE TABLE IF NOT EXISTS importados(
     host TEXT, ts REAL, consulta TEXT, titulo TEXT, url TEXT, precio REAL, agotado INTEGER DEFAULT 0, preventa INTEGER DEFAULT 0);

@@ -3,6 +3,14 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.17.25] - 2026-11-15
+
+### Añadido
+- **Informe de «Leer las gráficas que faltan»**: al terminar queda en pantalla cuántas se han guardado y, de las que no, cuál es el producto y el motivo («el mínimo leído (3,09 €) queda fuera de la escala de la gráfica…», «no he encontrado el mínimo y el máximo…»). Antes se recargaba la lista y se perdía el resumen.
+- **Reintento**: si la primera lectura de una gráfica no cuadra se repite con más espera (la captura llega comprimida y al principio el texto sale borroso).
+- BuscaTron anota lo último que leyó de cada gráfica (el texto, no la imagen; tabla `camel_lecturas`) para poder ver por qué una no se guardó.
+- Mientras captura, el aviso a pantalla completa pide no cambiar de pestaña ni tocar nada: si la pestaña deja de verse, la captura sale vieja.
+
 ## [0.17.24] - 2026-11-15
 
 ### Corregido

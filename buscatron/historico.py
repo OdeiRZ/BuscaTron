@@ -151,6 +151,13 @@ def guarda(asin, d):
                   (asin, *[d.get(k) for k in CLAVES], time.time()))
 
 
+def anota_lectura(asin, texto, problemas, ancho, guardado):
+    """Lo último que se leyó de la gráfica de ese producto, para saber por qué una no se guardó (solo el texto, no la imagen)."""
+    with bd.conecta() as c:
+        c.execute("INSERT OR REPLACE INTO camel_lecturas(asin, texto, problemas, ancho, guardado, ts) VALUES(?,?,?,?,?,?)",
+                  (asin, (texto or "")[:3000], " | ".join(problemas), ancho, int(guardado), time.time()))
+
+
 def todos():
     """{asin: {minimo, fecha_minimo, maximo, fecha_maximo, media, actual, ts}} de lo ya leído."""
     with bd.conecta() as c:

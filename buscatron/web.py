@@ -345,6 +345,8 @@ class Handler(BaseHTTPRequestHandler):
             guardado = bool(asin and datos.get("minimo") is not None and datos.get("maximo") is not None and not problemas)
             if guardado:                       # leído una vez: queda en la referencia de ese producto
                 historico.guarda(asin, datos)
+            if asin:
+                historico.anota_lectura(asin, texto, problemas or ([] if datos else ["no se ha encontrado el mínimo ni el máximo"]), px, guardado)
             return {"texto": texto, "datos": datos, "problemas": problemas, "nota": nota, "guardado": guardado,
                     "frases": historico.frases(datos) if datos and not problemas else []}
         if ruta == "/api/estado_tiendas":

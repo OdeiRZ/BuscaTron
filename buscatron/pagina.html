@@ -748,14 +748,14 @@ async function abreCapturaPestana(res){
   const v=document.createElement('video');v.srcObject=flujo;v.muted=true;await v.play();
   return {flujo,v};}
 /* La miniatura no tiene letra legible: la gráfica se pone un momento a tamaño grande, tapando la página, y se captura esa copia */
-async function fotoGrande(v,src,rotulo){
+async function fotoGrande(v,src,rotulo,espera){
   const ov=document.createElement('div');ov.style.cssText='position:fixed;left:0;top:0;right:0;bottom:0;z-index:99999;background:#fff;line-height:1.4;font:14px system-ui,sans-serif;color:#444';
   const grande=new Image();grande.src=src;grande.style.cssText=`display:block;max-width:none;height:auto;width:${Math.min(1200,window.innerWidth)}px`;
   const txt=document.createElement('div');txt.style.cssText='padding:10px 16px';txt.textContent=rotulo||'Leyendo la gráfica…';
   ov.appendChild(grande);ov.appendChild(txt);document.body.appendChild(ov);
   try{
     await (grande.decode?grande.decode():new Promise((ok,ko)=>{grande.onload=ok;grande.onerror=ko;}));
-    await esperaMs(700);
+    await esperaMs(espera||1200);      // la captura llega comprimida: al principio el texto sale borroso
     const r=grande.getBoundingClientRect(),k=v.videoWidth/window.innerWidth;
     const c=document.createElement('canvas');c.width=Math.max(1,Math.round(r.width*k));c.height=Math.max(1,Math.round(r.height*k));
     c.getContext('2d').drawImage(v,r.left*k,r.top*k,r.width*k,r.height*k,0,0,c.width,c.height);
@@ -785,19 +785,27 @@ async function leeTodasInterno(l){
   if(!pend.length){msg.textContent='No falta ninguna: todas las fichas de Amazon ya tienen su histórico leído.';return;}
   msg.innerHTML=`<div class="carga" style="margin:6px 0"><div class="spin"></div><div><b>Esperando tu permiso.</b> Mira el aviso de tu navegador (arriba): elige <b>esta pestaña</b> y pulsa «Compartir». Vale para las ${pend.length} gráficas.</div></div>`;
   const cap=await abreCapturaPestana(msg);if(!cap)return;
-  let hechas=0,dudosas=0,k=0;
+  let hechas=0,k=0;const fallos=[];
   try{
     for(const {p,i} of pend){
-      const img=$('hoja3').querySelectorAll('.refc')[i].querySelector('img.camel');
-      try{
-        const url=await fotoGrande(cap.v,img?img.src:grafCamel(p.amazon.asin),`Leyendo ${++k} de ${pend.length}: ${p.titulo.slice(0,60)}`);
-        const r=await api('grafica',{imagen:url,asin:p.amazon.asin}).catch(()=>({error:1}));
-        if(r.guardado)hechas++;else dudosas++;
-      }catch(e){dudosas++;}
+      const img=$('hoja3').querySelectorAll('.refc')[i].querySelector('img.camel'),asin=p.amazon.asin;
+      let r={error:'no se ha podido capturar'},ultimo='';
+      for(const espera of [1200,3000]){        // si la primera lectura no cuadra, se repite con más espera
+        try{
+          const url=await fotoGrande(cap.v,img?img.src:grafCamel(asin),`Leyendo ${k+1} de ${pend.length}: ${p.titulo.slice(0,60)}  ·  es normal que se vea así: no cambies de pestaña ni toques nada hasta que acabe`,espera);
+          r=await api('grafica',{imagen:url,asin}).catch(()=>({error:'no se pudo hablar con BuscaTron'}));
+        }catch(e){r={error:(e.name||'error')+': '+(e.message||'')};}
+        if(r.guardado)break;
+      }
+      k++;
+      if(r.guardado)hechas++;
+      else fallos.push(`${p.titulo.slice(0,50)}: ${r.error||(r.problemas&&r.problemas.length?r.problemas[0]:'no he encontrado el mínimo y el máximo en la imagen')}`);
       await esperaMs(1500);        // sin prisa: son imágenes de camelcamelcamel que carga tu navegador
     }
   }finally{cap.flujo.getTracks().forEach(t=>t.stop());}
-  aviso(`Listo: ${hechas} leídas y guardadas`+(dudosas?`, ${dudosas} sin leer con seguridad`:''));
+  informeTodas=`<div class="${fallos.length?'err':'ok'}" style="margin:6px 0"><b>${hechas} de ${pend.length} leídas y guardadas.</b>`+
+    (fallos.length?` No se han guardado ${fallos.length}:<ul style="margin:4px 0;padding-left:18px">${fallos.map(f=>`<li>${esc(f)}</li>`).join('')}</ul>`:'')+`</div>`;
+  aviso(`Listo: ${hechas} leídas y guardadas`+(fallos.length?`, ${fallos.length} sin guardar (mira la lista)`:''));
   abreRef();}
 function abrePegarGrafica(b){const amz=b.closest('.amz');let z=amz.querySelector('.pgraf .zona');
   if(z){z.closest('.pgraf').remove();return;}
@@ -824,9 +832,10 @@ async function abreRef(ambito){if(ambito)refAmbito=ambito;const yo=++refPedido;
     $('hoja3').innerHTML=cab+`<p class="err">No se pudo mostrar el resumen (${esc(e.message)}). Reinicia BuscaTron (🆕 arriba o Ajustes → Servicio) y vuelve a abrirlo.</p>`;}
   $('hoja3').querySelector('.cierra').onclick=()=>cierraHoja('ref');
   $('hoja3').querySelectorAll('[data-ramb]').forEach(b=>b.onclick=()=>abreRef(b.dataset.ramb));}
+let informeTodas='';
 function leerTodasHtml(l){const n=l.filter(p=>p.amazon&&p.amazon.asin&&!p.amazon.camel).length,t=l.filter(p=>p.amazon&&p.amazon.asin).length;
   return `<div class="card" style="margin:10px 0"><button type="button" id="leer-todas" ${n?'':'class="sec"'}>🖼️ ${n?`Leer las gráficas que faltan (${n})`:'Todas las gráficas están leídas'}</button>
-    <span class="l" style="margin-left:8px">${t-n} de ${t} con su histórico guardado. Se hace una vez; solo hay que repetirlo con los productos nuevos.</span><div id="leer-todas-msg" class="l" style="margin-top:6px"></div></div>`;}
+    <span class="l" style="margin-left:8px">${t-n} de ${t} con su histórico guardado. Se hace una vez; solo hay que repetirlo con los productos nuevos.</span><div id="leer-todas-msg" class="l" style="margin-top:6px">${informeTodas}</div></div>`;}
 function pintaRef(l,cab){
   if(!Array.isArray(l)){$('hoja3').innerHTML=cab+`<p class="err">${esc(l.error||'No se pudo preparar el resumen. ¿BuscaTron está actualizado y abierto?')}</p>`;}
   else{const con=l.filter(p=>p.amazon),bajo=con.filter(p=>!(p.tienda==='www.amazon.es'&&p.url===p.amazon.url)&&p.precio<p.amazon.minimo-0.005).length;
