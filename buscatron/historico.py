@@ -6,7 +6,9 @@ import datetime
 import re
 import unicodedata
 
-from . import extract
+import time
+
+from . import bd, extract
 
 MESES = {"ene": 1, "jan": 1, "feb": 2, "mar": 3, "abr": 4, "apr": 4, "may": 5, "jun": 6, "jul": 7, "ago": 8, "aug": 8,
          "sep": 9, "set": 9, "oct": 10, "nov": 11, "dic": 12, "dec": 12}
@@ -139,7 +141,23 @@ def hace(dias):
     return f"hace {dias / 365.25:.1f} años".replace(".", ",")
 
 
-def frases(d, hoy=None):
+CLAVES = ("minimo", "fecha_minimo", "maximo", "fecha_maximo", "media", "actual")
+
+
+def guarda(asin, d):
+    """Recuerda lo leído de la gráfica de camelcamelcamel de ese producto (se sustituye si lo vuelves a leer)."""
+    with bd.conecta() as c:
+        c.execute("INSERT OR REPLACE INTO camel_extremos(asin, minimo, fecha_minimo, maximo, fecha_maximo, media, actual, ts) VALUES(?,?,?,?,?,?,?,?)",
+                  (asin, *[d.get(k) for k in CLAVES], time.time()))
+
+
+def todos():
+    """{asin: {minimo, fecha_minimo, maximo, fecha_maximo, media, actual, ts}} de lo ya leído."""
+    with bd.conecta() as c:
+        return {r["asin"]: {k: r[k] for k in CLAVES + ("ts",) if r[k] is not None} for r in c.execute("SELECT * FROM camel_extremos")}
+
+
+def frases(d, hoy=None, aviso=True):
     hoy = hoy or datetime.date.today()
     e = euros
     out = []
@@ -167,6 +185,7 @@ def frases(d, hoy=None):
                         if prox else ""))
         else:
             out.append(f"Su mínimo no coincidió con ninguna campaña conocida (cayó el {f.strftime('%d/%m')}).")
-    out.append("Con solo los extremos no se puede calcular cada cuánto se repite una bajada: eso necesita toda la serie de precios, "
-               "que la gráfica dibuja pero la leyenda no escribe. Lo anterior es lo que se puede afirmar con lo leído.")
+    if aviso:
+        out.append("Con solo los extremos no se puede calcular cada cuánto se repite una bajada: eso necesita toda la serie de precios, "
+                   "que la gráfica dibuja pero la leyenda no escribe. Lo anterior es lo que se puede afirmar con lo leído.")
     return out

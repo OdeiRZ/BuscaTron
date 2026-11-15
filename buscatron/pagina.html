@@ -695,6 +695,9 @@ function veredicto(p,a){
   return `<span class="tag ko">Amazon está más barato ahora (${euro(a.actual)})</span>`;}
 const opcionAmz=(o,i,vincular=true)=>`<div class="l">${o.n?euro(o.actual)+' · ':''}<a href="${esc(o.url)}" target="_blank" rel="noopener">${esc(o.titulo||o.asin)}</a> · <a href="${camel(o.asin)}" target="_blank" rel="noopener">camel ↗</a>
   ${vincular?`<button type="button" class="sec mini" data-ves="${i}" data-asin="${esc(o.asin)}" style="margin-left:4px">Es este</button>`:''}</div>`;
+const camelHtml=c=>`<div class="camelx" style="margin-top:6px;padding:6px 10px;border-left:3px solid var(--ac)"><b class="l" style="color:var(--tx)">Histórico (camelcamelcamel)</b>
+  <ul style="margin:4px 0;padding-left:18px">${c.frases.map(f=>`<li class="l" style="margin:3px 0">${esc(f)}</li>`).join('')}</ul>
+  <div class="l">Leído el ${esc(fecha(c.ts).split(',')[0])}; no hace falta repetirlo.</div></div>`;
 function tarjetaRef(p,i){const a=p.amazon,q=encodeURIComponent(p.titulo);
   p.sugerencias=p.sugerencias||[];p.alternativas=p.alternativas||[];      // un BuscaTron sin reiniciar no los manda
   const otro=a&&(a.idioma==='otro'||a.idioma==='en');
@@ -702,12 +705,12 @@ function tarjetaRef(p,i){const a=p.amazon,q=encodeURIComponent(p.titulo);
     :'<span class="mut">Para vincularlo a mano, reinicia BuscaTron (🆕 arriba).</span>';
   const vinc=p.vinculado?`<div class="l">🔗 Vinculado a mano · <a href="#" data-vquita="${i}">quitar el vínculo</a></div>`:'';
   const amz=a?`<div class="amz">${a.n?`<div class="l">En Amazon: <b>${euro(a.actual)}</b> ahora · lo más barato visto <b>${euro(a.minimo)}</b>${a.maximo>a.minimo?` · lo más caro ${euro(a.maximo)}`:''} · ${a.n} precio${a.n===1?'':'s'} desde el ${fecha(a.desde).split(',')[0]}</div>
-      <div class="meta">${veredicto(p,a)}${otro?'<span class="tag ko">Esa ficha de Amazon no está en castellano</span>':''}</div>`
+      <div class="meta">${veredicto(p,a)}${otro?'<span class="tag ko">Esa ficha de Amazon no está en castellano</span>':''}</div>${a.camel?camelHtml(a.camel):''}`
       :`<div class="l">BuscaTron todavía no tiene precios suyos: mira su histórico en camelcamelcamel o Keepa.</div>`}${vinc}
       ${p.tienda==='www.amazon.es'&&p.url===a.url?'':`<div class="l">Es «<a href="${esc(a.url)}" target="_blank" rel="noopener">${esc(a.titulo||a.asin)}</a>»</div>`}
       <img class="camel" loading="lazy" referrerpolicy="no-referrer" alt="Gráfica de camelcamelcamel" src="${grafCamel(a.asin)}" onerror="this.remove()">
       <div class="enlaces"><a href="${camel(a.asin)}" target="_blank" rel="noopener">camelcamelcamel ↗</a><a href="${keepa(a.asin)}" target="_blank" rel="noopener">Keepa ↗</a>
-        <a href="${esc(a.url)}" target="_blank" rel="noopener">Amazon ↗</a><button type="button" data-leer="${i}" title="BuscaTron lee la gráfica de camelcamelcamel que ya ves cargada aquí">🖼️ Leer la gráfica</button><button type="button" data-graf="${i}" title="Si no, copia la gráfica de camelcamelcamel y pégala aquí">📋 Pegar gráfica</button>${a.n?`<button type="button" data-rh="${i}">📈 Lo visto por BuscaTron</button>`:''}</div>
+        <a href="${esc(a.url)}" target="_blank" rel="noopener">Amazon ↗</a><button type="button" data-leer="${i}" data-asin="${esc(a.asin)}" title="BuscaTron lee la gráfica de camelcamelcamel que ya ves cargada aquí">🖼️ Leer la gráfica</button><button type="button" data-graf="${i}" data-asin="${esc(a.asin)}" title="Si no, copia la gráfica de camelcamelcamel y pégala aquí">📋 Pegar gráfica</button>${a.n?`<button type="button" data-rh="${i}">📈 Lo visto por BuscaTron</button>`:''}</div>
       ${p.vinculado?'':`<details><summary>¿No es ese?</summary>${p.alternativas.map(o=>opcionAmz(o,i,!!p.clave)).join('')}<div class="enlaces">${pegar}</div></details>`}</div>`
     :`<div class="amz"><div class="l">BuscaTron no ha encontrado su ficha en Amazon con seguridad${p.sugerencias.length?'. ¿Es alguna de estas?':'.'}</div>
       ${p.sugerencias.map(o=>opcionAmz(o,i,!!p.clave)).join('')}
@@ -718,10 +721,10 @@ function tarjetaRef(p,i){const a=p.amazon,q=encodeURIComponent(p.titulo);
 function panelGrafica(amz,tras){let z=amz.querySelector('.pgraf');
   if(!z){z=document.createElement('div');z.className='pgraf';z.innerHTML='<div class="res"></div>';const im=amz.querySelector('img.camel');if(im)im.before(z);else tras.closest('.enlaces').after(z);}
   return z;}
-async function enviaGrafica(res,url){
+async function enviaGrafica(res,url,asin){
   res.innerHTML='<div class="carga"><div class="spin"></div>Leyendo la gráfica…</div>';
-  const r=await api('grafica',{imagen:url}).catch(()=>({error:'No se pudo hablar con BuscaTron'}));
-  if(r.error){res.innerHTML=`<p class="err">${esc(r.error)}</p>`;return;}
+  const r=await api('grafica',{imagen:url,asin:asin||''}).catch(()=>({error:'No se pudo hablar con BuscaTron'}));
+  if(r.error){res.innerHTML=`<p class="err">${esc(r.error)}</p>`;return r;}
   const nota=r.nota?`<p class="mut" style="margin:4px 0">${esc(r.nota)}</p>`:'';
   res.innerHTML=(r.frases.length?`<ul style="margin:6px 0;padding-left:18px">${r.frases.map(f=>`<li class="l" style="margin:3px 0">${esc(f)}</li>`).join('')}</ul>`+nota
     :(r.problemas&&r.problemas.length?`<p class="err">Lectura dudosa, no la doy por buena: ${esc(r.problemas.join(' '))} Prueba otra vez, con la gráfica más grande.</p>`+nota
@@ -729,52 +732,79 @@ async function enviaGrafica(res,url){
     +`<details><summary>Texto leído de la imagen</summary><pre style="white-space:pre-wrap;font-size:12px">${esc(r.texto||'(nada)')}</pre></details>`;
   res.style.cssText='border:2px solid var(--ac);border-radius:10px;padding:8px 12px;margin:8px 0';
   res.scrollIntoView({block:'center',behavior:'smooth'});
-  aviso(r.frases.length?'Gráfica leída: '+r.frases[0]:'No he podido leer la gráfica con seguridad: mira el aviso sobre ella');}
-async function leeGraficaCargada(b){const amz=b.closest('.amz'),img=amz.querySelector('img.camel'),res=panelGrafica(amz,b).querySelector('.res');
+  aviso(r.frases.length?'Gráfica leída'+(r.guardado?' y guardada: ':': ')+r.frases[0]:'No he podido leer la gráfica con seguridad: mira el aviso sobre ella');
+  return r;}
+/* Capturar la pestaña: el navegador pide permiso (una vez por captura) y solo vale compartir LA PESTAÑA. Con una ventana o la pantalla
+   entera se vería también el navegador (barras, marcadores…), la gráfica quedaría desplazada y se leería lo que haya en tu pantalla. */
+async function abreCapturaPestana(res){
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getDisplayMedia){
+    res.innerHTML='<p class="err">Este navegador no deja capturar la pestaña (hace falta Chrome o Edge en el ordenador, y BuscaTron abierto con HTTPS o desde localhost). Usa «Pegar gráfica».</p>';return null;}
+  let flujo;
+  try{flujo=await navigator.mediaDevices.getDisplayMedia({video:{displaySurface:'browser'},audio:false,preferCurrentTab:true,selfBrowserSurface:'include',monitorTypeSurfaces:'exclude'});}
+  catch(e){res.innerHTML='<p class="err">No has dado permiso para ver la pestaña. Puedes usar «Pegar gráfica».</p>';return null;}
+  const sup=((flujo.getVideoTracks()[0]||{}).getSettings||(()=>({})))().displaySurface||'';
+  if(sup&&sup!=='browser'){flujo.getTracks().forEach(t=>t.stop());
+    res.innerHTML=`<p class="err">Has compartido ${sup==='monitor'?'la pantalla entera':'una ventana'} y no la pestaña: así no puedo ver solo la gráfica. Pulsa otra vez y elige <b>esta pestaña</b> (en el aviso de Chrome, «Pestaña de Chrome» → BuscaTron), no «Ventana» ni «Pantalla completa».</p>`;return null;}
+  const v=document.createElement('video');v.srcObject=flujo;v.muted=true;await v.play();
+  return {flujo,v};}
+/* La miniatura no tiene letra legible: la gráfica se pone un momento a tamaño grande, tapando la página, y se captura esa copia */
+async function fotoGrande(v,src,rotulo){
+  const ov=document.createElement('div');ov.style.cssText='position:fixed;left:0;top:0;right:0;bottom:0;z-index:99999;background:#fff;line-height:1.4;font:14px system-ui,sans-serif;color:#444';
+  const grande=new Image();grande.src=src;grande.style.cssText=`display:block;max-width:none;height:auto;width:${Math.min(1200,window.innerWidth)}px`;
+  const txt=document.createElement('div');txt.style.cssText='padding:10px 16px';txt.textContent=rotulo||'Leyendo la gráfica…';
+  ov.appendChild(grande);ov.appendChild(txt);document.body.appendChild(ov);
+  try{
+    await (grande.decode?grande.decode():new Promise((ok,ko)=>{grande.onload=ok;grande.onerror=ko;}));
+    await esperaMs(700);
+    const r=grande.getBoundingClientRect(),k=v.videoWidth/window.innerWidth;
+    const c=document.createElement('canvas');c.width=Math.max(1,Math.round(r.width*k));c.height=Math.max(1,Math.round(r.height*k));
+    c.getContext('2d').drawImage(v,r.left*k,r.top*k,r.width*k,r.height*k,0,0,c.width,c.height);
+    return c.toDataURL('image/png');
+  }finally{ov.remove();}}
+async function leeGraficaCargada(b){const amz=b.closest('.amz'),img=amz.querySelector('img.camel'),res=panelGrafica(amz,b).querySelector('.res'),asin=b.dataset.asin||'';
   if(!img||!img.complete||!img.naturalWidth){res.innerHTML='<p class="err">La gráfica no está cargada: camelcamelcamel no se la ha enseñado a tu navegador. Prueba con «Pegar gráfica».</p>';return;}
   try{    // 1.º: tal cual, si camelcamelcamel permite que una página lea sus imágenes
     const im=new Image();im.crossOrigin='anonymous';
     await new Promise((ok,ko)=>{im.onload=ok;im.onerror=ko;im.src=img.src;});
     const c=document.createElement('canvas');c.width=im.naturalWidth;c.height=im.naturalHeight;c.getContext('2d').drawImage(im,0,0);
-    return enviaGrafica(res,c.toDataURL('image/png'));
+    return enviaGrafica(res,c.toDataURL('image/png'),asin);
   }catch(e){}
-  if(!navigator.mediaDevices||!navigator.mediaDevices.getDisplayMedia){
-    res.innerHTML='<p class="err">Este navegador no deja leer la gráfica desde la página (camelcamelcamel no lo permite y aquí no se puede capturar la pestaña). Usa «Pegar gráfica».</p>';return;}
   res.parentElement.scrollIntoView({block:'start'});
-  res.innerHTML='<p class="l">Tu navegador te va a preguntar si compartes esta pestaña: acepta. Se usa una sola vez para leer la gráfica y se descarta.</p>';
-  let flujo;
-  try{flujo=await navigator.mediaDevices.getDisplayMedia({video:{displaySurface:'browser'},audio:false,preferCurrentTab:true,selfBrowserSurface:'include',monitorTypeSurfaces:'exclude'});}
-  catch(e){res.innerHTML='<p class="err">No has dado permiso para ver la pestaña. Puedes usar «Pegar gráfica».</p>';return;}
-  // Solo vale compartir LA PESTAÑA: con una ventana o la pantalla entera se ve también el navegador (barras, marcadores…), la gráfica
-  // queda desplazada y además se leería lo que haya en tu pantalla.
-  const sup=((flujo.getVideoTracks()[0]||{}).getSettings||(()=>({})))().displaySurface||'';
-  if(sup&&sup!=='browser'){flujo.getTracks().forEach(t=>t.stop());
-    res.innerHTML=`<p class="err">Has compartido ${sup==='monitor'?'la pantalla entera':'una ventana'} y no la pestaña: así no puedo ver solo la gráfica. Pulsa otra vez «Leer la gráfica» y elige <b>esta pestaña</b> (en el aviso de Chrome, «Pestaña de Chrome» → BuscaTron), no «Ventana» ni «Pantalla completa».</p>`;return;}
-  let ov=null;
+  res.innerHTML='<p class="l">Tu navegador te va a preguntar si compartes esta pestaña: elige <b>esta pestaña</b> y acepta. Se usa una sola vez y se descarta.</p>';
+  const cap=await abreCapturaPestana(res);if(!cap)return;
+  try{enviaGrafica(res,await fotoGrande(cap.v,img.src),asin);}
+  catch(e){res.innerHTML='<p class="err">No se pudo capturar la gráfica. Puedes usar «Pegar gráfica».</p>';}
+  finally{cap.flujo.getTracks().forEach(t=>t.stop());}}
+/* «Leer las gráficas que faltan»: un solo permiso para todas. Lo leído queda guardado en cada producto: solo hay que repetirlo con los nuevos. */
+async function leeTodas(l){
+  const msg=$('leer-todas-msg'),pend=l.map((p,i)=>({p,i})).filter(({p})=>p.amazon&&p.amazon.asin&&!p.amazon.camel);
+  if(!pend.length){msg.textContent='No falta ninguna: todas las fichas de Amazon ya tienen su histórico leído.';return;}
+  msg.innerHTML=`<span class="mut">Tu navegador te va a preguntar si compartes la pestaña: elige <b>esta pestaña</b> y acepta; vale para las ${pend.length} gráficas.</span>`;
+  const cap=await abreCapturaPestana(msg);if(!cap)return;
+  let hechas=0,dudosas=0,k=0;
   try{
-    const v=document.createElement('video');v.srcObject=flujo;v.muted=true;await v.play();
-    // La miniatura no tiene letra legible: la gráfica se pone un momento a tamaño grande y se captura esa copia
-    ov=document.createElement('div');ov.style.cssText='position:fixed;left:0;top:0;z-index:99999;background:#fff;line-height:0';
-    const grande=new Image();grande.src=img.src;grande.style.cssText=`display:block;max-width:none;height:auto;width:${Math.min(1200,window.innerWidth)}px`;
-    ov.appendChild(grande);document.body.appendChild(ov);
-    await (grande.decode?grande.decode().catch(()=>{}):esperaMs(300));
-    await esperaMs(700);
-    const r=grande.getBoundingClientRect(),k=v.videoWidth/window.innerWidth;
-    const c=document.createElement('canvas');c.width=Math.max(1,Math.round(r.width*k));c.height=Math.max(1,Math.round(r.height*k));
-    c.getContext('2d').drawImage(v,r.left*k,r.top*k,r.width*k,r.height*k,0,0,c.width,c.height);
-    const url=c.toDataURL('image/png');ov.remove();ov=null;
-    enviaGrafica(res,url);
-  }finally{if(ov)ov.remove();flujo.getTracks().forEach(t=>t.stop());}}
+    for(const {p,i} of pend){
+      const img=$('hoja3').querySelectorAll('.refc')[i].querySelector('img.camel');
+      try{
+        const url=await fotoGrande(cap.v,img?img.src:grafCamel(p.amazon.asin),`Leyendo ${++k} de ${pend.length}: ${p.titulo.slice(0,60)}`);
+        const r=await api('grafica',{imagen:url,asin:p.amazon.asin}).catch(()=>({error:1}));
+        if(r.guardado)hechas++;else dudosas++;
+      }catch(e){dudosas++;}
+      await esperaMs(1500);        // sin prisa: son imágenes de camelcamelcamel que carga tu navegador
+    }
+  }finally{cap.flujo.getTracks().forEach(t=>t.stop());}
+  aviso(`Listo: ${hechas} leídas y guardadas`+(dudosas?`, ${dudosas} sin leer con seguridad`:''));
+  abreRef();}
 function abrePegarGrafica(b){const amz=b.closest('.amz');let z=amz.querySelector('.pgraf .zona');
   if(z){z.closest('.pgraf').remove();return;}
   const p=panelGrafica(amz,b);
   p.insertAdjacentHTML('afterbegin','<div class="zona" contenteditable="true" tabindex="0" role="textbox" aria-label="Pega aquí la gráfica" style="border:2px dashed var(--bd);border-radius:10px;padding:14px;margin:8px 0;min-height:44px;text-align:center">Abre la ficha en camelcamelcamel, clic derecho sobre su gráfica → «Copiar imagen», pulsa aquí y haz Ctrl+V.</div>');
-  const zona=p.querySelector('.zona'),res=p.querySelector('.res');zona.focus();
+  const zona=p.querySelector('.zona'),res=p.querySelector('.res'),asin=b.dataset.asin||'';zona.focus();
   zona.addEventListener('paste',async e=>{e.preventDefault();
     const it=[...(e.clipboardData?e.clipboardData.items:[])].find(i=>i.type.startsWith('image/'));
     if(!it){res.innerHTML='<p class="err">Lo que has pegado no es una imagen. Copia la gráfica con clic derecho → «Copiar imagen».</p>';return;}
     const url=await new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(fr.result);fr.readAsDataURL(it.getAsFile());});
-    enviaGrafica(res,url);});}
+    enviaGrafica(res,url,asin);});}
 async function vinculaRef(p,enlace){const r=await api('referencia',{clave:p.clave,enlace,titulo:p.titulo});
   if(r.error){aviso(r.error);return;}aviso('Vinculado: se recordará para este producto');abreRef();}
 let refPedido=0;     // si cambias de lista antes de que llegue la primera, la respuesta vieja se descarta
@@ -790,12 +820,16 @@ async function abreRef(ambito){if(ambito)refAmbito=ambito;const yo=++refPedido;
     $('hoja3').innerHTML=cab+`<p class="err">No se pudo mostrar el resumen (${esc(e.message)}). Reinicia BuscaTron (🆕 arriba o Ajustes → Servicio) y vuelve a abrirlo.</p>`;}
   $('hoja3').querySelector('.cierra').onclick=()=>cierraHoja('ref');
   $('hoja3').querySelectorAll('[data-ramb]').forEach(b=>b.onclick=()=>abreRef(b.dataset.ramb));}
+function leerTodasHtml(l){const n=l.filter(p=>p.amazon&&p.amazon.asin&&!p.amazon.camel).length,t=l.filter(p=>p.amazon&&p.amazon.asin).length;
+  return `<div class="card" style="margin:10px 0"><button type="button" id="leer-todas" ${n?'':'class="sec"'}>🖼️ ${n?`Leer las gráficas que faltan (${n})`:'Todas las gráficas están leídas'}</button>
+    <span class="l" style="margin-left:8px">${t-n} de ${t} con su histórico guardado. Se hace una vez; solo hay que repetirlo con los productos nuevos.</span><div id="leer-todas-msg" class="l" style="margin-top:6px"></div></div>`;}
 function pintaRef(l,cab){
   if(!Array.isArray(l)){$('hoja3').innerHTML=cab+`<p class="err">${esc(l.error||'No se pudo preparar el resumen. ¿BuscaTron está actualizado y abierto?')}</p>`;}
   else{const con=l.filter(p=>p.amazon),bajo=con.filter(p=>!(p.tienda==='www.amazon.es'&&p.url===p.amazon.url)&&p.precio<p.amazon.minimo-0.005).length;
     $('hoja3').innerHTML=cab+(l.length?`<div class="ref-res"><div class="stat"><b>${l.length}</b><span>Productos</span></div><div class="stat"><b>${con.length}</b><span>Vistos en Amazon</span></div><div class="stat"><b>${bajo}</b><span>Por debajo de Amazon</span></div></div>
-      <div class="ref-lista">${l.map(tarjetaRef).join('')}</div>`
+      ${leerTodasHtml(l)}<div class="ref-lista">${l.map(tarjetaRef).join('')}</div>`
       :`<div class="vacio-msg">${refAmbito==='avisos'?'No tienes avisos ahora mismo.':'Tus vigiladas activas todavía no han encontrado nada.'}</div>`);
+    if($('leer-todas'))$('leer-todas').onclick=()=>leeTodas(l);
     $('hoja3').querySelectorAll('[data-leer]').forEach(b=>b.onclick=()=>leeGraficaCargada(b));
     $('hoja3').querySelectorAll('[data-graf]').forEach(b=>b.onclick=()=>abrePegarGrafica(b));
     $('hoja3').querySelectorAll('[data-rh]').forEach(b=>b.onclick=()=>{const a=l[+b.dataset.rh].amazon;abreHist(a.url,a.titulo,'www.amazon.es');});

@@ -74,3 +74,59 @@ if __name__ == "__main__":
 class EscalaDelLector(unittest.TestCase):
     def test_las_imagenes_grandes_casi_no_se_amplian(self):
         self.assertEqual((ocr.escala_para(600), ocr.escala_para(1200), ocr.escala_para(1920), ocr.escala_para(3000)), (3, 3, 2, 1))
+
+
+import tempfile  # noqa: E402
+import time  # noqa: E402
+from buscatron import bd, referencia, seguimiento  # noqa: E402
+
+
+class ConBD(unittest.TestCase):
+    def setUp(self):
+        self.p = mock.patch.object(bd, "RUTA", os.path.join(tempfile.mkdtemp(), "t.db"))
+        self.p.start()
+
+    def tearDown(self):
+        self.p.stop()
+
+
+class Guardado(ConBD):
+    def llama(self, texto, ancho, asin):
+        with mock.patch.object(ocr, "lee", lambda b: texto), mock.patch.object(ocr, "decodifica", lambda u: png(ancho)):
+            return web.Handler._post(web.Handler.__new__(web.Handler), "/api/grafica", {"imagen": "x", "asin": asin})
+
+    def test_una_lectura_buena_se_guarda_por_producto(self):
+        r = self.llama(GRANDE, 1200, "B091Q2GGMR")
+        self.assertTrue(r["guardado"])
+        d = historico.todos()["B091Q2GGMR"]
+        self.assertEqual((d["minimo"], d["fecha_minimo"], d["maximo"], d["actual"]), (33.09, "2026-08-02", 48.98, 40.33))
+
+    def test_una_dudosa_no_se_guarda(self):
+        self.assertFalse(self.llama(PEQUENA, 600, "B091Q2GGMR")["guardado"])
+        self.assertEqual(historico.todos(), {})
+
+    def test_sin_producto_no_se_guarda(self):
+        self.assertFalse(self.llama(GRANDE, 1200, "")["guardado"])
+        self.assertEqual(historico.todos(), {})
+
+    def test_leer_otra_vez_sustituye(self):
+        historico.guarda("B091Q2GGMR", {"minimo": 1.0, "maximo": 2.0})
+        self.llama(GRANDE, 1200, "B091Q2GGMR")
+        self.assertEqual(historico.todos()["B091Q2GGMR"]["minimo"], 33.09)
+
+
+class EnLaReferencia(ConBD):
+    def test_cada_bloque_trae_lo_ya_leido_y_los_demas_no(self):
+        sid, ahora = seguimiento.guarda({"consulta": "marvel"}), time.time()
+        with bd.conecta() as c:
+            c.executemany("INSERT INTO precios(ts,consulta,tienda,titulo,url,precio,agotado,seg_id,preventa) VALUES(?,?,?,?,?,?,0,?,0)",
+                          [(ahora, "marvel", "www.amazon.es", "Fantasy Flight Games Marvel Champions Era de Apocalipsis",
+                            "https://www.amazon.es/dp/B091Q2GGMR", 40.33, sid),
+                           (ahora, "marvel", "www.amazon.es", "Asmodee Marvel Champions Civil War Expansion",
+                            "https://www.amazon.es/dp/B0AAAAAAAA", 43.65, sid)])
+        historico.guarda("B091Q2GGMR", historico.parsea(GRANDE))
+        por_asin = {p["amazon"]["asin"]: p["amazon"] for p in referencia.resumen("vigiladas") if p["amazon"]}
+        self.assertEqual(por_asin["B091Q2GGMR"]["camel"]["minimo"], 33.09)
+        self.assertTrue(por_asin["B091Q2GGMR"]["camel"]["frases"])
+        self.assertFalse(any("no se puede calcular" in f for f in por_asin["B091Q2GGMR"]["camel"]["frases"]))   # el aviso va una vez, no en cada bloque
+        self.assertIsNone(por_asin["B0AAAAAAAA"]["camel"])

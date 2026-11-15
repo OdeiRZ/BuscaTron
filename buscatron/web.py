@@ -341,7 +341,11 @@ class Handler(BaseHTTPRequestHandler):
             problemas = historico.valida(texto, datos) if datos else []
             px = ocr.ancho(datos_img)
             nota = f"La imagen es pequeña ({px} px de ancho): si algo no cuadra, amplía la gráfica." if 0 < px < 900 else ""
-            return {"texto": texto, "datos": datos, "problemas": problemas, "nota": nota,
+            asin = referencia.asin(f"/dp/{c.get('asin', '')}")
+            guardado = bool(asin and datos.get("minimo") is not None and datos.get("maximo") is not None and not problemas)
+            if guardado:                       # leído una vez: queda en la referencia de ese producto
+                historico.guarda(asin, datos)
+            return {"texto": texto, "datos": datos, "problemas": problemas, "nota": nota, "guardado": guardado,
                     "frases": historico.frases(datos) if datos and not problemas else []}
         if ruta == "/api/estado_tiendas":
             return motor.estado_tiendas()

@@ -3,6 +3,13 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.17.22] - 2026-11-15
+
+### Añadido
+- **🖼️ Leer las gráficas que faltan**, arriba en la Referencia de Amazon: con **un solo permiso** (compartir esta pestaña) recorre sola todas las fichas de Amazon que aún no tienen su histórico, pone cada gráfica un momento a tamaño grande, la lee y sigue con la siguiente (con 1,5 s entre una y otra). Muestra el avance («Leyendo 3 de 12») y al terminar recarga la lista.
+- **El histórico leído se guarda por producto** (tabla `camel_extremos`, por ASIN) y sale en su bloque de la referencia: mínimo histórico con su fecha, máximo, media, precio de hoy frente al mínimo y si el mínimo coincidió con una campaña que vuelve. Solo hace falta leer cada gráfica una vez, y repetirlo con los productos nuevos. Solo se guarda una lectura que cuadra con la escala de la gráfica; las dudosas no.
+- «Leer la gráfica» y «Pegar gráfica» de un producto también lo guardan.
+
 ## [0.17.21] - 2026-11-15
 
 ### Corregido

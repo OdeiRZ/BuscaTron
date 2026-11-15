@@ -7,7 +7,7 @@ import re
 import time
 import urllib.request
 
-from . import bd, extract, motor
+from . import bd, extract, historico, motor
 
 AMAZON = "www.amazon.es"
 COBERTURA = 0.75        # parte de las palabras del producto que tiene que tener el título de Amazon
@@ -157,8 +157,13 @@ def resumen(ambito="avisos"):
     idiomas = motor.idiomas_de_fichas(list(amazon) + [p["url"] for p in prods])
     prods = [p for p in prods if idiomas.get(p["url"]) not in ("en", "otro")]     # su ficha ya dijo que no está en castellano
 
+    camel = historico.todos()
+
     def limpio(a):
-        return {k: v for k, v in a.items() if k != "palabras"} | {"idioma": idiomas.get(a["url"])}
+        d = camel.get(a.get("asin"))
+        return {k: v for k, v in a.items() if k != "palabras"} | {
+            "idioma": idiomas.get(a["url"]),
+            "camel": {**d, "frases": historico.frases(d, aviso=False)} if d else None}
     salida, referencias = [], set()
     for p in prods:
         p["clave"] = motor.clave_producto(p["titulo"])
