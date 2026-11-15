@@ -59,16 +59,23 @@ def _desenvuelve_ddg(href):
     return u
 
 
+def relevante(titulo, url, consulta):
+    """¿El resultado del buscador habla de lo que buscas? Su título (o su dirección) tiene todas las palabras de la búsqueda."""
+    n = extract.normaliza(re.sub(r"<[^>]+>", " ", html_.unescape(titulo)) + " " + url)
+    return all(extract.encaja(n, w) for w in extract.normaliza(consulta).split())
+
+
 def buscadores(consulta, region="es", castellano=True, paginas=2):
-    """Direcciones que devuelven los buscadores (Bing con dos formulaciones y varias páginas; DuckDuckGo si Bing da pocas)."""
+    """Direcciones que devuelven los buscadores (Bing con dos formulaciones y varias páginas; DuckDuckGo si Bing da pocas).
+    Solo se quedan los resultados cuyo título contiene tu búsqueda: el resto es ruido del buscador."""
     variantes = [f"comprar {consulta}" + (" castellano" if castellano else " online"), f"{consulta} precio tienda online"]
     sesgo = "&setlang=es&cc=ES" if region == "es" else ("&setlang=es" if castellano else "")
     urls, errores = [], []
 
     def anade(h, patron, desenvuelve):
-        for href in re.findall(patron, h, re.S):
+        for href, titulo in re.findall(patron, h, re.S):
             u = desenvuelve(href)
-            if u.startswith("http") and u not in urls:
+            if u.startswith("http") and u not in urls and relevante(titulo, u, consulta):
                 urls.append(u)
 
     for q in variantes:
@@ -81,12 +88,12 @@ def buscadores(consulta, region="es", castellano=True, paginas=2):
             if st != 200:
                 errores.append(f"Bing: HTTP {st}")
                 break
-            anade(h, r'<li class="b_algo".*?<h2[^>]*><a[^>]+href="([^"]+)"', _desenvuelve_bing)
+            anade(h, r'<li class="b_algo".*?<h2[^>]*><a[^>]+href="([^"]+)"[^>]*>(.*?)</a>', _desenvuelve_bing)
     if len(urls) < 5:
         try:
             st, h = fetch.get(f"https://html.duckduckgo.com/html/?q={quote_plus(variantes[0])}&kl={'es-es' if region == 'es' else 'wt-wt'}", timeout=15)
             if st == 200:
-                anade(h, r'class="result__a"[^>]+href="([^"]+)"', _desenvuelve_ddg)
+                anade(h, r'class="result__a"[^>]+href="([^"]+)"[^>]*>(.*?)</a>', _desenvuelve_ddg)
             else:
                 errores.append(f"DuckDuckGo: HTTP {st}")
         except Exception as e:

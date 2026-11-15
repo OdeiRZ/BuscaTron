@@ -3,6 +3,11 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.17.12] - 2026-11-15
+
+### Corregido
+- **Búsqueda abierta**: se queda solo con los resultados del buscador cuyo título habla de lo que buscas. Bing devolvía para «Mage Knight Edición Definitiva» páginas sin relación (webs de IA, Idealista, coches) y BuscaTron perdía el tiempo leyéndolas. Con Chrome de verdad el resultado es el mismo, así que el problema es el buscador, no cómo se le pide.
+
 ## [0.17.11] - 2026-11-15
 
 ### Corregido
