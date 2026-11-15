@@ -3,6 +3,11 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.17.14] - 2026-11-15
+
+### Corregido
+- El texto de Ajustes decía que la clave de Brave Search era gratuita: es de pago (unos 5 $ por 1.000 consultas; cada búsqueda por internet gasta 2).
+
 ## [0.17.13] - 2026-11-15
 
 ### Añadido
