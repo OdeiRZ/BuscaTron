@@ -3,6 +3,11 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.17.17] - 2026-11-15
+
+### Eliminado
+- El análisis del precio con los datos propios de BuscaTron (v0.17.15: gráfica diaria, bajadas, estimación y fiabilidad): no se había pedido y con 10 días de historial no servía. La Referencia de Amazon queda como antes; el histórico largo se lee con «Pegar gráfica de camel» (v0.17.16).
+
 ## [0.17.16] - 2026-11-15
 
 ### Añadido

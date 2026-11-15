@@ -6,7 +6,7 @@ import datetime
 import re
 import unicodedata
 
-from . import analisis, extract
+from . import extract
 
 MESES = {"ene": 1, "jan": 1, "feb": 2, "mar": 3, "abr": 4, "apr": 4, "may": 5, "jun": 6, "jul": 7, "ago": 8, "aug": 8,
          "sep": 9, "set": 9, "oct": 10, "nov": 11, "dic": 12, "dec": 12}
@@ -17,6 +17,17 @@ MES = r"(ene|jan|feb|mar|abr|apr|may|jun|jul|ago|aug|sep|set|oct|nov|dic|dec)[a-
 FECHAS = (re.compile(r"\b(\d{1,2})[ .\-/]+" + MES + r"\.?[ ,.\-/]+(\d{2,4})\b"),          # 12 nov. 2026 · 12-nov-26
           re.compile(r"\b" + MES + r"\.?[ ]+(\d{1,2}),?[ ]+(\d{4})\b"),                    # nov 12, 2026
           re.compile(r"\b(\d{1,2})[/.\-](\d{1,2})[/.\-](\d{2,4})\b"))                    # 12/11/2026
+
+
+def euros(v):
+    return f"{v:.2f}".replace(".", ",") + " €"
+
+
+def black_friday(anio):
+    """El viernes después del cuarto jueves de noviembre."""
+    d = datetime.date(anio, 11, 1)
+    jueves = [d + datetime.timedelta(days=i) for i in range(30) if (d + datetime.timedelta(days=i)).weekday() == 3]
+    return jueves[3] + datetime.timedelta(days=1)
 
 
 def _plano(t):
@@ -78,7 +89,7 @@ def parsea(texto):
 # Campañas de ofertas: (nombre, ventana en el año que pasó, fecha de este año)
 def _campanas(anio):
     """[(nombre, desde, hasta, día de la campaña)] de ese año."""
-    bf = analisis.black_friday(anio)
+    bf = black_friday(anio)
     d = datetime.timedelta
     return [("Black Friday", bf - d(days=5), bf + d(days=1), bf),
             ("Cyber Monday", bf + d(days=2), bf + d(days=5), bf + d(days=3)),
@@ -104,7 +115,7 @@ def hace(dias):
 
 def frases(d, hoy=None):
     hoy = hoy or datetime.date.today()
-    e = analisis.euros
+    e = euros
     out = []
     mn, mx, act = d.get("minimo"), d.get("maximo"), d.get("actual")
     if mn is not None:

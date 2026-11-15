@@ -7,7 +7,7 @@ import re
 import time
 import urllib.request
 
-from . import analisis, bd, extract, motor
+from . import bd, extract, motor
 
 AMAZON = "www.amazon.es"
 COBERTURA = 0.75        # parte de las palabras del producto que tiene que tener el título de Amazon
@@ -73,7 +73,7 @@ def _amazon(c):
     for a in d.values():
         ps = [p for _, p in a["precios"]]
         a.update(actual=ps[-1], visto=a["precios"][-1][0], minimo=min(ps), maximo=max(ps), n=len(ps), desde=a["precios"][0][0],
-                 palabras=_palabras(a["titulo"]), serie=a["precios"])
+                 palabras=_palabras(a["titulo"]))
         del a["precios"]
     return d
 
@@ -158,8 +158,7 @@ def resumen(ambito="avisos"):
     prods = [p for p in prods if idiomas.get(p["url"]) not in ("en", "otro")]     # su ficha ya dijo que no está en castellano
 
     def limpio(a):
-        return {k: v for k, v in a.items() if k not in ("palabras", "serie")} | {
-            "idioma": idiomas.get(a["url"]), "analisis": analisis.analiza(a["serie"]) if a.get("serie") else None}
+        return {k: v for k, v in a.items() if k != "palabras"} | {"idioma": idiomas.get(a["url"])}
     salida, referencias = [], set()
     for p in prods:
         p["clave"] = motor.clave_producto(p["titulo"])
