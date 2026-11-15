@@ -8,14 +8,14 @@ from unittest import mock
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from buscatron import historico, ocr, web  # noqa: E402
 
-TEXTO = "Amazon: Actual 94,47 EUR MAS alto 102,86 EUR (12 nov. 2026)\nMAS bajo 61,50 EUR (24 nov. 2025) Media 84,12 EUR"
+TEXTO = ("€120\n€100\n€80\n€60\nPrice type\nAmazon\nLowest\n€61,50 (Nov 24, 2025)\nHighest\n€102,86 (Nov 12, 2026)\nCurrent\n€94,47 (Nov 15, 2026)")
 
 
 class Parseo(unittest.TestCase):
     def test_extremos_con_decimales_y_fechas(self):
         d = historico.parsea(TEXTO)
-        self.assertEqual((d["minimo"], d["fecha_minimo"], d["maximo"], d["fecha_maximo"], d["media"], d["actual"]),
-                         (61.5, "2025-11-24", 102.86, "2026-11-12", 84.12, 94.47))
+        self.assertEqual((d["minimo"], d["fecha_minimo"], d["maximo"], d["fecha_maximo"], d["actual"]),
+                         (61.5, "2025-11-24", 102.86, "2026-11-12", 94.47))
 
     def test_formatos_en_ingles_y_miles(self):
         d = historico.parsea("Lowest 12.99 € (Nov 24, 2025) Highest 1.299,00 € (12/03/2024) Average 20,10")

@@ -8,7 +8,7 @@ import time
 import urllib.parse
 import urllib.request
 
-from . import bd, extract, historico, motor
+from . import bd, extract, historico, motor, seguimiento
 
 AMAZON = "www.amazon.es"
 COBERTURA = 0.75        # parte de las palabras del producto que tiene que tener el título de Amazon
@@ -102,16 +102,31 @@ def _amazon(c):
     return d
 
 
-def _productos(c, ambito):
-    """Los productos de tus avisos o de lo que encuentran ahora tus vigiladas activas, uno por producto (el más barato)."""
+ESTADOS = {"activas": "s.activo=1", "pausa": "s.activo=0", "todas": "1=1"}
+
+
+def _de_vigiladas(c, estado="activas"):
+    """Lo que encontró cada vigilada en su última revisión Y cumple sus filtros de ahora: [(titulo, precio, tienda, url, ts, seg_id)].
+    estado: activas | pausa | todas (la pestaña de Vigiladas desde la que se abre)."""
+    filas = []
+    for s in c.execute("SELECT s.*, MAX(p.ts) AS uts FROM seguimientos s JOIN precios p ON p.seg_id=s.id WHERE "
+                       + ESTADOS.get(estado, ESTADOS["activas"]) + " GROUP BY s.id").fetchall():
+        seg = dict(s)
+        seg["opciones"] = seguimiento.opciones_de(seg)
+        for r in c.execute("SELECT titulo, precio, tienda, url, ts, seg_id FROM precios WHERE seg_id=? AND ts=? AND agotado=0",
+                           (seg["id"], seg["uts"])).fetchall():
+            if seguimiento.cumple(seg, r["titulo"], r["precio"], r["tienda"]):
+                filas.append(tuple(r))
+    return filas
+
+
+def _productos(c, ambito, estado="activas"):
+    """Los productos de tus avisos o de lo que encuentran tus vigiladas (según la pestaña: activas, en pausa o todas), uno por
+    producto (el más barato), siempre con los filtros que tienen ahora."""
     if ambito == "avisos":
         filas = c.execute("SELECT titulo, precio, tienda, url, ts, seg_id FROM avisos WHERE oculto=0").fetchall()
     else:
-        filas = []
-        for sid, ts in c.execute("SELECT s.id, MAX(p.ts) FROM seguimientos s JOIN precios p ON p.seg_id=s.id "
-                                 "WHERE s.activo=1 GROUP BY s.id").fetchall():
-            filas += c.execute("SELECT titulo, precio, tienda, url, ts, seg_id FROM precios "
-                               "WHERE seg_id=? AND ts=? AND agotado=0", (sid, ts)).fetchall()
+        filas = _de_vigiladas(c, estado)
     ocultos = set(motor.ignorados())
     grupos = {}
     for titulo, precio, tienda, url, ts, sid in filas:
@@ -122,6 +137,15 @@ def _productos(c, ambito):
         if not g or precio < g["precio"]:
             grupos[k] = {"titulo": titulo, "precio": precio, "tienda": tienda, "url": url, "ts": ts, "seg_id": sid}
     return sorted(grupos.values(), key=lambda g: extract.normaliza(g["titulo"]))
+
+
+# Palabras de otro tipo de artículo: si el título de Amazon las lleva y el del producto no, no es el mismo producto
+# («Too Many Bones: Gasket Add-on Character» no es «Too Many Bones Edición Definitiva»).
+OTRO_ARTICULO = {"character", "personaje", "add", "addon", "sleeve", "funda", "tapete", "playmat", "organizador", "inserto", "insert", "accesorio"}
+
+
+def es_otro_articulo(w, a):
+    return bool((a["palabras"] & OTRO_ARTICULO) - w)
 
 
 def _candidatos(prod, amazon, excluir, idiomas):
@@ -135,7 +159,7 @@ def _candidatos(prod, amazon, excluir, idiomas):
     r = []
     for a in amazon.values():
         comun = len(w & a["palabras"]) / len(w)
-        if comun < COBERTURA:
+        if comun < COBERTURA or es_otro_articulo(w, a):
             continue
         n = extract.normaliza(a["titulo"])
         if any(extract.encaja(n, e) for e in exc):            # lo que descarta la vigilada (fundas, tapetes…)
@@ -171,11 +195,11 @@ def _sugerencias(prod, amazon, excluir, usadas):
     return [a for _, a in r[:3]]
 
 
-def resumen(ambito="avisos"):
+def resumen(ambito="avisos", estado="activas"):
     """[{producto…, amazon: {…}|None, alternativas: [...]}] para la vista «Referencia de Amazon»."""
     with bd.conecta() as c:
         amazon = _amazon(c)
-        prods = _productos(c, ambito)
+        prods = _productos(c, ambito, estado)
         excl = {sid: exc for sid, exc in c.execute("SELECT id, excluir FROM seguimientos")}
         vinculos = {k: a for k, a in c.execute("SELECT clave, asin FROM vinculos_amazon")}
         extras = [(a, t) for a, t in c.execute("SELECT asin, titulo FROM ref_extra ORDER BY ts")]
@@ -231,8 +255,8 @@ def por_vigilada():
         excl = {sid: exc for sid, exc in c.execute("SELECT id, excluir FROM seguimientos")}
         vinculos = {k: a for k, a in c.execute("SELECT clave, asin FROM vinculos_amazon")}
         filas = {}
-        for sid, ts in c.execute("SELECT s.id, MAX(p.ts) FROM seguimientos s JOIN precios p ON p.seg_id=s.id GROUP BY s.id").fetchall():
-            filas[sid] = c.execute("SELECT titulo, precio, tienda, url FROM precios WHERE seg_id=? AND ts=? AND agotado=0", (sid, ts)).fetchall()
+        for titulo, precio, tienda, url, ts, sid in _de_vigiladas(c, "todas"):
+            filas.setdefault(sid, []).append((titulo, precio, tienda, url))
     ocultos = set(motor.ignorados())
     idiomas = motor.idiomas_de_fichas(list(amazon))
     out = {}

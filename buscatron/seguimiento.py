@@ -75,16 +75,17 @@ def guarda(d):
     if v["pmin"] is not None and v["pmax"] is not None and v["pmin"] > v["pmax"]:
         raise ValueError("el precio mínimo es mayor que el máximo: no encontraría nada")
     with bd.conecta() as c:
-        if d.get("id"):
-            if "activo" not in d:      # editar sin decir nada de la pausa la deja como estaba
-                fila = c.execute("SELECT activo FROM seguimientos WHERE id=?", (d["id"],)).fetchone()
-                v["activo"] = fila["activo"] if fila else 1
-            c.execute("UPDATE seguimientos SET " + ",".join(f"{k}=?" for k in CAMPOS) + " WHERE id=?",
-                      [v[k] for k in CAMPOS] + [d["id"]])
-            return int(d["id"])
-        cur = c.execute("INSERT INTO seguimientos(" + ",".join(CAMPOS) + ") VALUES(" + ",".join("?" * len(CAMPOS)) + ")",
-                        [v[k] for k in CAMPOS])
-        return cur.lastrowid
+        if not d.get("id"):
+            cur = c.execute("INSERT INTO seguimientos(" + ",".join(CAMPOS) + ") VALUES(" + ",".join("?" * len(CAMPOS)) + ")",
+                            [v[k] for k in CAMPOS])
+            return cur.lastrowid
+        if "activo" not in d:      # editar sin decir nada de la pausa la deja como estaba
+            fila = c.execute("SELECT activo FROM seguimientos WHERE id=?", (d["id"],)).fetchone()
+            v["activo"] = fila["activo"] if fila else 1
+        c.execute("UPDATE seguimientos SET " + ",".join(f"{k}=?" for k in CAMPOS) + " WHERE id=?",
+                  [v[k] for k in CAMPOS] + [d["id"]])
+    limpia_avisos_por_filtros(int(d["id"]))      # los avisos que los filtros nuevos descartan, fuera
+    return int(d["id"])
 
 
 def borra(seg_id):
@@ -325,22 +326,45 @@ def resumen(seg, opc, modo, res, informe, ofertas=3):
     return "\n\n".join(lineas)
 
 
+def cumple(seg, titulo, precio=None, tienda=None):
+    """¿Este resultado guardado cumple los filtros ACTUALES de la vigilada (su búsqueda, «Solo títulos con», «Descarta», «al menos
+    una de estas» y el rango de precio)? Los resultados de la última revisión se guardan tal cual salieron entonces: si luego se
+    editan los filtros, hay que volver a pasarlos por ellos al leerlos, no esperar a la siguiente revisión.
+    `seg`: la fila de la vigilada (con «opciones» como texto JSON o ya como dict)."""
+    ex = motor.extract
+    n = ex.normaliza(titulo)
+    opciones = seg["opciones"] if isinstance(seg.get("opciones"), dict) else opciones_de(seg)
+    palabras = ex.normaliza(f"{seg.get('consulta') or ''} {seg.get('incluir') or ''}").split()
+    frases = [f for f in (ex.normaliza(x).strip() for x in (opciones.get("alguna") or "").split(",")) if f]
+    if not all(ex.encaja(n, w) for w in palabras):
+        return False
+    if tienda and not motor.solo_juego(tienda, titulo, seg.get("consulta") or ""):
+        return False
+    if any(ex.encaja(n, w) for w in ex.normaliza(seg.get("excluir") or "").split()):
+        return False
+    if frases and not any(ex.encaja(n, f) for f in frases):
+        return False
+    if precio is not None and ((seg.get("pmin") is not None and precio < seg["pmin"]) or (seg.get("pmax") is not None and precio > seg["pmax"])):
+        return False
+    return True
+
+
+def limpia_avisos_por_filtros(seg_id):
+    """Quita los avisos de esa vigilada que ya no cumplen sus filtros (se llama al editarla y guardar). Devuelve cuántos."""
+    with bd.conecta() as c:
+        fila = c.execute("SELECT * FROM seguimientos WHERE id=?", (seg_id,)).fetchone()
+        if not fila:
+            return 0
+        seg = dict(fila)
+        malos = [r["id"] for r in c.execute("SELECT id, titulo, precio, tienda FROM avisos WHERE seg_id=?", (seg_id,)) if not cumple(seg, r["titulo"], r["precio"], r["tienda"])]
+        c.executemany("DELETE FROM avisos WHERE id=?", [(i,) for i in malos])
+    return len(malos)
+
+
 def cubren(titulo, precio=None):
     """Nombres de las vigiladas activas que encontrarían este producto (aproximado: por las palabras de su búsqueda y sus
     filtros). Sirve para avisar de que un objetivo 🎯 no avisará si ninguna vigilada busca ese producto."""
-    n = motor.extract.normaliza(titulo)
-    nombres = []
-    for s in lista():
-        if not s["activo"]:
-            continue
-        palabras = motor.extract.normaliza(f"{s['consulta']} {s['incluir'] or ''}").split()
-        frases = [f for f in (motor.extract.normaliza(x).strip() for x in s["opciones"]["alguna"].split(",")) if f]
-        encaja = motor.extract.encaja
-        if (all(encaja(n, w) for w in palabras) and not any(encaja(n, w) for w in motor.extract.normaliza(s["excluir"] or "").split())
-                and (not frases or any(encaja(n, f) for f in frases))
-                and not (precio is not None and s["pmin"] is not None and precio < s["pmin"])):
-            nombres.append(s["nombre"])
-    return nombres
+    return [s["nombre"] for s in lista() if s["activo"] and cumple(s, titulo, precio)]
 
 
 def pendientes(ahora=None):

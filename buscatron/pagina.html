@@ -685,7 +685,7 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'){const h=hojaAbierta
 $('ref').onclick=e=>{if(e.target===$('ref'))cierraHoja('ref');};
 
 /* 📊 referencia de Amazon: cada producto con su equivalente en Amazon y lo que BuscaTron ha visto allí */
-let refAmbito='avisos';
+let refAmbito='avisos',refEstado='activas';   // refEstado: la pestaña de Vigiladas desde la que se abre (activas, pausa o todas)
 const camel=a=>`https://es.camelcamelcamel.com/product/${a}`,keepa=a=>`https://keepa.com/#!product/9-${a}`;
 const grafCamel=a=>`https://charts.camelcamelcamel.com/es/${a}/amazon.png?force=1&zero=0&w=1200&h=600&desired=false&legend=1&ilt=1&tp=all&fo=0&lang=es_ES`;
 function veredicto(p,a){
@@ -750,20 +750,36 @@ async function abreCapturaPestana(res){
   const v=document.createElement('video');v.srcObject=flujo;v.muted=true;await v.play();
   return {flujo,v};}
 /* La miniatura no tiene letra legible: la gráfica se pone un momento a tamaño grande, tapando la página, y se captura esa copia */
+/* Una marca magenta junto a la gráfica dice dos cosas en la captura: que el fotograma YA trae la pantalla de lectura (el navegador a veces
+   entrega fotogramas viejos o vacíos) y dónde está, aunque la captura incluya las barras del navegador. Se espera a verla y se recorta
+   la gráfica desde ella; si no aparece nunca (cambiaste de pestaña…), se dice en vez de leer basura. */
+function buscaMarca(x,w,h){
+  const d=x.getImageData(0,0,w,h).data;let x0=w,y0=h,x1=-1,y1=-1,n=0;
+  for(let yy=0;yy<h;yy+=2){for(let xx=0;xx<w;xx+=2){const i=(yy*w+xx)*4;
+    if(d[i]>200&&d[i+1]<90&&d[i+2]>200){n++;if(xx<x0)x0=xx;if(xx>x1)x1=xx;if(yy<y0)y0=yy;if(yy>y1)y1=yy;}}}
+  return n>150&&x1-x0>20?{x:x0,y:y0,w:x1-x0+1}:null;}
 async function fotoGrande(v,src,rotulo,espera,avance){
-  const ov=document.createElement('div');ov.style.cssText='position:fixed;left:0;top:0;right:0;bottom:0;z-index:99999;background:#f4f5f8;line-height:1.4;font:14px system-ui,sans-serif;color:#444';
-  const grande=new Image();grande.src=src;grande.style.cssText=`display:block;max-width:none;height:auto;width:${Math.min(1200,window.innerWidth)}px`;
-  const txt=document.createElement('div');txt.style.cssText='padding:10px 16px';txt.textContent=rotulo||'Leyendo la gráfica…';
+  const ov=document.createElement('div');ov.id='bt-lectura';ov.style.cssText='position:fixed;left:0;top:0;right:0;bottom:0;z-index:99999;background:#f4f5f8;line-height:1.4;font:14px system-ui,sans-serif;color:#444';
+  const cab=document.createElement('div');cab.style.cssText='display:flex;align-items:center;gap:12px;height:48px';
+  const marca=document.createElement('div');marca.id='bt-marca';marca.style.cssText='width:40px;height:40px;background:#ff00ff;flex:none';
+  const txt=document.createElement('div');txt.textContent=rotulo||'Leyendo la gráfica…';cab.appendChild(marca);cab.appendChild(txt);
   const barra=document.createElement('div');barra.style.cssText='height:6px;background:#dfe2ee';barra.innerHTML=`<div style="height:6px;width:${Math.round(100*(avance||0))}%;background:#4f46e5"></div>`;
-  ov.appendChild(barra);ov.appendChild(grande);ov.appendChild(txt);document.body.appendChild(ov);
+  const grande=new Image();grande.src=src;grande.style.cssText=`display:block;max-width:none;height:auto;width:${Math.min(1200,window.innerWidth)}px`;
+  ov.appendChild(cab);ov.appendChild(barra);ov.appendChild(grande);document.body.appendChild(ov);
   try{
     await (grande.decode?grande.decode():new Promise((ok,ko)=>{grande.onload=ok;grande.onerror=ko;}));
-    await esperaMs(espera||1200);      // la captura llega comprimida: al principio el texto sale borroso
-    // Se manda el fotograma ENTERO, sin recortar por coordenadas: si lo capturado trae las barras del navegador, la gráfica queda
-    // desplazada y un recorte le cortaría el pie (donde está la leyenda con el mínimo y el máximo). El lector busca las etiquetas.
-    const c=document.createElement('canvas');c.width=v.videoWidth||window.innerWidth;c.height=v.videoHeight||window.innerHeight;
-    c.getContext('2d').drawImage(v,0,0,c.width,c.height);
-    return c.toDataURL('image/png');
+    for(let i=0;i<18;i++){                                   // hasta ~8 s esperando a que el fotograma ya traiga la pantalla de lectura
+      await esperaMs(i===0?(espera||800):400);
+      const w=v.videoWidth,h=v.videoHeight;if(!w||!h)continue;
+      const c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d',{willReadFrequently:true});x.drawImage(v,0,0);
+      const caja=buscaMarca(x,w,h);if(!caja)continue;
+      const k=caja.w/40,r=grande.getBoundingClientRect(),m=marca.getBoundingClientRect();
+      const sx=Math.max(0,Math.round(caja.x+(r.left-m.left)*k)),sy=Math.max(0,Math.round(caja.y+(r.top-m.top)*k));
+      const o=document.createElement('canvas');o.width=Math.max(1,Math.min(Math.round(r.width*k),w-sx));o.height=Math.max(1,Math.min(Math.round(r.height*k),h-sy));
+      o.getContext('2d').drawImage(c,sx,sy,o.width,o.height,0,0,o.width,o.height);
+      return o.toDataURL('image/png');
+    }
+    throw new Error('la captura no llegó a mostrar la pantalla de lectura (¿cambiaste de pestaña o de ventana?)');
   }finally{ov.remove();}}
 async function leeGraficaCargada(b){const amz=b.closest('.amz'),img=amz.querySelector('img.camel'),res=panelGrafica(amz,b).querySelector('.res'),asin=b.dataset.asin||'';
   if(!img||!img.complete||!img.naturalWidth){res.innerHTML='<p class="err">La gráfica no está cargada: camelcamelcamel no se la ha enseñado a tu navegador. Prueba con «Pegar gráfica».</p>';return;}
@@ -825,14 +841,14 @@ function abrePegarGrafica(b){const amz=b.closest('.amz');let z=amz.querySelector
 async function vinculaRef(p,enlace){const r=await api('referencia',{clave:p.clave,enlace,titulo:p.titulo});
   if(r.error){aviso(r.error);return;}aviso('Vinculado: se recordará para este producto');abreRef();}
 let refPedido=0;     // si cambias de lista antes de que llegue la primera, la respuesta vieja se descarta
-async function abreRef(ambito){if(ambito)refAmbito=ambito;const yo=++refPedido;
-  const sel=`<div class="ref-sel" role="group" aria-label="Productos">${[['avisos','De tus avisos'],['vigiladas','De lo que encuentran tus vigiladas']].map(([k,v])=>`<button type="button" class="chip ${k===refAmbito?'on':''}" data-ramb="${k}" aria-pressed="${k===refAmbito}">${v}</button>`).join('')}</div>`;
+async function abreRef(ambito,estado){if(ambito)refAmbito=ambito;if(estado)refEstado=estado;const yo=++refPedido;
+  const sel=`<div class="ref-sel" role="group" aria-label="Productos">${[['avisos','De tus avisos'],['vigiladas','De tus vigiladas'+(refAmbito==='vigiladas'?' ('+({todas:'todas',activas:'activas',pausa:'en pausa'}[refEstado]||'activas')+')':'')]].map(([k,v])=>`<button type="button" class="chip ${k===refAmbito?'on':''}" data-ramb="${k}" aria-pressed="${k===refAmbito}">${v}</button>`).join('')}</div>`;
   const cab=`<button type="button" class="cierra" aria-label="Cerrar">✕</button><h3>📊 Referencia de Amazon</h3>
     <div class="enlaces" style="margin:8px 0"><input type="text" id="ref-extra" placeholder="Pega aquí el enlace de un juego de Amazon (aunque no esté en stock)" autocomplete="off" style="flex:1;min-width:220px"><select id="ref-extra-prod" title="Si el enlace es de un producto que ya tienes, elígelo: se une a él en vez de crear otro" style="max-width:100%"><option value="">Producto aparte (no está en mis listas)</option></select><button type="button" id="ref-extra-ok">➕ Añadir</button></div>
     <p class="ayuda" style="margin-top:4px">Cada producto con su equivalente en Amazon y lo que BuscaTron ha visto allí en tus búsquedas. Para el histórico de años, abre camelcamelcamel o Keepa: no dejan leer sus datos automáticamente, pero sus fichas están a un toque.</p>${sel}`;
   $('hoja3').innerHTML=cab+'<div class="carga" style="margin:22px 0"><div class="spin"></div>Preparando el resumen…</div>';
   if(!$('ref').classList.contains('v'))abreHoja('ref');
-  const l=await api('referencia?ambito='+refAmbito).catch(e=>({error:'No se pudo hablar con BuscaTron'}));
+  const l=await api('referencia?ambito='+refAmbito+(refAmbito==='vigiladas'?'&estado='+refEstado:'')).catch(e=>({error:'No se pudo hablar con BuscaTron'}));
   if(yo!==refPedido)return;
   try{pintaRef(l,cab);}catch(e){    // nunca «Preparando el resumen…» para siempre: se cuenta qué pasó
     $('hoja3').innerHTML=cab+`<p class="err">No se pudo mostrar el resumen (${esc(e.message)}). Recarga la página con Ctrl+F5 (puede que esta pestaña sea de una versión anterior); si sigue igual, reinicia BuscaTron (🆕 arriba o Ajustes → Servicio).</p>`;}
@@ -957,11 +973,11 @@ function ordenaSegs(l,modo){const az=(a,b)=>a.nombre.localeCompare(b.nombre,'es'
   const f={creacion:(a,b)=>a.id-b.id,recientes:(a,b)=>b.id-a.id,nombre:az,activas:(a,b)=>(b.activo-a.activo)||az(a,b),
     proxima:(a,b)=>(prox(a)-prox(b))||az(a,b),revisada:(a,b)=>((a.ultima||0)-(b.ultima||0))||az(a,b)}[modo]||((a,b)=>a.id-b.id);
   return c.sort(f);}
-const FILTRO_SEG={todas:'Todas',activas:'Activas',pausa:'En pausa'};
+const FILTRO_SEG={todas:'Todas',activas:'Activas',pausa:'En pausa'};let segEfectivo='todas';
 let filtroSeg='todas';try{const o=localStorage.getItem('bt-filtro-seg');if(o in FILTRO_SEG)filtroSeg=o;}catch(e){}
 function cabeceraSeg(l){const act=l.filter(s=>s.activo).length,pau=l.length-act,n={todas:l.length,activas:act,pausa:pau};
   return `<div class="cuenta" style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><span>${l.length} búsqueda${l.length===1?'':'s'} vigilada${l.length===1?'':'s'}: ${act} activa${act===1?'':'s'}${pau?`, ${pau} en pausa`:''}</span>
-    <button type="button" class="sec mini" onclick="abreRef('vigiladas')" title="Lo que encuentran tus vigiladas, comparado con lo visto en Amazon">📊 Referencia de Amazon</button></div>
+    <button type="button" class="sec mini" onclick="abreRef('vigiladas',segEfectivo)" title="Lo que encuentran tus vigiladas (las de la pestaña que tienes abierta: todas, activas o en pausa), comparado con lo visto en Amazon">📊 Referencia de Amazon</button></div>
   ${pau&&act?`<div class="filtro-seg" role="group" aria-label="Mostrar">${Object.entries(FILTRO_SEG).map(([k,v])=>`<button type="button" class="chip ${k===filtroSeg?'on':''}" data-fseg="${k}" aria-pressed="${k===filtroSeg}">${v} · ${n[k]}</button>`).join('')}</div>`:''}
   <div class="orden-res"><label for="seg-orden">Ordenar por</label><select id="seg-orden">${Object.entries(ORDEN_SEG).map(([k,v])=>`<option value="${k}" ${k===ordenSeg?'selected':''}>${v}</option>`).join('')}</select></div>`;}
 function tarjetaSeg(s){
@@ -984,7 +1000,7 @@ function tarjetaSeg(s){
   <button class="peli mini" onclick="borraSeg(${s.id})">🗑 Borrar</button></div></div>`;}
 function pintaSeg(l){segs=l;
   const abiertos=new Set([...document.querySelectorAll('#seg-lista .seg details[open]')].map(d=>d.dataset.id));   // que repintar no los cierre
-  const act=l.filter(s=>s.activo).length,filtro=act&&act<l.length?filtroSeg:'todas';
+  const act=l.filter(s=>s.activo).length,filtro=act&&act<l.length?filtroSeg:'todas';segEfectivo=filtro;
   const vis=ordenaSegs(l,ordenSeg).filter(s=>filtro==='todas'||(filtro==='activas')===!!s.activo);
   $('seg-lista').innerHTML=l.length?cabeceraSeg(l)+vis.map(tarjetaSeg).join('')
   :'<div class="card vacio-msg"><span class="em">👁️</span>Todavía no vigilas ninguna búsqueda.<br>Haz una búsqueda y pulsa «Vigilar esta búsqueda», o crea una aquí arriba. BuscaTron la revisará sola y te avisará cuando baje de precio.</div>';

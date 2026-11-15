@@ -29,6 +29,10 @@ outlet-pc.es www.goblintrader.es""".split()
 # sus resultados más baratos.
 STOCK_EN_FICHA = {"zacatrus.es"}
 
+# Tiendas que venden de todo (no solo juegos): en una búsqueda de una sola palabra («Vantage») devuelven zapatillas, rociadores,
+# guantes… Ahí solo vale lo que por su título parece un juego (motor.solo_juego).
+GENERALISTAS = {"www.amazon.es", "outlet-pc.es", "www.ebay.es", "es.wallapop.com", "www.vinted.es", "www.milanuncios.com"}
+
 CONOCIDAS = {
     "www.masqueoca.com": "https://www.masqueoca.com/tienda/buscardo.asp?txtbusqueda={q}&dondebusco=1&vertodo=1&stockneg=1",
     "www.turolgames.com": "https://www.turolgames.com/es/buscar?controller=search&search_query={q}",  # necesita navegador (pantalla de carga con JS)

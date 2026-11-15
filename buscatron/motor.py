@@ -145,6 +145,17 @@ def _intenta(t, consulta, get, paginas=1, con_estado=False):
 JUEGO = re.compile(r"\b(juegos?|games?|cartas|expansion|tablero|boardgame|lcg|cooperativo|miniaturas|rol)\b")
 
 
+def exige_juego(consulta):
+    """Con una sola palabra de búsqueda, las tiendas generalistas devuelven de todo: solo valen los juegos."""
+    return len(extract.normaliza(consulta).split()) == 1
+
+
+def solo_juego(tienda, titulo, consulta):
+    """¿Este resultado vale? Falso si es de una tienda generalista, la búsqueda es de una sola palabra y el título no parece el de
+    un juego («Talla: 45 - Under Armour Zapatillas Charged Vantage 2», «Rociador Berthoud Vantage»)."""
+    return not (tienda in cfg.GENERALISTAS and exige_juego(consulta) and not JUEGO.search(extract.normaliza(titulo)))
+
+
 def _tienda(t, consulta, nav=None, paginas=1):
     """La tienda y, si tiene búsqueda de repaso (cfg.REPASO: Amazon en todas sus secciones), lo que esta añada."""
     h, items, err = _tienda_base(t, consulta, nav, paginas)
@@ -660,7 +671,7 @@ def buscar(consulta, incluir="", excluir="", ocultar_agotados=True, hosts=None, 
         kept = 0
         prior = prior_tienda(items)
         for x in items:
-            if pasa(x, prior):
+            if pasa(x, prior) and solo_juego(host, x["titulo"], consulta):
                 x["tienda"], x["origen"] = host, por_host[host].get("tipo", "tienda")
                 res.append(x)
                 kept += 1

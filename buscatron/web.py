@@ -257,7 +257,8 @@ class Handler(BaseHTTPRequestHandler):
                                             else motor.historial_de(parse_qs(url.query).get("url", [""])[0])),
                  "/api/objetivos": lambda: [dict(o, vigilan=seguimiento.cubren(o["titulo"], o["precio"])) for o in motor.objetivos().values()],
                  "/api/servicio": servicio.estado, "/api/historico_vigiladas": referencia.por_vigilada,
-                 "/api/referencia": lambda: referencia.resumen("vigiladas" if parse_qs(url.query).get("ambito") == ["vigiladas"] else "avisos"),
+                 "/api/referencia": lambda: referencia.resumen("vigiladas" if parse_qs(url.query).get("ambito") == ["vigiladas"] else "avisos",
+                                                            (parse_qs(url.query).get("estado") or ["activas"])[0]),
                  "/api/vigilan": lambda: seguimiento.cubren(parse_qs(url.query)["titulo"][0], _num(parse_qs(url.query).get("precio", [""])[0])),
                  "/api/busquedas": lambda: (busquedas.obtiene(int(parse_qs(url.query)["id"][0])) or {"error": "búsqueda no encontrada"})
                  if "id" in parse_qs(url.query) else busquedas.lista()}

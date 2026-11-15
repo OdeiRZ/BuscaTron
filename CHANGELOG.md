@@ -3,6 +3,16 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.17.31] - 2026-11-15
+
+### Corregido
+- **Se guardaron históricos falsos**: con una captura vieja, BuscaTron leyó el texto de su propia página (que ya enseñaba los históricos de otros productos) y lo guardó como si fuera la gráfica de tres productos (los tres «Too Many Bones: … Add-on Character» quedaron con los mismos mínimo, máximo y actual inventados). Borradas esas tres lecturas, y ahora **solo se guarda si la imagen es de verdad una gráfica de camelcamelcamel** (su escala vertical y su leyenda); si no, se dice y no se guarda nada. Si camel responde «We can't find the requested product», se dice que ese producto no está en camel.
+- **Captura de las gráficas con marca**: la pantalla de lectura lleva una marca magenta junto a la gráfica. BuscaTron espera a verla en la captura (el navegador a veces entrega fotogramas viejos o vacíos), la usa para saber dónde está la gráfica aunque la captura traiga las barras del navegador y recorta solo la gráfica. Si la marca no aparece nunca (cambiaste de pestaña…), lo dice en el informe. Probado con un fotograma con retraso, escala 1,25 y barras: 7 de 7.
+- **Los filtros se aplican siempre a lo guardado**: la Referencia (de avisos y de vigiladas), el resumen de histórico por vigilada y los avisos pasan por los filtros que tiene la vigilada AHORA (búsqueda, «Solo títulos con», «Descarta», «al menos una de estas», precio mínimo y máximo), no por los de la última revisión. Antes, al editar y guardar, lo viejo seguía saliendo hasta la siguiente revisión. Al guardar una vigilada se borran sus avisos que ya no cumplen. El 🎯 usa la misma regla.
+- **La Referencia respeta la pestaña de Vigiladas** desde la que se abre (todas, activas o en pausa); antes solo miraba las activas.
+- **Emparejamiento con Amazon**: una ficha con palabras de otro tipo de artículo (add-on, character, fundas, tapete, organizador…) que el producto no tiene ya no se da por su equivalente («Too Many Bones: Gasket Add-on Character» no es «Too Many Bones Edición Definitiva»).
+- **Menos basura de tiendas generalistas**: en una búsqueda de una sola palabra («Vantage»), los resultados de Amazon, Outlet-PC, eBay, Vinted, Milanuncios y Wallapop solo valen si su título parece el de un juego. Fuera zapatillas, rociadores, guantes… sin tener que ir añadiendo palabras a «Descarta».
+- Mejor lectura de la leyenda: sin la etiqueta «Lowest» o con el precio actual ilegible, se completa con las etiquetas de colores de la gráfica.
 ## [0.17.30] - 2026-11-15
 
 ### Añadido

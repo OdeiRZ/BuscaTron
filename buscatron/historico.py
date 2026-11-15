@@ -14,7 +14,7 @@ MESES = {"ene": 1, "jan": 1, "feb": 2, "mar": 3, "abr": 4, "apr": 4, "may": 5, "
          "sep": 9, "set": 9, "oct": 10, "nov": 11, "dic": 12, "dec": 12}
 ETIQUETAS = (("minimo", r"mas bajo|lowest|minimo|precio minimo|min\b"), ("maximo", r"mas alto|highest|maximo|precio maximo|max\b"),
              ("media", r"media|promedio|average|avg"), ("actual", r"actual|current|ahora"))
-IMPORTE = re.compile(r"(\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?|\d+,\d{1,2}|\d+\.\d{2}|\d+)")
+IMPORTE = re.compile(r"(\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?|\d+,\d{1,2}|\d+\.\d{2})")      # la leyenda siempre lleva decimales
 MES = r"(ene|jan|feb|mar|abr|apr|may|jun|jul|ago|aug|sep|set|oct|nov|dic|dec)[a-z]*"
 FECHAS = (re.compile(r"\b(\d{1,2})[ .\-/]+" + MES + r"\.?[ ,.\-/]+(\d{2,4})\b"),          # 12 nov. 2026 · 12-nov-26
           re.compile(r"\b" + MES + r"\.?[ ]+(\d{1,2})[ ,.]+(\d{4})\b"),                    # nov 12, 2026
@@ -101,7 +101,7 @@ def parsea(texto):
     # Si el lector no reconoce una etiqueta (a veces falta «Lowest»), se reparten las entradas de la leyenda («€32,89 (Mar 20,
     # 2024)») que NO se han reconocido ya por su etiqueta, en el orden de la leyenda: mínimo, máximo y actual.
     libres = entradas_leyenda(t)
-    if len(libres) >= 3 and any(k not in out for k in ("minimo", "maximo", "actual")):
+    if libres and any(k not in out for k in ("minimo", "maximo", "actual")):
         def quita(valor, fecha=None, la_ultima=False):
             idx = [i for i, (v, f) in enumerate(libres) if abs(v - valor) < 0.005 and (fecha is None or f.isoformat() == fecha)]
             if idx:
@@ -112,12 +112,18 @@ def parsea(texto):
             quita(out["actual"], la_ultima=True)          # la del precio actual es la fecha más reciente
         if "minimo" in out:
             quita(out["minimo"], out.get("fecha_minimo"))
-        for clave in [k for k in ("minimo", "maximo", "actual") if k not in out]:
-            if libres:
-                v, f = libres.pop(0)
-                out[clave] = v
-                if clave != "actual":
-                    out["fecha_" + clave] = f.isoformat()
+        faltan = [k for k in ("minimo", "maximo", "actual") if k not in out]
+        hoy = datetime.date.today()
+        while faltan and libres:
+            v, f = libres.pop(0)
+            if len(libres) + 1 < len(faltan):             # entradas de menos: la del precio actual es de hoy; si no, por el orden
+                clave = "actual" if "actual" in faltan and (hoy - f).days <= 3 else next((k for k in faltan if k != "actual"), "actual")
+            else:
+                clave = faltan[0]
+            faltan.remove(clave)
+            out[clave] = v
+            if clave != "actual":
+                out["fecha_" + clave] = f.isoformat()
     return out
 
 
@@ -170,12 +176,30 @@ def repara(texto, d):
         if len(c) == 1:
             out[clave] = c[0]
             cambios.append(f"{nombre}: la leyenda se leyó {euros(v)} y la etiqueta de la gráfica dice {euros(c[0])}")
+    if out.get("actual") is None and out.get("minimo") is not None and out.get("maximo") is not None:
+        # el precio actual no se leyó en la leyenda: es la etiqueta lateral que no es ni el mínimo ni el máximo
+        resto = {s for s in candidatos if abs(s - out["minimo"]) > 0.005 and abs(s - out["maximo"]) > 0.005}
+        if len(resto) == 1:
+            out["actual"] = resto.pop()
+            cambios.append(f"el precio actual no se leyó en la leyenda: es {euros(out['actual'])}, la otra etiqueta de la gráfica")
     return out, cambios
+
+
+def es_grafica(texto):
+    """¿El texto es de una gráfica de camelcamelcamel? Tiene que traer su escala vertical («€30», «€35»…) y alguna palabra de su
+    leyenda (Price type, Lowest, Highest, Current). Sin esto no se guarda nada: BuscaTron llegó a leer el texto de su propia
+    página, con otros históricos, y a guardarlo como si fuera de un producto."""
+    t = (texto or "").lower()
+    return escala_eje(texto) is not None and any(k in t for k in ("price type", "lowest", "highest", "current"))
 
 
 def valida(texto, d):
     """Motivos para no fiarse de lo leído (lista vacía si todo cuadra). Una lectura mala que parece buena es peor que
     ninguna: con la letra pequeña «€33,09» se lee «03,09»."""
+    if re.search(r"requested\s+product|find\s+the\s+requested", texto or "", re.I):
+        return ["camelcamelcamel no tiene este producto (su imagen dice «We can't find the requested product»): no hay histórico que leer."]
+    if not es_grafica(texto):
+        return ["la imagen no parece una gráfica de camelcamelcamel (no trae su escala ni su leyenda): no se guarda nada."]
     out = []
     esc = escala_eje(texto)
     if esc:
