@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS caidas(host TEXT PRIMARY KEY, desde REAL, fallos INTE
 CREATE TABLE IF NOT EXISTS camel_extremos(asin TEXT PRIMARY KEY, minimo REAL, fecha_minimo TEXT, maximo REAL, fecha_maximo TEXT, media REAL, actual REAL, ts REAL);
 CREATE TABLE IF NOT EXISTS camel_lecturas(asin TEXT PRIMARY KEY, texto TEXT, problemas TEXT, ancho INTEGER, guardado INTEGER, ts REAL);
 CREATE TABLE IF NOT EXISTS ref_extra(asin TEXT PRIMARY KEY, titulo TEXT, ts REAL);
+CREATE TABLE IF NOT EXISTS limites_avisados(asin TEXT, tipo TEXT, valor REAL, ts REAL, PRIMARY KEY(asin, tipo));
 CREATE TABLE IF NOT EXISTS recordatorios(host TEXT, ts_importado REAL, PRIMARY KEY(host, ts_importado));
 CREATE TABLE IF NOT EXISTS importados(
     host TEXT, ts REAL, consulta TEXT, titulo TEXT, url TEXT, precio REAL, agotado INTEGER DEFAULT 0, preventa INTEGER DEFAULT 0);

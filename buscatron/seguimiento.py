@@ -248,8 +248,8 @@ def _revisa(seg_id, enviar):
             if len(grupos) > 10:
                 lineas.append(f"… y {len(grupos) - 10} productos más en la pestaña Avisos")
             envio = notifica.envia(canales, f"BuscaTron · {seg['nombre']}", "\n\n".join(lineas))
-        elif enviar and opc.get("resumen") and "telegram" in seg["canales"].split(","):
-            envio = notifica.envia(["telegram"], f"BuscaTron · {seg['nombre']} · resumen", resumen(seg, opc, modo, res, informe))
+        if enviar:
+            envio = {**envio, **_avisa_limites(seg, res)}
         return {"resultados": len(res), "avisos": nuevos, "envio": envio}, seg
     except Exception as e:
         # Se anota la revisión aunque falle: si no, el programador la repetiría cada minuto contra todas las tiendas
@@ -263,6 +263,22 @@ def _revisa(seg_id, enviar):
 def tiendas_caidas(informe):
     """Tiendas que no respondieron (la búsqueda abierta no es una tienda)."""
     return sum(1 for h, i in informe.items() if i.get("caida") and h != "Búsqueda abierta")
+
+
+def _avisa_limites(seg, res):
+    """Telegram (o correo) solo si hay un cambio de límites: Amazon baja de su mínimo histórico o sube de su máximo (camelcamelcamel).
+    Ya no se manda un resumen en cada revisión: si no ha cambiado nada, no se manda nada."""
+    from . import referencia
+    canales = [k for k in seg["canales"].split(",") if k in ("telegram", "correo")]
+    if not canales:
+        return {}
+    cambios = referencia.limites_de(res)
+    if not cambios:
+        return {}
+    envio = notifica.envia(canales, f"BuscaTron · {seg['nombre']} · cambio de límites", "\n\n".join(referencia.texto_limite(x) for x in cambios))
+    if any(v is None for v in envio.values()):          # llegó por algún canal: no se repite
+        referencia.marca_limites(cambios)
+    return {"limites": [x["titulo"] for x in cambios], **envio}
 
 
 def euros(v):

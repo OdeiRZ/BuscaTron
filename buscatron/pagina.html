@@ -342,7 +342,6 @@ kbd{font:600 11px/1 system-ui,sans-serif;padding:2px 5px;border:1px solid var(--
       </details>
       <label class="sw"><input type="checkbox" id="c-telegram"> Avisarme por Telegram</label>
       <label class="sw"><input type="checkbox" id="c-correo"> Avisarme por correo</label>
-      <label class="sw"><input type="checkbox" id="s-resumen"> Si no hay avisos, mandarme igualmente por Telegram un resumen en cada revisión: cada producto con sus 3 ofertas más baratas</label>
       <p class="ayuda">Los avisos aparecen siempre en la pestaña Avisos, además de por Telegram si lo marcas. Si rellenas el precio y el %, basta con que se cumpla uno de los dos.</p>
       <div class="acciones"><button>Guardar</button><button type="button" class="sec" id="s-cancel">Vaciar el formulario</button></div>
     </form>
@@ -967,7 +966,7 @@ $('sf').onsubmit=async e=>{e.preventDefault();
   const r=await api('seguimientos',{accion:'guardar',id:$('s-id').value||undefined,activo:previa?!!previa.activo:true,nombre:$('s-nombre').value,consulta:$('s-consulta').value,
     incluir:$('s-incluir').value,excluir:$('s-excluir').value,pmin:$('s-pmin').value,pmax:$('s-pmax').value,objetivo:$('s-objetivo').value,
     bajo_historico:$('s-hist').value,cada_horas:$('s-horas').value,sin_agotados:$('s-sinag').checked,castellano:$('s-idioma').value!=='todos',canales,
-    opciones:{preventas:$('s-preventas').checked,con_envio:$('s-conenvio').checked,segunda_mano:$('s-segmano').checked,abierta:$('s-abierta').checked,region:$('s-region').value,paginas:$('s-paginas').value,idioma:$('s-idioma').value,resumen:$('s-resumen').checked,alguna:$('s-alguna').value}});
+    opciones:{preventas:$('s-preventas').checked,con_envio:$('s-conenvio').checked,segunda_mano:$('s-segmano').checked,abierta:$('s-abierta').checked,region:$('s-region').value,paginas:$('s-paginas').value,idioma:$('s-idioma').value,alguna:$('s-alguna').value}});
   if(r.error){aviso(r.error);return;}const id=+$('s-id').value,s=Array.isArray(r)&&r.find(x=>x.id===id);
   limpiaSeg();$('sf-det').open=false;pintaSeg(r);
   aviso(s&&s.revisando?'Guardada. Se está revisando: si has cambiado la búsqueda o sus filtros, al terminar se revisa otra vez con los cambios':'Búsqueda vigilada guardada');};
@@ -1047,7 +1046,7 @@ function editaSeg(id){const s=segs.find(x=>x.id===id);$('sf-tit').textContent='�
   $('s-nombre').value=s.nombre;$('s-consulta').value=s.consulta;$('s-incluir').value=s.incluir;$('s-excluir').value=s.excluir;
   $('s-pmin').value=s.pmin??'';$('s-pmax').value=s.pmax??'';$('s-objetivo').value=s.objetivo??'';$('s-hist').value=s.bajo_historico||'';
   $('s-horas').value=s.cada_horas;$('s-sinag').checked=!!s.sin_agotados;$('s-idioma').value=(s.opciones&&s.opciones.idioma)||(s.castellano?'castellano':'todos');
-  const o=s.opciones||{};$('s-preventas').checked=!!o.preventas;$('s-conenvio').checked=!!o.con_envio;$('s-segmano').checked=!!o.segunda_mano;$('s-abierta').checked=!!o.abierta;$('s-region').value=o.region||'es';$('s-paginas').value=o.paginas||'';$('s-resumen').checked=!!o.resumen;$('s-alguna').value=o.alguna||'';
+  const o=s.opciones||{};$('s-preventas').checked=!!o.preventas;$('s-conenvio').checked=!!o.con_envio;$('s-segmano').checked=!!o.segunda_mano;$('s-abierta').checked=!!o.abierta;$('s-region').value=o.region||'es';$('s-paginas').value=o.paginas||'';$('s-alguna').value=o.alguna||'';
   $('c-telegram').checked=s.canales.includes('telegram');$('c-correo').checked=s.canales.includes('correo');ayudaIdioma();muestraFormSeg();}
 async function pausa(id){const s=segs.find(x=>x.id===id);const l=await api('seguimientos',{accion:'guardar',...s,activo:!s.activo,sin_agotados:!!s.sin_agotados});
   if(l.error){aviso(l.error);return;}pintaSeg(l);

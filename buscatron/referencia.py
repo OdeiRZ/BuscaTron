@@ -284,3 +284,52 @@ def por_vigilada():
         if items:
             out[seg["id"]] = sorted(items, key=lambda x: extract.normaliza(x["titulo"]))
     return out
+
+
+MARGEN = 0.005
+
+
+def limites_de(res):
+    """Cambios de límites de una revisión: el precio que Amazon tiene AHORA de una ficha frente al mínimo y al máximo históricos de esa
+    misma ficha (camelcamelcamel). Solo Amazon con Amazon: las demás tiendas casi siempre son más baratas que Amazon, y eso no es un
+    cambio. `res`: los resultados de la revisión. Devuelve [{asin, tipo: 'min'|'max', valor, titulo, url, limite, fecha}], solo los
+    NUEVOS: no repite un límite del que ya se avisó, salvo que el precio haya ido más lejos (más bajo, o más alto)."""
+    camel = historico.todos()
+    if not camel or not res:
+        return []
+    with bd.conecta() as c:
+        avisados = {(a, t): v for a, t, v in c.execute("SELECT asin, tipo, valor FROM limites_avisados")}
+    out, vistos = [], set()
+    for x in sorted((x for x in res if x.get("tienda") == AMAZON), key=lambda x: x["precio"]):     # el más barato de cada ficha
+        a_ = asin(x["url"])
+        d = camel.get(a_)
+        if not a_ or a_ in vistos or not d or d.get("minimo") is None or d.get("maximo") is None:
+            continue
+        vistos.add(a_)
+        precio = x["precio"]
+        base = {"asin": a_, "valor": precio, "titulo": x["titulo"], "url": x["url"]}
+        previo = avisados.get((a_, "min"))
+        if precio < d["minimo"] - MARGEN and (previo is None or precio < previo - MARGEN):
+            out.append({**base, "tipo": "min", "limite": d["minimo"], "fecha": d.get("fecha_minimo")})
+        previo = avisados.get((a_, "max"))
+        if precio > d["maximo"] + MARGEN and (previo is None or precio > previo + MARGEN):
+            out.append({**base, "tipo": "max", "limite": d["maximo"], "fecha": d.get("fecha_maximo")})
+    return out
+
+
+def marca_limites(cambios):
+    """Anota los límites de los que ya se avisó, para no repetirlos."""
+    with bd.conecta() as c:
+        c.executemany("INSERT OR REPLACE INTO limites_avisados(asin, tipo, valor, ts) VALUES(?,?,?,?)",
+                      [(x["asin"], x["tipo"], x["valor"], time.time()) for x in cambios])
+
+
+def texto_limite(x):
+    """El aviso de un cambio de límite, para Telegram o el correo."""
+    e = historico.euros
+    cuando = (" el " + "/".join(reversed(x["fecha"].split("-")))) if x.get("fecha") else ""
+    if x["tipo"] == "min":
+        cabecera = f"📉 Amazon ha bajado a {e(x['valor'])}: nuevo mínimo histórico (el anterior era {e(x['limite'])}{cuando})"
+    else:
+        cabecera = f"📈 Amazon ha subido a {e(x['valor'])}: nuevo máximo histórico (el anterior era {e(x['limite'])}{cuando})"
+    return f"{x['titulo']}\n{cabecera}\n{x['url']}"

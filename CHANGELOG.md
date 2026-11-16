@@ -3,6 +3,12 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.17.36] - 2026-11-16
+
+### Cambiado
+- **Telegram solo avisa si hay cambios, nunca como resumen**: se quita el resumen que se mandaba tras cada revisión (la opción «mandarme un resumen» desaparece del formulario y se ignora en las vigiladas que la tenían). Si no cambia nada, no se manda nada.
+- **Aviso de cambio de límites** (Telegram o correo, según los canales de la vigilada): cuando Amazon baja de su **mínimo histórico** o sube de su **máximo histórico** (camelcamelcamel) en una ficha con histórico leído. Se compara Amazon con Amazon, la misma ficha: las demás tiendas casi siempre son más baratas que Amazon y eso no es un cambio. No se repite un límite ya avisado, salvo que el precio vaya más lejos; si el aviso no llega, se reintenta en la siguiente revisión. Tabla limites_avisados.
+- Se mantienen los avisos de objetivo («cuesta X o menos», «% por debajo de su precio habitual») y los avisos operativos poco frecuentes (una tienda te bloquea o vuelve, y los precios pegados que caducan).
 ## [0.17.35] - 2026-11-15
 
 ### Corregido

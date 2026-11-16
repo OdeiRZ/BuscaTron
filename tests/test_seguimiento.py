@@ -174,18 +174,13 @@ class Avisos(Base):
         self.idioma_ficha = "en"
         self.assertEqual(self.busca(30)["avisos"], [])
 
-    def test_resumen_por_telegram_si_no_hay_avisos(self):
+    def test_ya_no_se_manda_resumen_aunque_la_opcion_antigua_este_puesta(self):
+        """Telegram solo avisa si hay un cambio (un aviso de objetivo o un cambio de límites): sin cambios no se manda nada."""
         self.sid = seguimiento.guarda({"consulta": "marvel", "objetivo": "20", "canales": "app,telegram", "opciones": {"resumen": True}})
         r = self.revisa_con([item(30, url="https://t.es/a"), item(25, url="https://t.es/b"), item(40, url="https://t.es/c", agotado=True)],
-                            {"t.es": {"encontrados": 3, "error": None}, "x.es": {"encontrados": 0, "error": "no responde", "caida": True},
-                             "y.es": {"encontrados": 0, "error": "no tiene nada que coincida con la búsqueda", "caida": False}})
+                            {"t.es": {"encontrados": 3, "error": None}, "x.es": {"encontrados": 0, "error": "no responde", "caida": True}})
         self.assertEqual(r["avisos"], [])
-        canales, asunto, texto = self.enviados[0]
-        self.assertEqual((canales, asunto), (["telegram"], "BuscaTron · marvel · resumen"))
-        self.assertIn("Sin avisos nuevos", texto)
-        self.assertIn("1 tiendas sin respuesta", texto)
-        self.assertLess(texto.index("25,00 €"), texto.index("30,00 €"))     # del más barato al más caro (aquí, dos productos distintos)
-        self.assertNotIn("40,00 €", texto)                                  # el agotado no cuenta
+        self.assertEqual(self.enviados, [])
 
     def test_sin_la_opcion_o_sin_telegram_no_hay_resumen(self):
         self.sid = seguimiento.guarda({"consulta": "marvel", "objetivo": "20", "canales": "telegram"})
