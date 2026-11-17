@@ -69,15 +69,24 @@ class _Hilo(threading.Thread):
         try:
             from playwright.sync_api import sync_playwright
             with sync_playwright() as pw:
-                ctx = pw.chromium.launch_persistent_context(
-                    PERFIL, executable_path=ejecutable(), headless=not self.visible, locale="es-ES",
-                    viewport={"width": 1280, "height": 900})
+                for intento in range(4):
+                    # El Chrome anterior (al pasar de invisible a visible) puede tardar unos segundos en soltar el perfil.
+                    try:
+                        ctx = pw.chromium.launch_persistent_context(
+                            PERFIL, executable_path=ejecutable(), headless=not self.visible, locale="es-ES",
+                            viewport={"width": 1280, "height": 900})
+                        break
+                    except Exception:
+                        if intento == 3:
+                            raise
+                        time.sleep(4)
                 pag = ctx.pages[0] if ctx.pages else ctx.new_page()
                 self.listo.set()
                 while True:
-                    url, sal, espera = self.cola.get()
+                    url, sal, espera, empieza = self.cola.get()
                     if url is None:
                         break
+                    empieza.set()
                     try:
                         resp = pag.goto(url, wait_until="domcontentloaded", timeout=45000)
                         try:
@@ -121,6 +130,7 @@ class _Hilo(threading.Thread):
 
 _hilo = None
 _cerrojo = threading.Lock()
+EN_COLA = 900          # lo más que una página espera su turno en Chrome (s)
 
 
 def cierra(espera=0):
@@ -129,7 +139,7 @@ def cierra(espera=0):
     with _cerrojo:
         h = _hilo
         if h and h.is_alive():
-            h.cola.put((None, None, 0))
+            h.cola.put((None, None, 0, None))
         _hilo = None
     if espera and h:
         h.join(espera)
@@ -142,8 +152,10 @@ def get(url, visible=False, timeout=120, esperar_humano=0):
     ritmo.espera(url)
     with _cerrojo:
         if _hilo is not None and _hilo.is_alive() and _hilo.visible != visible:
-            _hilo.cola.put((None, None, 0))
-            _hilo.join(10)
+            # Se cierra cuando acabe lo que ya tiene en cola (la cola va en orden): cortarlo dejaba páginas a medias
+            # («Target page… closed») y el perfil ocupado para el Chrome nuevo («no se pudo abrir el navegador»).
+            _hilo.cola.put((None, None, 0, None))
+            _hilo.join(EN_COLA)
             _hilo = None
         if _hilo is None or not _hilo.is_alive():
             _hilo = _Hilo(visible)
@@ -153,8 +165,12 @@ def get(url, visible=False, timeout=120, esperar_humano=0):
     if h.error:
         raise RuntimeError(f"no se pudo abrir el navegador: {str(h.error)[:100]}")
     espera = esperar_humano if visible else 0
-    sal = queue.Queue()
-    h.cola.put((url, sal, espera))
+    sal, empieza = queue.Queue(), threading.Event()
+    h.cola.put((url, sal, espera, empieza))
+    # Hay un solo Chrome y atiende las páginas de una en una: el tiempo límite cuenta desde que empieza con ESTA página,
+    # no desde que entró en la cola (con muchas tiendas, las últimas caducaban sin haberse consultado).
+    if not empieza.wait(EN_COLA):
+        raise TimeoutError("el navegador tenía demasiadas páginas pendientes") from None
     try:
         r = sal.get(timeout=timeout + espera)
     except queue.Empty:

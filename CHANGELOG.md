@@ -3,6 +3,15 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.17.42] - 2026-11-18
+
+### Corregido
+- **Chrome se cortaba con muchas tiendas** (Kaufland, Comic Stores, Buy Meeples…: «el navegador no respondió a tiempo», «no se pudo abrir el navegador», «Target page… closed»). BuscaTron tiene un solo Chrome que atiende las páginas de una en una:
+  - el tiempo límite cuenta desde que Chrome empieza con cada página, no desde que entra en la cola;
+  - al pasar a Chrome visible (una tienda que pide comprobar que eres humano) se espera a que el invisible acabe lo que tiene en cola, en vez de cortarlo a los 10 s, y el nuevo reintenta abrir el perfil si aún está ocupado;
+  - una tienda cuya página se lee bien pero no tiene el producto no se repite con Chrome en cada búsqueda (3 días), lo que acorta mucho la cola.
+- Direcciones de búsqueda que pasaste a mano: Comic Stores, Generación X, Akira Comics, Arcadia Comics, Dados y cubitos, Buy Meeples, En Portada Comics, Shuriken64 y Juegos de mesa y rol (estas tres ya probadas: encuentran el juego con su precio). Kinuma, Padis, Elkar y Ludoteca Maldita buscan con JavaScript sin cambiar la dirección: solo enlace.
+- Kaufland cuenta como tienda generalista (vende de todo).
 ## [0.17.41] - 2026-11-17
 
 ### Cambiado

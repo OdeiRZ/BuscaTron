@@ -255,6 +255,9 @@ def _tienda_consulta(t, consulta, nav, paginas, estados):
             return h, r, None
     if nav is None:
         return h, [], (err or SIN_COINCIDENCIAS) + " (quizá solo la lea un navegador: activa «Usar Chrome» en Ajustes)"
+    leida = not t.get("js") and err == SIN_COINCIDENCIAS          # su página se leyó bien, solo que sin ese producto
+    if leida and _sin_chrome.get(h, 0) > time.time():
+        return h, [], err
     visible = nav["visible"]
     get = lambda u: navegador.get(u, visible=visible, esperar_humano=90 if visible else 0)
     plant = t.get("plantilla")
@@ -264,7 +267,15 @@ def _tienda_consulta(t, consulta, nav, paginas, estados):
         return h, r, None
     if plant is None:
         t["plantilla"] = None
+    if leida and (err or SIN_COINCIDENCIAS) == SIN_COINCIDENCIAS:
+        # Chrome tampoco encontró nada: la lectura directa ya bastaba. Unos días sin repetirlo con Chrome, que es uno solo
+        # para todas las tiendas y con 70 la cola de páginas hacía caducar las consultas de las demás.
+        _sin_chrome[h] = time.time() + SIN_CHROME_DIAS * 86400
     return h, [], err or SIN_COINCIDENCIAS
+
+
+_sin_chrome = {}
+SIN_CHROME_DIAS = 3
 
 
 OTROS_IDIOMAS = re.compile(r"\b(ingles|inglesa|english|frances|francesa|francais|aleman|alemana|deutsch|italiano|italiana|portugues|portuguesa|polaco|polaca|neerlandes|ruso|rusa|players|playing time|minutes)\b|\bages \d+")
