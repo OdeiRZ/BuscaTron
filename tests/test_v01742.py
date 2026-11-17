@@ -58,5 +58,35 @@ class ColaDeChrome(unittest.TestCase):
             self.assertEqual(navegador.get("https://z.es/", timeout=1)[0], 200)
 
 
+class PestanaColgada(unittest.TestCase):
+    def test_tras_un_cuelgue_se_abre_otra_pestana(self):
+        """«Page crashed» en una tienda no deja la pestaña muerta para las siguientes."""
+        class Pag:
+            def __init__(self, n): self.n = n
+            def goto(self, url, **k):
+                if self.n == 0: raise RuntimeError("Page.goto: Page crashed")
+                return mock.Mock(status=200)
+            def wait_for_load_state(self, *a, **k): pass
+            def wait_for_timeout(self, ms): pass
+            def content(self): return "<html>bien</html>" * 400
+            def close(self): pass
+        paginas = []
+        class Ctx:
+            pages = []
+            def new_page(self):
+                paginas.append(Pag(len(paginas))); return paginas[-1]
+            def close(self): pass
+        pw = mock.MagicMock()
+        pw.__enter__.return_value.chromium.launch_persistent_context.return_value = Ctx()
+        with mock.patch("playwright.sync_api.sync_playwright", lambda: pw):
+            h = navegador._Hilo(False); h.start(); h.listo.wait(5)
+            r = []
+            for u in ("https://a.es/", "https://b.es/"):
+                sal, emp = queue.Queue(), threading.Event(); h.cola.put((u, sal, 0, emp)); r.append(sal.get(timeout=5))
+            h.cola.put((None, None, 0, None))
+        self.assertIsInstance(r[0], Exception)
+        self.assertEqual(r[1][0], 200)
+
+
 if __name__ == "__main__":
     unittest.main()

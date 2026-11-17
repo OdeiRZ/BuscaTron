@@ -122,6 +122,14 @@ class _Hilo(threading.Thread):
                         sal.put((estado, contenido))
                     except Exception as e:
                         sal.put(e)
+                        # Una página pesada puede colgar la pestaña («Page crashed»): sin abrir otra, todas las tiendas
+                        # siguientes fallaban con la pestaña muerta.
+                        if re.search(r"crash|closed", str(e), re.I):
+                            try:
+                                pag.close()
+                            except Exception:
+                                pass
+                            pag = ctx.new_page()
                 ctx.close()
         except Exception as e:
             self.error = e

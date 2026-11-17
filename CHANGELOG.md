@@ -3,6 +3,11 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.17.43] - 2026-11-18
+
+### Corregido
+- Si una página pesada cuelga la pestaña de Chrome («Page crashed», como Kaufland), se abre otra: antes, todas las tiendas siguientes fallaban con la pestaña muerta. Probado con la búsqueda real: Comic Stores ya da 25 resultados.
+
 ## [0.17.42] - 2026-11-18
 
 ### Corregido
