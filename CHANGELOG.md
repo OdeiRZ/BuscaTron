@@ -3,6 +3,11 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.17.39] - 2026-11-17
+
+### Cambiado
+- Las tiendas salen ordenadas por nombre (sin distinguir mayúsculas ni tildes) en las fichas de Buscar, en «Tus tiendas» y en el estado de las tiendas.
+
 ## [0.17.38] - 2026-11-17
 
 ### Añadido

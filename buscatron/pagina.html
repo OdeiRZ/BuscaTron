@@ -491,12 +491,14 @@ function ayudaIdioma(){$('idioma-ayuda').textContent=AYUDA_IDIOMA[$('idioma').va
 $('s-idioma').addEventListener('change',ayudaIdioma);
 
 /* tiendas */
+const porNombre=(l,nom)=>[...l].sort((a,b)=>nom(a).localeCompare(nom(b),'es',{sensitivity:'base',numeric:true}));
 function pintaT(){
   const act=tiendas.filter(t=>t.activa).length;
   $('n-tiendas').textContent=`${act} de ${tiendas.length} activas`;
-  $('chips').innerHTML=tiendas.map(t=>`<button type="button" class="chip ${t.activa?'on':''}" data-h="${esc(t.host)}">${esc(nombreT(t.host))}</button>`).join('');
+  const orden=porNombre(tiendas,t=>nombreT(t.host));
+  $('chips').innerHTML=orden.map(t=>`<button type="button" class="chip ${t.activa?'on':''}" data-h="${esc(t.host)}">${esc(nombreT(t.host))}</button>`).join('');
   document.querySelectorAll('#chips .chip').forEach(c=>c.onclick=()=>{const t=tiendas.find(x=>x.host===c.dataset.h);t.activa=!t.activa;guardaActivas();});
-  $('gestion').innerHTML=tiendas.map(t=>`<div class="trow" data-h="${esc(t.host)}">
+  $('gestion').innerHTML=orden.map(t=>`<div class="trow" data-h="${esc(t.host)}">
     <input type="text" class="tn" value="${esc(t.nombre||'')}" placeholder="Nombre (${esc(t.host.replace(/^www\./,''))})" aria-label="Nombre">
     <input type="text" class="tu" value="${esc(t.plantilla||t.host)}" aria-label="Dirección o URL de búsqueda" autocapitalize="none" inputmode="url" spellcheck="false">
     <div class="envio"><input type="number" class="te" inputmode="decimal" step="0.01" min="0" value="${t.envio??''}" placeholder="Envío €" aria-label="Gastos de envío en euros">
@@ -1130,7 +1132,7 @@ async function cargaAjustes(){cargaServicio();const a=await api('ajustes');$('a-
   $('a-nav').checked=!!a.usar_navegador;$('a-navvis').checked=!!a.navegador_visible;$('a-nav').disabled=!a.navegador_disponible;
   if(!a.navegador_disponible)$('a-nav-info').textContent='No disponible: hace falta Chrome o Edge instalado y el complemento Playwright (pip install playwright).';
   $('a-pin').value=a.pin;$('a-pag').value=a.paginas||3;cargaRed();cargaArranque();cargaEstado();cargaOcultos();cargaObjetivos();}
-async function cargaEstado(){const l=await api('estado_tiendas',{});if(!Array.isArray(l))return;
+async function cargaEstado(){let l=await api('estado_tiendas',{});if(!Array.isArray(l))return;l=porNombre(l,e=>e.nombre||e.host);
   // arriba solo las que piden atención; las que van bien (o las miras tú), plegadas
   const bien=e=>e.manual||(e.activa&&e.consultas&&e.con_resultados&&!e.sugerir_desactivar);
   const fila=e=>`<div class="est"><b>${esc(e.nombre)}${e.activa?'':' <span class="tag">desactivada</span>'}</b>
