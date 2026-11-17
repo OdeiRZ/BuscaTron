@@ -3,6 +3,11 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.17.40] - 2026-11-17
+
+### Cambiado
+- Tiendas: «＋ Añadir una tienda» y «✎ Editar o quitar tiendas» son dos apartados separados. Para añadir ya no hay que pasar por la lista de las 70; para editar, un buscador filtra la lista por nombre o web.
+
 ## [0.17.39] - 2026-11-17
 
 ### Cambiado

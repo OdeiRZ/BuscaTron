@@ -285,16 +285,21 @@ kbd{font:600 11px/1 system-ui,sans-serif;padding:2px 5px;border:1px solid var(--
       <summary>Tiendas <span class="n" id="n-tiendas"></span></summary>
       <div class="chips" id="chips"></div>
       <details>
-        <summary>Editar la lista de tiendas</summary>
-        <div id="gestion"></div>
+        <summary>＋ Añadir una tienda</summary>
         <div class="grid">
-          <div><label for="t-nombre">Nombre (opcional)</label><input type="text" id="t-nombre" placeholder="Mi tienda favorita"></div>
           <div><label for="t-url">Web de la tienda o dirección de su buscador</label><input type="text" id="t-url" placeholder="tienda.es" autocapitalize="none" inputmode="url"></div>
+          <div><label for="t-nombre">Nombre (opcional)</label><input type="text" id="t-nombre" placeholder="Mi tienda favorita"></div>
           <div class="full"><label class="sw"><input type="checkbox" id="t-manual"> No consultarla automáticamente (bloquea a BuscaTron): mostrar su enlace y la opción de pegar sus resultados</label>
             <label class="sw"><input type="checkbox" id="t-sm"> Es una web de segunda mano</label></div>
-          <div class="full"><button type="button" class="sec" id="add">＋ Añadir tienda</button></div>
+          <div class="full"><button type="button" id="add">＋ Añadir tienda</button></div>
         </div>
         <p class="ayuda">Basta con la web (<b>tienda.es</b>): BuscaTron encuentra su buscador. Si no lo consigue, haz una búsqueda en la tienda, copia la dirección y pon <b>{q}</b> en lugar de lo que buscaste: <b>https://tienda.es/buscar?q={q}</b></p>
+      </details>
+      <details>
+        <summary>✎ Editar o quitar tiendas</summary>
+        <input type="search" id="t-filtro" placeholder="Escribe parte del nombre o de la web" autocapitalize="none" aria-label="Buscar la tienda a editar" style="margin:6px 0">
+        <div id="gestion"></div>
+      </details>
       </details>
     </details>
   </form>
@@ -518,7 +523,11 @@ function pintaT(){
       if(r.coste!=null)f.querySelector('.te').value=r.coste; if(r.gratis_desde!=null)f.querySelector('.tg').value=r.gratis_desde;
       guarda();aviso('Envío encontrado y guardado. Compruébalo: es una estimación');};});
   document.querySelectorAll('#gestion [data-del]').forEach(b=>b.onclick=async()=>{if(confirm('¿Quitar '+nombreT(b.dataset.del)+' de tu lista de tiendas?')){tiendas=await api('tiendas',{borrar:b.dataset.del});pintaT();}});
+  filtraT();
 }
+function filtraT(){const f=($('t-filtro').value||'').trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+  document.querySelectorAll('#gestion .trow').forEach(r=>{const t=(r.dataset.h+' '+(r.querySelector('.tn').value||'')).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');r.style.display=!f||t.includes(f)?'':'none';});}
+$('t-filtro').addEventListener('input',filtraT);
 async function cargaT(){tiendas=await api('tiendas');pintaT();}
 async function guardaActivas(){const act=tiendas.filter(t=>t.activa).map(t=>t.host);tiendas=await api('tiendas',{activas:act});pintaT();}
 $('add').onclick=async()=>{const u=$('t-url').value.trim();if(!u){$('t-url').focus();return;}
