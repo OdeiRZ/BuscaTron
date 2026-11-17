@@ -3,6 +3,12 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.17.45] - 2026-11-18
+
+### Cambiado
+- Kaufland con su dirección de búsqueda (la pasaste tú): ya no pasa por la portada, que era donde pedía captcha. Probado: 4 productos de Marvel Champions.
+- Fuera de los títulos los textos de botones e imágenes que algunas tiendas meten delante del nombre («Añadir el producto a la lista de favoritos», «Imagen del producto de…») y el nombre repetido.
+
 ## [0.17.44] - 2026-11-18
 
 ### Corregido

@@ -58,6 +58,15 @@ class ColaDeChrome(unittest.TestCase):
             self.assertEqual(navegador.get("https://z.es/", timeout=1)[0], 200)
 
 
+class TitulosKaufland(unittest.TestCase):
+    def test_fuera_los_botones_y_el_nombre_repetido(self):
+        from buscatron import extract
+        t = ("Añadir el producto a la lista de favoritos Imagen del producto de Marvel Champions: Deadpool Pack de héroe expandido "
+             "Marvel Champions: Deadpool Pack de héroe expandido")
+        self.assertEqual(extract.limpia_titulo(t), "Marvel Champions: Deadpool Pack de héroe expandido")
+        self.assertEqual(extract.limpia_titulo("Imagen del producto"), "Imagen del producto")      # sin nada más, se queda
+
+
 class PestanaColgada(unittest.TestCase):
     def test_tras_un_cuelgue_se_abre_otra_pestana(self):
         """«Page crashed» en una tienda no deja la pestaña muerta para las siguientes."""

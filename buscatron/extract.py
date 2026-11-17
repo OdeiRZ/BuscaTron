@@ -112,9 +112,15 @@ def titulo_desde_url(url):
     return t[:1].upper() + t[1:]
 
 
+# Textos de botones e imágenes que algunas tiendas meten en el enlace del producto, delante del nombre (Kaufland:
+# «Añadir el producto a la lista de favoritos Imagen del producto de Marvel Champions… Marvel Champions…»).
+DELANTE = re.compile(r"^(?:\s*(?:añadir (?:el producto )?a (?:la lista de )?(?:favoritos|deseos)|imagen del producto(?: de)?)\s*)+", re.I)
+
+
 def limpia_titulo(t):
     """Zacatrus mete en el enlace el nombre dos veces y sus precios: «Hulk Hulk 16,95 € Club -10% 15,26 € ?» → «Hulk».
     Solo si el nombre se repite y detrás no hay nada o empieza un precio: cualquier otro título queda igual."""
+    t = DELANTE.sub("", t).strip() or t
     m = re.match(r"^(.{4,}?)\s+\1(?:\s+(?=\d)|\s*$)", t)
     if m and (not t[m.end():].strip() or PRECIO.match(t[m.end():].strip())):
         return m.group(1)
