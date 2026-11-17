@@ -3,6 +3,15 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.17.38] - 2026-11-17
+
+### Añadido
+- **Tipo de producto** de cada resultado, deducido del título: juego base, expansión (también los packs de héroe, villano, escenario o campaña), complemento (add-on, personaje, promo) o accesorio (fundas, tapetes, organizadores). Lo que no dice qué es cuenta como juego base: nunca se descarta un juego por no llamarse «juego».
+- En cada vigilada, **«Qué tipo de producto vigilar»**: por defecto todos; desmarcando, por ejemplo, complementos y accesorios, deja de avisar de add-ons y fundas. Se aplica también a lo ya guardado.
+- 21 tiendas más de Ludonauta (70 en total).
+
+### Cambiado
+- Lo que seguro que no es un juego de mesa (zapatillas, ropa, correas y protectores de pantalla de reloj, rociadores, herramientas…) se descarta en todas las tiendas, no solo en las generalistas. Con tus datos: 109 resultados de basura fuera y ningún juego.
 ## [0.17.37] - 2026-11-17
 
 ### Añadido

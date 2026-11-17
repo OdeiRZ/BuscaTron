@@ -145,6 +145,33 @@ def _intenta(t, consulta, get, paginas=1, con_estado=False):
 JUEGO = re.compile(r"\b(juegos?|games?|cartas|expansion|tablero|boardgame|lcg|cooperativo|miniaturas|rol)\b")
 
 
+# Lo que seguro que NO es un juego de mesa, en cualquier tienda. Solo cosas inequívocas (ropa, calzado, herramientas, jardín): un
+# juego no tiene que decir «juego» para valer, así que lo que no se reconoce se queda.
+NO_JUEGO = re.compile(r"\b(zapatillas?|deportivas|camisetas?|sudaderas?|calcetines|gorras?|pantalon(?:es)?|chaquetas?|talla\s+\d+|rociador|protector(?:es)? de pantalla|correas?|pulseras?|coche de juguete|"
+                      r"pulverizador|manguera|taladro|cortacesped|desbrozadora|guantes)\b")
+TIPOS = ("juego", "expansion", "complemento", "accesorio")
+ACCESORIO = re.compile(r"\b(fundas?|sleeves?|tapete|playmat|neopreno|organizador|inserto|insert|deck ?box|portacartas|protectores)\b")
+COMPLEMENTO = re.compile(r"\b(add ?on|addon|character|promos?|mini ?expansion)\b")
+# Los packs de héroe, villano, escenario o campaña son expansiones oficiales (Marvel Champions…), digan o no «expansión».
+EXPANSION = re.compile(r"\b(expansion|expansiones|ampliacion|(?:pack|paquete)s? (?:de )?(?:heroe|villano|escenario|escenico|campana|personajes?)|(?:hero|villain|scenario|campaign) pack)\b")
+
+
+def es_no_juego(titulo):
+    return bool(NO_JUEGO.search(extract.normaliza(titulo)))
+
+
+def tipo_de(titulo):
+    """Qué es, por su título: 'accesorio' (fundas, tapetes, organizadores), 'complemento' (add-on, personaje, promo),
+    'expansion' (también los packs de héroe, escenario o campaña) o, si no dice nada de eso, 'juego' (el juego base o cualquier cosa que no se reconozca: nunca se descarta por no
+    decir que es un juego)."""
+    # «Dune Imperium: Linajes (+ Promo)» es la expansión que trae una promo de regalo, no la promo
+    n = extract.normaliza(re.sub(r"(?i)[+]\s*promos?|con promos?", " ", titulo))
+    for tipo, rx in (("accesorio", ACCESORIO), ("complemento", COMPLEMENTO), ("expansion", EXPANSION)):
+        if rx.search(n):
+            return tipo
+    return "juego"
+
+
 def exige_juego(consulta):
     """Con una sola palabra de búsqueda, las tiendas generalistas devuelven de todo: solo valen los juegos."""
     return len(extract.normaliza(consulta).split()) == 1
@@ -678,8 +705,8 @@ def buscar(consulta, incluir="", excluir="", ocultar_agotados=True, hosts=None, 
         kept = 0
         prior = prior_tienda(items)
         for x in items:
-            if pasa(x, prior) and solo_juego(host, x["titulo"], consulta):
-                x["tienda"], x["origen"] = host, por_host[host].get("tipo", "tienda")
+            if pasa(x, prior) and solo_juego(host, x["titulo"], consulta) and not es_no_juego(x["titulo"]):
+                x["tienda"], x["origen"], x["tipo"] = host, por_host[host].get("tipo", "tienda"), tipo_de(x["titulo"])
                 res.append(x)
                 kept += 1
         informe[host] = {"encontrados": kept, "error": err if not kept else None, "brutos": len(items), "error_tienda": err,

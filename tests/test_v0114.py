@@ -149,18 +149,18 @@ class PalabrasCompletas(unittest.TestCase):
 
     def test_una_frase_igual_a_la_busqueda_no_junta_productos_distintos(self):
         html = ('<a href="/p/1">Vantage</a><span>81,00 €</span>'
-                '<a href="/p/2">Protector de pantalla Polar Vantage M3</a><span>9,00 €</span>'
+                '<a href="/p/2">Fundas Vantage premium</a><span>9,00 €</span>'
                 '<a href="/p/3">Tactical Advantage</a><span>0,25 €</span>')
         from buscatron import extract
         items = extract.extrae(html, "https://t.es/buscar?q=vantage", "vantage")
-        self.assertEqual([x["titulo"] for x in items], ["Vantage", "Protector de pantalla Polar Vantage M3"])
+        self.assertEqual([x["titulo"] for x in items], ["Vantage", "Fundas Vantage premium"])
         tmp = tempfile.mkdtemp()
         with mock.patch.object(bd, "RUTA", os.path.join(tmp, "t.db")), mock.patch.object(cfg, "RUTA", os.path.join(tmp, "t.json")), \
                 mock.patch.object(ajustes, "RUTA", os.path.join(tmp, "c.json")), mock.patch.object(motor.navegador, "disponible", lambda: False), \
                 mock.patch.object(motor, "_tienda", lambda t, *a: (t["host"], [dict(x) for x in items], None)):
             cfg.guarda([{"host": "t.es", "activa": True, "plantilla": "https://t.es/buscar?q={q}"}])
             res, _ = motor.buscar("Vantage", alguna="Vantage", castellano=False)
-            self.assertEqual(len({x["grupo"] for x in res}), 2)                             # el juego y el protector, por separado
+            self.assertEqual(len({x["grupo"] for x in res}), 2)                             # el juego y las fundas, por separado
             res, _ = motor.buscar("juegos", alguna="vantage", castellano=False)             # frase que añade algo (campañas): agrupa
             self.assertEqual({x["grupo"] for x in res}, {"f:vantage"})
 

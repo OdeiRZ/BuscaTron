@@ -8,8 +8,8 @@ from . import bd, motor, notifica
 
 CAMPOS = ("nombre", "consulta", "incluir", "excluir", "pmin", "pmax", "objetivo", "bajo_historico",
           "sin_agotados", "castellano", "opciones", "canales", "cada_horas", "activo")
-OPCIONES = {"preventas": False, "con_envio": False, "segunda_mano": False, "abierta": False, "region": "es", "paginas": None, "idioma": None, "resumen": False, "alguna": ""}
-NO_SON_DE_BUSQUEDA = ("resumen",)
+OPCIONES = {"preventas": False, "con_envio": False, "segunda_mano": False, "abierta": False, "region": "es", "paginas": None, "idioma": None, "resumen": False, "alguna": "", "tipos": []}
+NO_SON_DE_BUSQUEDA = ("resumen", "tipos")
 # Lo que cambia el resultado de una revisión: si lo editas mientras se revisa, se repite con lo nuevo al acabar
 # (el nombre, la frecuencia, los canales o pausarla no hacen falta).
 DE_LA_BUSQUEDA = ("consulta", "incluir", "excluir", "pmin", "pmax", "objetivo", "bajo_historico", "sin_agotados", "castellano", "opciones")      # opciones del seguimiento que el motor no recibe
@@ -54,7 +54,8 @@ def _opciones(o):
     return {"preventas": bool(o.get("preventas")), "con_envio": bool(o.get("con_envio")), "segunda_mano": bool(o.get("segunda_mano")),
             "abierta": bool(o.get("abierta")), "region": region, "paginas": int(min(max(paginas, 1), 6)) if paginas else None,
             "idioma": o.get("idioma") if o.get("idioma") in ("castellano", "estricto", "todos") else None,
-            "resumen": bool(o.get("resumen")), "alguna": str(o.get("alguna") or "").strip()[:500]}
+            "resumen": bool(o.get("resumen")), "alguna": str(o.get("alguna") or "").strip()[:500],
+            "tipos": [t for t in motor.TIPOS if t in (o.get("tipos") or [])]}
 
 
 def guarda(d):
@@ -193,8 +194,9 @@ def _revisa(seg_id, enviar):
                                     None, seg["pmin"], seg["pmax"], seg_id,
                                     castellano=bool(seg["castellano"]),
                                     **{k: v for k, v in opciones_de(seg).items() if k not in NO_SON_DE_BUSQUEDA})
-        limpia_avisos(seg_id, res, informe)
         opc = opciones_de(seg)
+        res = [x for x in res if tipo_vale(opc, x["titulo"])]
+        limpia_avisos(seg_id, res, informe)
         modo = motor.modo_idioma(bool(seg["castellano"]), opc.get("idioma"))
         # Antes de avisar se mira la ficha de cada candidato: el listado no siempre dice si está agotado, si es una
         # preventa o en qué idioma está (Amazon traduce sus títulos).
@@ -342,6 +344,12 @@ def resumen(seg, opc, modo, res, informe, ofertas=3):
     return "\n\n".join(lineas)
 
 
+def tipo_vale(opciones, titulo):
+    """¿Es de un tipo que la vigilada quiere? Sin tipos marcados (o con todos), vale cualquiera."""
+    t = opciones.get("tipos") or []
+    return not t or motor.tipo_de(titulo) in t
+
+
 def cumple(seg, titulo, precio=None, tienda=None):
     """¿Este resultado guardado cumple los filtros ACTUALES de la vigilada (su búsqueda, «Solo títulos con», «Descarta», «al menos
     una de estas» y el rango de precio)? Los resultados de la última revisión se guardan tal cual salieron entonces: si luego se
@@ -355,6 +363,8 @@ def cumple(seg, titulo, precio=None, tienda=None):
     if not all(ex.encaja(n, w) for w in palabras):
         return False
     if tienda and not motor.solo_juego(tienda, titulo, seg.get("consulta") or ""):
+        return False
+    if motor.es_no_juego(titulo) or not tipo_vale(opciones, titulo):
         return False
     if any(ex.encaja(n, w) for w in ex.normaliza(seg.get("excluir") or "").split()):
         return False
