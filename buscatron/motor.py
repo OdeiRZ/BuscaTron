@@ -5,6 +5,8 @@ import time
 
 from . import ajustes, bd, fetch, extract, descubre, importar, navegador, tiendas as cfg
 
+DESAFIO_SIN_RESOLVER = ("pide demostrar que eres humano (captcha): se abrió una ventana de Chrome, pero no se resolvió en 90 s. "
+                        "Resuélvelo en esa ventana en la próxima búsqueda y la sesión quedará guardada")
 DESAFIO = "pide demostrar que eres humano (captcha). Para resolverlo tú, activa en Ajustes → Navegador la opción de abrir una ventana"
 SIN_COINCIDENCIAS = "no tiene nada que coincida con la búsqueda"     # la tienda respondió, pero sin ese producto
 MIN_HISTORIAL = 3
@@ -710,7 +712,9 @@ def buscar(consulta, incluir="", excluir="", ocultar_agotados=True, hosts=None, 
         # para que el usuario pueda resolverlo; el resto se consulta sin que salga nada en pantalla.
         for i, (host, items, err) in enumerate(resultados):
             if err == DESAFIO:
-                resultados[i] = _tienda(por_host[host], consulta, {"visible": True}, pags(por_host[host]))
+                r = _tienda(por_host[host], consulta, {"visible": True}, pags(por_host[host]))
+                # La ventana ya se abrió y nadie resolvió la comprobación a tiempo: decir eso, no «activa la ventana».
+                resultados[i] = (r[0], r[1], DESAFIO_SIN_RESOLVER if r[2] == DESAFIO else r[2])
     idioma_ficha.update(idiomas_de_fichas([x["url"] for _, items, _ in resultados for x in items]))
     for host, items, err in resultados:
         kept = 0

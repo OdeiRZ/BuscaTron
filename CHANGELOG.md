@@ -3,6 +3,11 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.17.44] - 2026-11-18
+
+### Corregido
+- Si una tienda pide captcha y la ventana de Chrome ya se abrió sin que se resolviera a tiempo, el aviso lo dice así, en vez de pedir que actives una opción que ya estaba activada (Kaufland).
+
 ## [0.17.43] - 2026-11-18
 
 ### Corregido
