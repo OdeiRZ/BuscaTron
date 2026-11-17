@@ -3,6 +3,13 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.17.37] - 2026-11-17
+
+### Añadido
+- **21 tiendas de juegos de mesa** del directorio de Ludonauta (EGD Games, Play Planet, Quinto Elemento, Espacio de Juegos, Rampi Games, Empire Games, Kinuma, Kame Kame, Tira y Mueve, Ludoteca Maldita, Ludosaurus, Santuario Games, Alcalá Comics, Arcadia Comics, Ocio Central, La Cueva Roja, Shuriken64, Dados y cubitos, Comic Stores, Generación X y EcoMimos), con una sola petición a cada una para sacar su buscador. SomosJuegos corta la conexión a los programas y no se añade. Las vigiladas buscan en todas las tiendas activas, así que ya las usan.
+
+### Cambiado
+- Una web cuyo certificado no valida Python (le falta el certificado intermedio, que Chrome sí resuelve) se lee con el Chrome de BuscaTron en vez de darse por caída. Cualquier otro fallo de conexión sigue siendo «no responde»: un rechazo no se esquiva con el navegador.
 ## [0.17.36] - 2026-11-16
 
 ### Cambiado

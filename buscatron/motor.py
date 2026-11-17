@@ -216,7 +216,14 @@ def _tienda_viva(t, consulta, nav, paginas, estados):
 def _tienda_consulta(t, consulta, nav, paginas, estados):
     h = t["host"]
     if not (nav and t.get("js")):
-        r, err = _intenta(t, consulta, fetch.get, paginas, estados)
+        try:
+            r, err = _intenta(t, consulta, fetch.get, paginas, estados)
+        except OSError as e:
+            # A Python le falta a veces el certificado intermedio de una web (Comic Stores, Generación X…) que Chrome sí resuelve: no es
+            # un bloqueo, así que se lee con el navegador. Cualquier otro fallo de conexión sigue siendo «no responde».
+            if not (nav and "CERTIFICATE_VERIFY_FAILED" in str(e)):
+                raise
+            r, err = [], None
         if r:
             return h, r, None
     if nav is None:
