@@ -3,6 +3,12 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.17.41] - 2026-11-17
+
+### Cambiado
+- El tiempo de espera de una búsqueda depende de cuántas tiendas tienes activas (medido con 70: de 2 a 4 minutos), y «Buscar ahora» de una vigilada dice «unos minutos» en vez de «hasta 1 min».
+- Revisión de las 42 tiendas nuevas con una búsqueda real: 21 funcionan, 6 buscan bien pero no tenían el juego, y Cuarto de Juegos, Doctor Panush, Mi Juego Bonito y Arigatô Sevilla rechazan a los programas (429 o 500): pasan a «solo enlace».
+
 ## [0.17.40] - 2026-11-17
 
 ### Cambiado

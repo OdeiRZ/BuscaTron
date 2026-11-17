@@ -645,7 +645,10 @@ function muestra(r,body,guardada){
    (pantalla bloqueada, otra app, recarga), la búsqueda sigue y se recoge al volver. */
 const esperaMs=ms=>new Promise(r=>setTimeout(r,ms));
 let buscando=null;
-function pintaBuscando(lento){$('out').innerHTML=`<div class="card carga"><div class="spin"></div><div>Buscando en tus tiendas…<br><span class="mut">Suele tardar 1 o 2 minutos${lento?' (algo más buscando por internet o en segunda mano)':''}: cada tienda se consulta con calma para que no te bloquee. Puedes bloquear el móvil o cambiar de app: la búsqueda sigue y verás el resultado al volver.</span></div></div>`;}
+// Medido el 17/11 con 70 tiendas: ~100 s las que se leen directamente; las que necesitan Chrome alargan la búsqueda.
+function tiempoBusqueda(){const n=(typeof tiendas!=='undefined'?tiendas:[]).filter(t=>t.activa&&!t.manual).length;
+  return n>40?`Suele tardar de 2 a 4 minutos con tus ${n} tiendas`:n>20?`Suele tardar de 1 a 3 minutos con tus ${n} tiendas`:'Suele tardar 1 o 2 minutos';}
+function pintaBuscando(lento){$('out').innerHTML=`<div class="card carga"><div class="spin"></div><div>Buscando en tus tiendas…<br><span class="mut">${tiempoBusqueda()}${lento?' (algo más buscando por internet o en segunda mano)':''}: cada tienda se consulta con calma para que no te bloquee. Puedes bloquear el móvil o cambiar de app: la búsqueda sigue y verás el resultado al volver.</span></div></div>`;}
 function estadoBoton(activo){const b=$('go');b.disabled=activo;b.textContent=activo?'Buscando…':'Buscar';}
 async function sigueBusqueda(tid,body){
   buscando=tid;estadoBoton(true);let fallos=0;
@@ -1027,7 +1030,7 @@ function tarjetaSeg(s){
   ${revisando(s)?'<div class="l">🔄 Revisándose ahora mismo…</div>':s.activo?`<div class="l">🔄 Próxima revisión ${proxima(s)}</div>`:''}
   <details><summary>Más detalles</summary>${histAmzLista(s)}${filtros}${extrasSeg(s)}<div class="l">📬 Avisos en: ${esc(canales)}</div>
     <div class="l">⏱️ ${s.activo?`Se revisa sola cada ${String(s.cada_horas).replace('.',',')} h`:'En pausa: no se revisa sola'} · última revisión: ${fecha(s.ultima)}</div></details>
-  <div class="acciones">${revisando(s)?'<button class="mini" disabled>Buscando… (hasta 1 min)</button>':`<button class="mini" onclick="revisa(${s.id},this)" title="Busca ya en tus tiendas y te avisa si hay algo">🔄 Buscar ahora</button>`}
+  <div class="acciones">${revisando(s)?'<button class="mini" disabled>Buscando… (unos minutos)</button>':`<button class="mini" onclick="revisa(${s.id},this)" title="Busca ya en tus tiendas y te avisa si hay algo">🔄 Buscar ahora</button>`}
   <button class="sec mini" onclick="editaSeg(${s.id})">✏️ Editar</button>
   <button class="sec mini" onclick="pausa(${s.id})" title="${s.activo?'Deja de revisarse sola; no se borra nada':'Vuelve a revisarse sola'}">${s.activo?'⏸️ Pausar':'▶️ Reanudar'}</button>
   <button class="peli mini" onclick="borraSeg(${s.id})">🗑 Borrar</button></div></div>`;}
@@ -1074,7 +1077,7 @@ async function pausa(id){const s=segs.find(x=>x.id===id);const l=await api('segu
     :(Date.now()/1000-(s.ultima||0)>=s.cada_horas*3600?`Reanudada: se revisa ahora mismo y luego cada ${s.cada_horas} h`:`Reanudada: la próxima revisión, ${proxima(s)}`));}
 async function borraSeg(id){if(confirm('¿Dejar de vigilar esta búsqueda? Se borran también sus avisos; el historial de precios se conserva.'))pintaSeg(await api('seguimientos',{accion:'borrar',id}));}
 async function revisa(id,b){esperando[id]=(segs.find(x=>x.id===id)||{}).ultima||0;
-  b.disabled=true;b.textContent='Buscando… (hasta 1 min)';
+  b.disabled=true;b.textContent='Buscando… (unos minutos)';
   const r=await api('seguimientos',{accion:'revisar',id});if(r&&r.error){delete esperando[id];aviso(r.error);}
   pintaSeg(Array.isArray(r)?r:segs);}
 
