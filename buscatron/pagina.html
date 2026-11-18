@@ -1121,10 +1121,10 @@ function tarjetaSeg(s){
   <div class="l">🎯 Te avisa si ${reglas}</div>
   <div class="l">🕘 ${s.ultima?`Revisada ${relativo(s.ultima)}`:'Todavía sin revisar'}${s.estado?`: ${esc(s.estado)}`:''}</div>
   ${histAmzResumen(s)}
-  ${revisando(s)?'<div class="l">🔄 Revisándose ahora mismo…</div>':s.activo?`<div class="l">🔄 Próxima revisión ${proxima(s)}</div>`:''}
+  ${revisando(s)?`<div class="l">🔄 Revisándose ${duraRevision(s)}</div>`:s.activo?`<div class="l">🔄 Próxima revisión ${proxima(s)}</div>`:''}
   <details><summary>Más detalles</summary>${histAmzLista(s)}${filtros}${extrasSeg(s)}<div class="l">📬 Avisos en: ${esc(canales)}</div>
-    <div class="l">⏱️ ${s.activo?`Se revisa sola cada ${String(s.cada_horas).replace('.',',')} h`:'En pausa: no se revisa sola'} · última revisión: ${fecha(s.ultima)}</div></details>
-  <div class="acciones">${revisando(s)?'<button class="mini" disabled>Buscando… (unos minutos)</button>':`<button class="mini" onclick="revisa(${s.id},this)" title="Busca ya en tus tiendas y te avisa si hay algo">🔄 Buscar ahora</button>`}
+    <div class="l">⏱️ ${s.activo?`Se revisa sola cada ${String(s.cada_horas).replace('.',',')} h`:'En pausa: no se revisa sola'} · última revisión: ${fecha(s.ultima)}${s.duracion?` (tardó ${minutos(s.duracion)})`:""}</div></details>
+  <div class="acciones">${revisando(s)?'<button class="mini" disabled>Buscando…</button>':`<button class="mini" onclick="revisa(${s.id},this)" title="Busca ya en tus tiendas y te avisa si hay algo">🔄 Buscar ahora</button>`}
   <button class="sec mini" onclick="editaSeg(${s.id})">✏️ Editar</button>
   <button class="sec mini" onclick="pausa(${s.id})" title="${s.activo?'Deja de revisarse sola; no se borra nada':'Vuelve a revisarse sola'}">${s.activo?'⏸️ Pausar':'▶️ Reanudar'}</button>
   <button class="peli mini" onclick="borraSeg(${s.id})">🗑 Borrar</button></div></div>`;}
@@ -1147,10 +1147,14 @@ function sigueRevisiones(){if(sondeo)return;let n=0,firma='';
     for(const s of l){if(!(s.id in esperando))continue;
       if((s.ultima||0)>esperando[s.id]&&!s.revisando){delete esperando[s.id];cargaNavAv();aviso(`Revisión terminada («${s.nombre}»): ${s.estado}`);}}
     for(const id of Object.keys(esperando))if(!l.some(s=>s.id===+id)||n>400)delete esperando[id];   // borrada, o tarda demasiado (20 min: con el ritmo por tienda una revisión tarda minutos)
-    const f=l.map(s=>`${s.id}:${s.revisando}:${s.ultima}:${s.id in esperando}`).join();
+    const f=l.map(s=>`${s.id}:${s.revisando}:${s.ultima}:${s.id in esperando}`).join()+':'+Math.floor(Date.now()/60000);   // y cada minuto, para el tiempo que lleva
     const sigue=l.some(revisando);
     if(f!==firma||!sigue){firma=f;pintaSeg(l);}         // solo se repinta si algo cambia: no te mueve la lista mientras la usas
     if(!sigue){clearInterval(sondeo);sondeo=null;}},3000);}
+// Cuánto lleva la revisión en marcha y cuánto tardó la anterior (cada tienda va con calma: tarda minutos)
+function minutos(seg){return Math.max(1,Math.round(seg/60))+' min';}
+function duraRevision(s){const ya=s.revisando_desde?`desde hace ${minutos(Date.now()/1000-s.revisando_desde)}`:'ahora mismo';
+  return `${ya} · ${s.duracion?`la anterior tardó ${minutos(s.duracion)}`:'suele tardar de 10 a 15 min'}; los avisos se crean al terminar`;}
 function proxima(s){const t=(s.ultima||0)+s.cada_horas*3600,ahora=Date.now()/1000;
   if(!s.ultima||t<=ahora)return 'en cuanto le toque (las automáticas van de una en una, cada 10 min, si BuscaTron está abierto)';
   const h=(t-ahora)/3600;return `dentro de ${h<1?Math.max(1,Math.round(h*60))+' min':String(Math.round(h*10)/10).replace('.',',')+' h'} (${new Date(t*1000).toLocaleString('es-ES',{weekday:'short',hour:'2-digit',minute:'2-digit'})})`;}

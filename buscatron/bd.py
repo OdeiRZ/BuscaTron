@@ -91,7 +91,7 @@ def _prepara(c):
         pass
     for tabla, columna in (("seguimientos", "castellano INTEGER DEFAULT 1"), ("seguimientos", "opciones TEXT DEFAULT '{}'"),
                            ("precios", "preventa INTEGER DEFAULT 0"), ("avisos", "oculto INTEGER DEFAULT 0"),
-                           ("precios", "clave TEXT")):   # bases creadas por versiones anteriores
+                           ("precios", "clave TEXT"), ("seguimientos", "duracion REAL")):   # bases creadas por versiones anteriores
         try:
             c.execute(f"ALTER TABLE {tabla} ADD COLUMN {columna}")
         except sqlite3.OperationalError:

@@ -17,7 +17,7 @@ MIN_OBSERVACIONES = 4      # mínimo de precios previos de un artículo para fia
 REAVISO_DIAS = 30
 FICHAS_POR_AVISO = 4       # fichas que se leen por tienda antes de avisar (las más baratas; el resto, con lo ya sabido)
 _cerrojo = threading.Lock()
-_en_curso = set()
+_en_curso = {}         # id → cuándo empezó su revisión
 
 
 def _num(v):
@@ -40,10 +40,11 @@ def lista():
     with bd.conecta() as c:
         filas = [dict(r) for r in c.execute("SELECT * FROM seguimientos ORDER BY id")]
     with _cerrojo:
-        en_curso = set(_en_curso)
+        en_curso = dict(_en_curso)
     for f in filas:
         f["opciones"] = opciones_de(f)      # para la web: un objeto, no un texto
         f["revisando"] = f["id"] in en_curso
+        f["revisando_desde"] = en_curso.get(f["id"])     # para que la web diga cuánto lleva
     return filas
 
 
@@ -158,13 +159,13 @@ def revisa(seg_id, enviar=True):
     with _cerrojo:
         if seg_id in _en_curso or servicio.saliendo():      # ya en marcha, o BuscaTron reiniciándose: no se empieza
             return {"ocupado": True}
-        _en_curso.add(seg_id)
+        _en_curso[seg_id] = time.time()
     try:
         with servicio.trabajo("revision"):
             return _vueltas(seg_id, enviar)
     finally:
         with _cerrojo:
-            _en_curso.discard(seg_id)
+            _en_curso.pop(seg_id, None)
 
 
 def _vueltas(seg_id, enviar):
@@ -241,7 +242,7 @@ def _revisa(seg_id, enviar):
             n = len(nuevos)
             estado = (f"{productos(res)}, {n} aviso{'' if n == 1 else 's'} nuevo{'' if n == 1 else 's'}"
                       + (f", {caidas} tienda{'' if caidas == 1 else 's'} sin respuesta" if caidas else ""))
-            c.execute("UPDATE seguimientos SET ultima=?, estado=? WHERE id=?", (ts, estado, seg_id))
+            c.execute("UPDATE seguimientos SET ultima=?, estado=?, duracion=? WHERE id=?", (ts, estado, time.time() - ts, seg_id))
         envio = {}
         if nuevos and enviar:
             canales = [k for k in seg["canales"].split(",") if k in ("telegram", "correo")]
