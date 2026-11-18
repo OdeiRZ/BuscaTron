@@ -1,6 +1,6 @@
 # 🔎 BuscaTron
 
-Buscador y vigilante de precios **local** para tiendas online españolas. Pensado para juegos de mesa, válido para cualquier producto: consulta las tiendas en vivo desde tu propio PC, ordena los resultados por precio y te avisa cuando algo baja.
+Buscador y vigilante de precios **local** para tiendas online españolas, centrado en **juegos de mesa** (unas 70 tiendas especializadas y generalistas) y válido para cualquier producto: consulta las tiendas en vivo desde tu propio PC, ordena los resultados por precio y te avisa cuando algo baja.
 
 - **Sin APIs de pago, sin cuentas y sin depender de ninguna IA.** Funciona con la biblioteca estándar de Python.
 - **Datos en vivo**: no usa cachés ni comparadores intermedios, así que el precio es el que ves en la tienda.
@@ -10,8 +10,10 @@ Buscador y vigilante de precios **local** para tiendas online españolas. Pensad
 
 ## En el móvil y en el PC
 
-- **Móvil**: pestañas abajo; el botón «atrás» vuelve a la pestaña anterior y cierra el historial de precios o «Pegar resultados» en vez de salir de la app.
-- **PC (pantallas anchas)**: Buscar a dos columnas (el formulario a la izquierda, los resultados a la derecha), Vigiladas y Avisos en rejilla, Ajustes a dos columnas y las pestañas fijas arriba al bajar. La tecla <kbd>/</kbd> lleva a la caja de búsqueda desde cualquier pestaña.
+Diseño propio de mesa de juego (desde v0.18.0): papel cálido, cabecera en tinta, naranja de ficha para las acciones, títulos en Bricolage Grotesque y un meeple con lupa como logo (web, icono del móvil y bandeja de Windows). Tema claro y oscuro.
+
+- **Móvil**: pestañas abajo; al buscar, la pantalla baja sola a los resultados; tarjetas compactas; el historial, la referencia y «Pegar resultados» suben desde abajo. El botón «atrás» vuelve a la pestaña anterior y cierra esas hojas en vez de salir de la app.
+- **PC (pantallas anchas)**: pestañas arriba, fijas bajo la cabecera; Buscar a dos columnas (el buscador fijo a la izquierda, los resultados a la derecha), Vigiladas y Avisos en rejilla y Ajustes a dos columnas. La tecla <kbd>/</kbd> lleva a la caja de búsqueda desde cualquier pestaña.
 - Cada pestaña tiene su dirección (`#buscar`, `#seguir`, `#avisos`, `#ajustes`), así que se puede guardar como marcador.
 
 ## Inicio rápido
@@ -73,7 +75,8 @@ Pulsa «Vigilar esta búsqueda» (o crea una en la pestaña Vigiladas) y deja qu
 - Cada seguimiento lleva las mismas opciones que la búsqueda: preventas, envío, segunda mano, otras webs y páginas por tienda.
 - **Comprueba la ficha del producto** antes de avisar: si su ficha dice que está agotado o en preventa (y no las incluyes), no avisa, aunque el listado de la tienda no lo diga. También el idioma (ver [Idioma de los juegos](#idioma-de-los-juegos)): un juego en francés no te avisa aunque su título esté en español.
 - No repite avisos: solo vuelve a avisar si el precio baja más, o pasados 30 días.
-- **Resumen por Telegram** (opcional, en cada búsqueda vigilada): si una revisión no trae avisos nuevos, te manda igualmente cada producto que encuentra con sus 3 ofertas más baratas, para saber que la vigilancia funciona. Ojo: «Precio máximo» solo filtra resultados; para que te avise hay que rellenar «Avisarme si cuesta como mucho» o el % de bajada.
+- **Qué tipo de producto vigilar**: juego base, expansiones (también packs de héroe, villano, escenario o campaña), complementos (add-on, personaje, promo) y accesorios (fundas, tapetes, organizadores). Se deduce del título; lo que no dice qué es cuenta como juego base, así que nunca se descarta un juego por no llamarse «juego». Se aplica también a lo ya guardado.
+- **Telegram solo cuando cambian los límites**: te escribe si Amazon baja de su mínimo histórico o sube de su máximo (según camelcamelcamel) y cuando se cumple un objetivo; nunca manda resúmenes. Ojo: «Precio máximo» solo filtra resultados; para que te avise hay que rellenar «Avisarme si cuesta como mucho» o el % de bajada.
 - **Revisión automática**: cada seguimiento se revisa solo cada X horas (por defecto 12) mientras BuscaTron esté en marcha, y la tarjeta muestra cuándo toca la próxima. Si el equipo estaba apagado, la revisión pendiente se lanza al encender, en menos de un minuto. Cada revisión actualiza los precios y el historial.
 - **Estado de cada revisión** en su tarjeta: «3 productos (10 ofertas), 0 avisos nuevos, 1 tiendas sin respuesta». «Sin respuesta» son solo las tiendas que fallaron (sin conexión, captcha, error de su web); una tienda que respondió pero no tiene ese producto no cuenta. Si la revisión entera falla, se anota «la revisión falló: …» y espera a su hora, en lugar de repetirse cada minuto contra todas tus tiendas.
 - **🔄 Buscar ahora** (una revisión inmediata, con sus avisos; no quita la pausa), **⏸️ Pausar / ▶️ Reanudar** (al reanudar, si ya le tocaba, se revisa en menos de un minuto), editar y borrar (al borrar un seguimiento se borran también sus avisos; el historial de precios se conserva).
@@ -95,7 +98,8 @@ El histórico propio de Amazon empieza con tus búsquedas (desde el 6/11/2026) y
 
 ### ⚙️ Ajustes
 - **🔧 Servicio**: reiniciar o cerrar BuscaTron desde la web (también desde el móvil) o desde el menú del icono de la bandeja, igual que en PixelatIA: **nunca con un trabajo en marcha** (una búsqueda, la revisión de una vigilada o una búsqueda del bot de Telegram): lo dice y espera a que termines. Cuando el código ha cambiado desde que arrancó sale **🆕** arriba: púlsalo para reiniciar y aplicar la actualización. Al reiniciar, la página espera a que vuelva y se recarga sola. Tras «Cerrar», solo se puede volver a abrir en el ordenador.
-- **Búsqueda**: páginas que se leen por tienda por defecto.
+- **🏪 Tus tiendas**: fichas para incluir o no cada tienda en las búsquedas, «＋ Añadir una tienda» (basta con su web) y «✎ Editar o quitar tiendas» con un buscador para encontrarla. Ordenadas por nombre. En Buscar solo queda la línea «Buscando en X de Y tiendas · Gestionar tiendas».
+- **Búsqueda**: páginas que se leen por tienda por defecto. El aviso de espera depende de cuántas tiendas tienes activas (con 70, de 2 a 4 minutos).
 - **Arranque con Windows**: interruptor para iniciar BuscaTron al encender el equipo.
 - **Estado de las tiendas**: cuántas de sus últimas 10 consultas dieron resultados, cuándo fue el último y su último problema, con un botón para desactivarla. Distingue la tienda que **no responde** (conviene desactivarla) de la que **responde bien pero no ha tenido nada de lo que buscas** (por ejemplo, Outlet-PC sin stock de ese juego): esa solo conviene desactivarla si no suele tener tus juegos.
 - **Productos ocultos**, para volver a mostrarlos.
@@ -234,8 +238,9 @@ Seguridad:
 2. **Descarga los resultados** y se queda con los enlaces cuyo texto contiene todas las palabras de la búsqueda, junto al primer precio vigente (dentro de la tarjeta del producto o justo después). Ignora los precios tachados y el texto oculto de la página, y detecta «agotado» y «preventa» («Casi agotado» y «Últimas unidades» no son agotado). Cada tarjeta acaba donde empieza la de otro producto, aunque ese no tenga que ver con tu búsqueda: el «En reposición» del siguiente no se le atribuye al anterior. Lo que va entre el enlace de la imagen y el del título (p. ej. «Agotado» en Jugamos Una) sí es del producto. Entiende el punto de miles («1.299 €» son 1299 €) y el punto decimal («29.99 €»), y descarta los enlaces que no son direcciones web y los que llevan a otra búsqueda (sugerencias como «En lugar de lo anterior, busca…» o búsquedas relacionadas). Si la tienda recorta el título, lo reconstruye a partir del atributo `title` o de la dirección del producto. Las direcciones se guardan **sin códigos de seguimiento** (en Amazon, `amazon.es/dp/ASIN`; en el resto, sin `utm_*`, `ref`, `srsltid`…), de modo que un mismo producto es siempre la misma dirección: así acumula historial, «Mínimo histórico» y no repite avisos.
 3. **Trata bien a las tiendas**: pausa de 0,6 s entre dos peticiones a la misma web, como mucho 4 direcciones de prueba cuando no conoce su buscador, parada inmediata si una tienda responde «429 demasiadas peticiones», no vuelve a llamar durante 10 minutos a una web que no ha respondido a la conexión, nunca lee más de 6 páginas por tienda (aunque pongas más en Ajustes) y una revisión vigilada que falla no se reintenta hasta su hora. Bixoto y Ferretería Ibérica no se consultan nunca de forma automática, tampoco desde la búsqueda abierta. Así evita que una tienda te bloquee la IP por parecer un ataque; si lo hiciera, te aparecería como «no responde».
 4. **Sigue las páginas siguientes** (enlace `rel="next"` o «Siguiente») hasta el número de páginas elegido, mientras aporten productos nuevos.
-5. **Si el método rápido no encuentra nada** y el navegador está activado, vuelve a intentarlo renderizando la página con tu Chrome (con Playwright). Si funciona, recuerda que esa tienda lo necesita.
-6. **Ordena por precio** (o por precio total) y guarda cada resultado en `buscatron.db` (SQLite). Ese historial alimenta la regla de «bajada respecto a la media», la etiqueta «Mínimo histórico» y las gráficas. Una vez al día, lo de hace más de 6 meses se compacta a un precio por producto y día, para que no crezca sin control.
+5. **Si el método rápido no encuentra nada** y el navegador está activado, vuelve a intentarlo renderizando la página con tu Chrome (con Playwright). Si funciona, recuerda que esa tienda lo necesita. También se usa Chrome cuando a Python le falta el certificado intermedio de una web (Comic Stores, Generación X…), que no es un bloqueo; cualquier otro fallo de conexión sigue siendo «no responde». Hay **un solo Chrome** que atiende las páginas de una en una: el tiempo límite cuenta desde que empieza con cada página (no desde que entra en la cola), si una página cuelga la pestaña se abre otra, al pasar a la ventana visible espera a que acabe lo pendiente, y una tienda que ya se lee bien sin Chrome pero no tiene el producto no se repite con Chrome durante 3 días.
+6. **Descarta lo que seguro que no es un juego** en todas las tiendas (ropa, calzado, correas y protectores de pantalla de reloj, rociadores, herramientas…) y clasifica el resto por tipo (juego, expansión, complemento, accesorio). En las tiendas generalistas (Amazon, Kaufland, Outlet-PC…) una búsqueda de una sola palabra solo admite títulos de juego. Limpia los títulos de textos de botones e imágenes («Añadir el producto a la lista de favoritos…», Kaufland) y del nombre repetido.
+7. **Ordena por precio** (o por precio total) y guarda cada resultado en `buscatron.db` (SQLite). Ese historial alimenta la regla de «bajada respecto a la media», la etiqueta «Mínimo histórico» y las gráficas. Una vez al día, lo de hace más de 6 meses se compacta a un precio por producto y día, para que no crezca sin control.
 
 ### Navegador opcional
 Para las tiendas que cargan sus resultados con JavaScript. Está activado por defecto, pero solo funciona si tienes instalado Playwright y Chrome o Edge:
@@ -250,14 +255,18 @@ Todas las consultas con navegador se hacen **en segundo plano**, sin ventanas. *
 
 ## Tiendas probadas
 
-Resultado de la prueba el 6/11/2026 (las webs cambian, así que puede variar):
+Revisión con una búsqueda real («marvel champions», una página por tienda) el 17-18/11/2026 (las webs cambian, así que puede variar):
 
 | Estado | Tiendas |
 |---|---|
-| ✅ Funcionan (16) | Juegos de la Mesa Redonda, Zacatrus, Dungeon Marvels, Jugamos Una, Jugamos Otra, El Taller del Modelista, Mathom, Tablerum, Outlet Games, Ludus Belli, Bandua, Goblin Trader, Gameria, Masqueoca, Turol Games y **Amazon** (estas dos con navegador; Amazon, solo en su sección «Juguetes y juegos») |
-| ➖ Responden, sin el producto probado (2) | Tiendas MGI, Outlet-PC |
-| 🔗 Solo enlace (2) | Ferretería Ibérica Madrid y Bixoto (con [importación a mano](#importar-a-mano)); Bixoto bloquea la IP incluso con una sola consulta automática desde un Chrome real (probado el 7/11/2026), así que no se consulta nunca de forma automática |
+| ✅ Funcionan | Juegos de la Mesa Redonda, Zacatrus, Jugamos Una, Jugamos Otra, El Taller del Modelista, Mathom, Tablerum, Outlet Games, Ludus Belli, Bandua, Goblin Trader, Gameria, Más que Oca, Turol Games, Maldito Games, Planeton Games, Dracotienda, Dynos, **Amazon**; y de las añadidas el 17/11: Alcalá Comics, Comic Stores, Customeeple, Dragones y Losetas, EcoMimos, EGD Games, Empire Games, En Portada Comics, Espacio de Juegos, Generación X, Gigamesh, Homelands, Juegos de mesa y rol, Kame Kame, **Kaufland**, La Cueva Roja, Ludosaurus, Mono de Juegos, Ocio Central, Oz Juegos, Play Planet, Player vs Player, Quinto Elemento, Rampi Games, Santuario Games, Shuriken64 y Tu Juego de Mesa |
+| ➖ Responden, sin el producto probado | Tiendas MGI, Outlet-PC, 4 Dados, Akira Comics, Arcadia Comics, Don Dino, Joker Comics, N'Only Games, Tira y Mueve |
+| 🔗 Solo enlace | Ferretería Ibérica Madrid y Bixoto (con [importación a mano](#importar-a-mano)); Cuarto de Juegos, Doctor Panush y Mi Juego Bonito (responden 429), Arigatô Sevilla (error 500); Kinuma, Padis, Elkar, Ludoteca Maldita y Dados y cubitos (buscan con JavaScript sin cambiar la dirección); Buy Meeples (su página cuelga Chrome) |
+| ⛔ Bloqueada | Dungeon Marvels (desde el 9/11; se prueba sola cada 6 h) |
+| ❌ No añadidas | SomosJuegos, JugarXJugar y Warmus Games cortan la conexión a los programas; Ágora Comic falla al conectar |
 | 🛒 Segunda mano | Vinted y Milanuncios funcionan; Wallapop y eBay, solo enlace |
+
+Kaufland pide a veces una comprobación humana: con «abrir una ventana» activado en Ajustes → Navegador, la resuelves tú en la ventana de Chrome y la sesión queda guardada.
 
 ## Archivos locales
 
@@ -312,12 +321,12 @@ permitir_acceso_movil.bat     abre el cortafuegos para tu red local (pide admini
 python -m unittest discover -s tests
 ```
 
-227 pruebas, sin red. Cubren las reglas de aviso (objetivo de la búsqueda y del producto, media histórica, no repetir, reaviso, limpieza de obsoletos, tienda caída frente a tienda sin el producto), qué vigilada cubre cada objetivo, editar o borrar una vigilada mientras se revisa, el historial por producto, las órdenes del bot y los mensajes largos de Telegram, la escritura segura de los archivos y los cambios de tiendas durante una búsqueda, los errores del servidor, el tope de páginas y las revisiones que fallan, los precios con punto de miles, el extractor (precios tachados y con descuento, tarjetas que no se mezclan con la siguiente, texto oculto, títulos recortados, preventas, estados de segunda mano, páginas siguientes, datos de producto, envío), el motor (paginación, filtros, total con envío, mínimo histórico, historial), la búsqueda abierta, el filtro de IP y el PIN, la importación a mano y las búsquedas guardadas.
+383 pruebas, sin red. Cubren las reglas de aviso (objetivo de la búsqueda y del producto, media histórica, no repetir, reaviso, limpieza de obsoletos, tienda caída frente a tienda sin el producto), qué vigilada cubre cada objetivo, editar o borrar una vigilada mientras se revisa, el historial por producto, las órdenes del bot y los mensajes largos de Telegram, la escritura segura de los archivos y los cambios de tiendas durante una búsqueda, los errores del servidor, el tope de páginas y las revisiones que fallan, los precios con punto de miles, el extractor (precios tachados y con descuento, tarjetas que no se mezclan con la siguiente, texto oculto, títulos recortados, preventas, estados de segunda mano, páginas siguientes, datos de producto, envío), el motor (paginación, filtros, total con envío, mínimo histórico, historial), la búsqueda abierta, el filtro de IP y el PIN, la importación a mano y las búsquedas guardadas.
 
 ## Limitaciones conocidas
 
 - Las revisiones programadas solo se ejecutan **mientras BuscaTron esté abierto**: activa el arranque con Windows para que lo esté siempre.
-- No reconoce «el mismo producto» entre tiendas: filtra por palabras. Usa «Descartar» para quitar accesorios, packs o ediciones que no te interesan, y un precio mínimo para los productos que se llaman igual que tu juego.
+- No reconoce «el mismo producto» entre tiendas con certeza: agrupa por palabras. El tipo de producto se deduce del título, así que una tienda que no diga «expansión» o «fundas» lo deja como juego base. Usa «Descartar» o «Qué tipo de producto vigilar» para lo que no te interese, y un precio mínimo para los productos que se llaman igual que tu juego.
 - Amazon se consulta solo en su sección **«Juguetes y juegos»** (`&i=toys` en su dirección de búsqueda): sin ella, «Vantage» devolvía 166 relojes, protectores y coches y el juego ni aparecía. Para los juegos mal clasificados (Eternal Decks no está en esa sección) se lee además **una página de repaso** en todas las secciones, por relevancia, de la que solo se toman los productos cuyo título dice que son un juego («juego», «game», «cartas», «expansión», «tablero»…). Si buscas otras cosas en Amazon, quita `&i=toys` de su dirección en «Editar la lista de tiendas».
 - Las tiendas cambian su web de vez en cuando y su lector puede dejar de funcionar. La web indica qué tiendas no han respondido.
 - Ferretería Ibérica, Wallapop y eBay bloquean cualquier acceso automático: solo se ofrece su enlace y, para ellas, la [importación a mano](#importar-a-mano). Amazon solo responde a un navegador real, así que necesita el [navegador opcional](#navegador-opcional) (Playwright y Chrome o Edge) y puede volver a pedir una comprobación humana si lo considera sospechoso.
