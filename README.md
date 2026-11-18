@@ -6,7 +6,7 @@ Buscador y vigilante de precios **local** para tiendas online españolas, centra
 - **Datos en vivo**: no usa cachés ni comparadores intermedios, así que el precio es el que ves en la tienda.
 - **Tus datos se quedan en tu equipo**: lista de tiendas, historial y tokens se guardan en archivos locales que no se suben al repositorio.
 
-> Estado: **versión funcional** (v0.18.0). Consulta el [CHANGELOG](CHANGELOG.md).
+> Estado: **versión funcional** (v0.18.1). Consulta el [CHANGELOG](CHANGELOG.md).
 
 ## En el móvil y en el PC
 
@@ -76,7 +76,7 @@ Pulsa «Vigilar esta búsqueda» (o crea una en la pestaña Vigiladas) y deja qu
 - **Comprueba la ficha del producto** antes de avisar: si su ficha dice que está agotado o en preventa (y no las incluyes), no avisa, aunque el listado de la tienda no lo diga. También el idioma (ver [Idioma de los juegos](#idioma-de-los-juegos)): un juego en francés no te avisa aunque su título esté en español.
 - No repite avisos: solo vuelve a avisar si el precio baja más, o pasados 30 días.
 - **Qué tipo de producto vigilar**: juego base, expansiones (también packs de héroe, villano, escenario o campaña), complementos (add-on, personaje, promo) y accesorios (fundas, tapetes, organizadores). Se deduce del título; lo que no dice qué es cuenta como juego base, así que nunca se descarta un juego por no llamarse «juego». Se aplica también a lo ya guardado.
-- **Telegram solo cuando cambian los límites**: te escribe si Amazon baja de su mínimo histórico o sube de su máximo (según camelcamelcamel) y cuando se cumple un objetivo; nunca manda resúmenes. Ojo: «Precio máximo» solo filtra resultados; para que te avise hay que rellenar «Avisarme si cuesta como mucho» o el % de bajada.
+- **Telegram solo cuando cambian los límites**: te escribe si Amazon baja de su mínimo histórico o sube de su máximo (según camelcamelcamel) y cuando se cumple un objetivo; nunca manda resúmenes ni avisos de servicio (tiendas bloqueadas o precios pegados que caducan: eso se ve en la web). Ojo: «Precio máximo» solo filtra resultados; para que te avise hay que rellenar «Avisarme si cuesta como mucho» o el % de bajada.
 - **Revisión automática**: cada seguimiento se revisa solo cada X horas (por defecto 12) mientras BuscaTron esté en marcha, y la tarjeta muestra cuándo toca la próxima. Si el equipo estaba apagado, la revisión pendiente se lanza al encender, en menos de un minuto. Cada revisión actualiza los precios y el historial.
 - **Estado de cada revisión** en su tarjeta: «3 productos (10 ofertas), 0 avisos nuevos, 1 tiendas sin respuesta». «Sin respuesta» son solo las tiendas que fallaron (sin conexión, captcha, error de su web); una tienda que respondió pero no tiene ese producto no cuenta. Si la revisión entera falla, se anota «la revisión falló: …» y espera a su hora, en lugar de repetirse cada minuto contra todas tus tiendas.
 - **🔄 Buscar ahora** (una revisión inmediata, con sus avisos; no quita la pausa), **⏸️ Pausar / ▶️ Reanudar** (al reanudar, si ya le tocaba, se revisa en menos de un minuto), editar y borrar (al borrar un seguimiento se borran también sus avisos; el historial de precios se conserva).

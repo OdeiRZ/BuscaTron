@@ -3,6 +3,11 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.18.1] - 2026-11-18
+
+### Cambiado
+- **Telegram solo para tus juegos:** ya no avisa de que una tienda te bloqueó o vuelve a responder, ni de que caducan los precios pegados a mano. Solo llegan los cambios de límites de Amazon y los objetivos. Esos estados se siguen viendo en Ajustes → Estado de las tiendas y en «Tiendas que tienes que mirar tú».
+- **Generalistas añadidas:** El Corte Inglés, Fnac, PcComponentes, Toys "R" Us, Juguettos, GAME y Casa del Libro (96 tiendas). Junto con Carrefour, Aliexpress y Kaufland cuentan como generalistas: en una búsqueda de una sola palabra solo admiten títulos de juego.
 ## [0.18.0] - 2026-11-18
 
 ### Cambiado: lavado de cara completo

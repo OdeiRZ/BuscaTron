@@ -91,19 +91,17 @@ class PaginasLimitadas(ConArchivos):
 
 
 class Recordatorio(ConArchivos):
-    def test_si_telegram_falla_se_reintenta(self):
+    def test_ya_no_se_avisa_por_telegram(self):
         from buscatron import importar, programador
         ajustes.guarda({"telegram_token": "t", "telegram_chat": "1"})
         cfg.guarda([{"host": "f.es", "activa": True, "plantilla": "https://f.es/?q={q}", "manual": True}])
         importar.guarda("f.es", "civil war", [{"titulo": "Civil War", "precio": 30}], "https://f.es/?q=civil+war")
         with bd.conecta() as c:
             c.execute("UPDATE importados SET ts = ts - 65 * 3600")         # caduca dentro de 7 h
-        with mock.patch.object(programador.notifica, "envia", lambda *a: {"telegram": "sin conexión"}):
+        enviados = []
+        with mock.patch("buscatron.notifica.envia", new=lambda *a: enviados.append(a) or {"telegram": None}):
             programador.recordatorios()
-        self.assertEqual(len(importar.por_caducar()), 1)                   # no se da por avisado
-        with mock.patch.object(programador.notifica, "envia", lambda *a: {"telegram": None}):
-            programador.recordatorios()
-        self.assertEqual(importar.por_caducar(), [])
+        self.assertEqual(enviados, [])                                     # por Telegram solo límites y objetivos
 
 
 class PreciosConMiles(unittest.TestCase):

@@ -120,7 +120,7 @@ class VueltaSuave(unittest.TestCase):
         with mock.patch.object(programador.cfg, "carga", lambda: [dict(t, bloqueo=dict(t["bloqueo"])) if t.get("bloqueo") else dict(t) for t in lista]), \
                 mock.patch.object(programador.cfg, "guarda", lambda l: guardada.append(l)), \
                 mock.patch.object(programador.fetch, "get", lambda u, timeout=20: (200, "")), \
-                mock.patch.object(programador.notifica, "envia", lambda *a: {}):
+                mock.patch("buscatron.notifica.envia", new=lambda *a: {}):
             programador.bloqueadas()
         t = guardada[-1][0]
         self.assertTrue(t["activa"])

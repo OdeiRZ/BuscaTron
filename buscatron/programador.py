@@ -4,7 +4,7 @@ import threading
 import time
 import traceback
 
-from . import ajustes, bd, fetch, importar, notifica, seguimiento, tiendas as cfg
+from . import ajustes, bd, fetch, seguimiento, tiendas as cfg
 
 LIMPIEZA_HORAS = 24
 BLOQUEO_HORAS = 6          # una tienda que bloqueó tu conexión se prueba con UNA petición a su portada cada tanto
@@ -38,10 +38,7 @@ def bloqueadas():
                         x["bloqueo"]["probado"] = time.time()
             cfg.guarda(lista)
         nombre = t.get("nombre") or t["host"]
-        print(f"{nombre}:", "vuelve a responder; reactivada" if vuelve else "sigue sin responder")
-        if vuelve:
-            notifica.envia(["telegram"], f"BuscaTron · {nombre}",
-                           f"{nombre} vuelve a responder: la he reactivado y entra otra vez en tus búsquedas y vigiladas.")
+        print(f"{nombre}:", "vuelve a responder; reactivada" if vuelve else "sigue sin responder")   # sin Telegram: solo límites y objetivos
 
 
 def vigiladas(ahora=None, hilo=False):
@@ -75,21 +72,8 @@ def _revisa(sid):
 
 
 def recordatorios():
-    a = ajustes.carga()
-    if not (a.get("telegram_token") and a.get("telegram_chat")):
-        return
-    lista = {t["host"]: t for t in cfg.carga()}
-    for host, ts, queda, consulta in importar.por_caducar():
-        t = lista.get(host, {})
-        nombre = t.get("nombre") or host
-        enlace = cfg.url_busqueda(t["plantilla"], consulta) if t.get("plantilla") else ""
-        horas = max(1, round(queda / 3600))
-        envio = notifica.envia(["telegram"], f"BuscaTron · {nombre}",
-                       f"Los precios que pegaste a mano de {nombre} caducan dentro de {horas} h. Si quieres que sigan contando en tus "
-                       f"búsquedas y avisos, vuelve a pegarlos («Tiendas que tienes que mirar tú» → «Pegar resultados»)."
-                       + (f"\n{enlace}" if enlace else ""))
-        if envio.get("telegram") is None:          # si no llegó (sin conexión…), se reintenta en la siguiente vuelta
-            importar.marca_recordado(host, ts)
+    """Desactivado: por Telegram solo van los cambios de límites y objetivos de tus juegos (lo pidió así). Los precios pegados
+    a mano siguen caducando igual y la web lo muestra en «Tiendas que tienes que mirar tú»."""
 
 
 def limpieza():

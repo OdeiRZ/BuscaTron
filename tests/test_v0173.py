@@ -24,16 +24,16 @@ class TiendaQueTeBloqueo(ConArchivos):
                 raise respuesta
             return respuesta, ""
         with mock.patch.object(programador.fetch, "get", get), \
-                mock.patch.object(programador.notifica, "envia", lambda *a: avisos.append(a)):
+                mock.patch("buscatron.notifica.envia", new=lambda *a: avisos.append(a)):
             programador.bloqueadas()
         return pedidas, avisos, {t["host"]: t for t in cfg.carga()}
 
-    def test_si_vuelve_se_reactiva_y_avisa(self):
+    def test_si_vuelve_se_reactiva_sin_telegram(self):
         pedidas, avisos, l = self._vuelta(200)
         self.assertEqual(pedidas, ["https://dm.es/"])                 # una sola petición, a la portada
         self.assertTrue(l["dm.es"]["activa"])
         self.assertNotIn("bloqueo", l["dm.es"])
-        self.assertIn("vuelve a responder", avisos[0][2])
+        self.assertEqual(avisos, [])                                  # por Telegram solo límites y objetivos
 
     def test_si_sigue_sin_responder_no_se_toca_y_espera_6_h(self):
         pedidas, avisos, l = self._vuelta(TimeoutError("timed out"))

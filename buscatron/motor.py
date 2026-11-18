@@ -65,11 +65,8 @@ def bloquea(h):
         c.execute("DELETE FROM caidas WHERE host=?", (h,))
     _caidas.pop(h, None)
     _rechazos.pop(h, None)
-    nombre = t.get("nombre") or h
-    from . import notifica
-    notifica.envia(["telegram"], f"BuscaTron · {nombre}",
-                   f"{nombre} sigue rechazando tus consultas: la he desactivado para no alargar el bloqueo. Probaré su portada "
-                   f"cada pocas horas y, cuando vuelva a responder, la reactivo y te aviso.")
+    # Sin aviso por Telegram: allí solo van los cambios de límites y objetivos de tus juegos. El bloqueo se ve en
+    # Ajustes → Estado de las tiendas.
 
 
 def registra_rechazo(h, err):
