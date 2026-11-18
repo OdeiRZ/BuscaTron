@@ -3,6 +3,15 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.18.0] - 2026-11-18
+
+### Cambiado: lavado de cara completo
+- **Identidad propia de juegos de mesa:** papel cálido con trama de puntos, cabecera en tinta, ficha naranja como color de acción y títulos en Bricolage Grotesque. Logo nuevo (un meeple con lupa) en la web, el icono del móvil y el de la bandeja de Windows. Modo oscuro a juego.
+- **Buscar más directo:** buscador grande con lupa, opciones rápidas en una fila y, en vez de las 70 fichas de tiendas, una línea «Buscando en X de Y tiendas · Gestionar tiendas». En el móvil, al buscar, la pantalla baja sola a los resultados.
+- **Tiendas en Ajustes:** «🏪 Tus tiendas» reúne las fichas (con su propio desplazamiento), añadir una tienda y editar o quitar tiendas.
+- **Resultados más legibles:** precio grande a la derecha, tienda destacada en verde azulado, el más barato con franja verde, y tarjetas más compactas en el móvil.
+- **Navegación:** abajo en el móvil, con la pestaña activa resaltada; en el PC, pestañas arriba fijas bajo la cabecera, con el buscador fijo a la izquierda al bajar por los resultados.
+- Hojas (historial, referencia, pegar resultados) que suben desde abajo en el móvil, desplegables con flecha propia, campos con foco visible, selectores con flecha a juego, y animaciones que respetan «reducir movimiento».
 ## [0.17.45] - 2026-11-18
 
 ### Cambiado

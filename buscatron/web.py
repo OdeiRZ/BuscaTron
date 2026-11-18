@@ -30,11 +30,11 @@ VIDA_TRABAJO = 3600           # segundos que se guarda el resultado de una búsq
 
 LOGIN = """<!doctype html><html lang="es"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1"><title>BuscaTron · Acceso</title>
-<style>:root{color-scheme:light dark;--bg:#f3f4f8;--card:#fff;--tx:#1a1d26;--bd:#e5e7ee;--ac:#4f46e5}
-@media(prefers-color-scheme:dark){:root{--bg:#0f1117;--card:#181b24;--tx:#e8eaf0;--bd:#2a2f3c;--ac:#8b93ff}}
+<style>:root{color-scheme:light dark;--bg:#f5efe4;--card:#fffcf6;--tx:#211c16;--bd:#e3d8c5;--ac:#c4421b}
+@media(prefers-color-scheme:dark){:root{--bg:#14120f;--card:#201c17;--tx:#f1eadf;--bd:#332d25;--ac:#ff7f50}}
 *{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;background:var(--bg);color:var(--tx);font:16px system-ui,sans-serif;padding:16px}
-form{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:22px;width:100%;max-width:340px;text-align:center}
-h1{margin:0 0 4px;font-size:22px}p{margin:0 0 16px;color:#6b7280;font-size:14px}
+form{background:var(--card);border:1px solid var(--bd);border-radius:18px;padding:22px;width:100%;max-width:340px;text-align:center}
+h1{margin:0 0 4px;font-size:22px}p{margin:0 0 16px;color:#8a7f6f;font-size:14px}
 input,button{width:100%;min-height:46px;border-radius:10px;font:inherit;font-size:18px}
 input{border:1px solid var(--bd);background:var(--bg);color:var(--tx);text-align:center;letter-spacing:4px;padding:0 12px}
 button{margin-top:10px;border:0;background:var(--ac);color:#fff;font-weight:600;cursor:pointer}#e{color:#b42318;min-height:20px;margin-top:8px;font-size:14px}</style></head>
@@ -57,7 +57,7 @@ def _archivo(nombre, tipo):
 
 
 MANIFIESTO = {"name": "BuscaTron", "short_name": "BuscaTron", "description": "Compara precios en tus tiendas",
-              "start_url": "/", "scope": "/", "display": "standalone", "background_color": "#0f1117", "theme_color": "#4f46e5", "lang": "es",
+              "start_url": "/", "scope": "/", "display": "standalone", "background_color": "#1f2a30", "theme_color": "#1f2a30", "lang": "es",
               "icons": [{"src": "/icono-192.png", "sizes": "192x192", "type": "image/png"},
                         {"src": "/icono-512.png", "sizes": "512x512", "type": "image/png"},
                         {"src": "/icono-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}]}
