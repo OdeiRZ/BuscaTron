@@ -3,6 +3,11 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.19.2] - 2026-11-19
+
+### Corregido
+- Una tienda «solo enlace» sin dirección de búsqueda (Dynos) se seguía consultando (y daba 403) y no salía lo que pegabas de ella: ahora no se consulta, su enlace es la portada y lo pegado aparece en las búsquedas y las vigiladas.
+
 ## [0.19.1] - 2026-11-19
 
 ### Corregido

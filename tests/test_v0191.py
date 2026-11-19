@@ -20,5 +20,26 @@ class MarcaEnSuLinea(unittest.TestCase):
         self.assertEqual([x["titulo"] for x in r], ["Pizarra Vantage 120x90"])
 
 
+class ManualSinPlantilla(unittest.TestCase):
+    """Una tienda «solo enlace» sin dirección de búsqueda (Dynos) se consultaba igual y no salía lo pegado."""
+
+    def test_no_se_consulta_y_salen_los_pegados(self):
+        import os
+        import tempfile
+        from unittest import mock
+        from buscatron import ajustes, bd, motor
+        d = tempfile.mkdtemp()           # base y ajustes temporales: la búsqueda guarda precios
+        t = {"host": "www.dynos.es", "nombre": "Dynos", "activa": True, "plantilla": None, "manual": True, "tipo": "tienda"}
+        pegado = {"titulo": "Juego De Mesa Marvel Champions Hulk", "precio": 13.32, "url": "https://www.dynos.es/?btitem=x",
+                  "agotado": False, "preventa": False, "estado": "", "importado": 1.0}
+        with mock.patch.object(bd, "RUTA", os.path.join(d, "t.db")), mock.patch.object(ajustes, "RUTA", os.path.join(d, "c.json")), \
+             mock.patch.object(motor.cfg, "carga", return_value=[t]), \
+             mock.patch.object(motor.importar, "vigentes", return_value=[dict(pegado)]), \
+             mock.patch.object(motor, "_tienda_consulta", side_effect=AssertionError("no debe consultarse")):
+            res, inf = motor.buscar("marvel champions", hosts=["www.dynos.es"], castellano=False)
+        self.assertEqual(inf["www.dynos.es"]["manual"], "https://www.dynos.es/")
+        self.assertEqual([x["precio"] for x in res], [13.32])
+
+
 if __name__ == "__main__":
     unittest.main()

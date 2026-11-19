@@ -673,7 +673,8 @@ def buscar(consulta, incluir="", excluir="", ocultar_agotados=True, hosts=None, 
                and not t.get("bloqueo")]        # bloqueada: ni aunque la pida una página abierta desde antes
     if not segunda_mano:
         activas = [t for t in activas if t.get("tipo") != "segunda_mano"]
-    manuales = [t for t in activas if t.get("manual") and t.get("plantilla")]
+    # «solo enlace» aunque no tenga dirección de búsqueda (su enlace es la portada): si no, se consultaba igual
+    manuales = [t for t in activas if t.get("manual")]
     activas = [t for t in activas if t not in manuales]
     por_host = {t["host"]: t for t in lista}
     inc = extract.normaliza(incluir).split()
@@ -724,7 +725,8 @@ def buscar(consulta, incluir="", excluir="", ocultar_agotados=True, hosts=None, 
         informe[host] = {"encontrados": kept, "error": err if not kept else None, "brutos": len(items), "error_tienda": err,
                          "caida": es_caida(err) and not kept}
     for t in manuales:
-        informe[t["host"]] = {"encontrados": 0, "error": None, "manual": cfg.url_busqueda(t["plantilla"], consulta)}
+        enlace = cfg.url_busqueda(t["plantilla"], consulta) if t.get("plantilla") else f"https://{t['host']}/"
+        informe[t["host"]] = {"encontrados": 0, "error": None, "manual": enlace}
         previos = [x for x in importar.vigentes(t["host"], consulta) if pasa(x)]      # lo que el usuario pegó a mano
         for x in previos:
             x["tienda"], x["origen"] = t["host"], t.get("tipo", "tienda")
