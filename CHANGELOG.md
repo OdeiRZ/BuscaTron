@@ -3,6 +3,11 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.19.1] - 2026-11-19
+
+### Corregido
+- «Pegar resultados» no encontraba nada en tiendas que ponen la marca en su propia línea (Ferretería Ibermadrid: «15%», «VANTAGE», nombre, precio) si buscabas la marca: ahora la marca se une al nombre que la sigue.
+
 ## [0.19.0] - 2026-11-19
 
 ### Cambiado

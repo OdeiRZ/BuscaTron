@@ -23,6 +23,28 @@ def _sin_precios(linea):
     return " ".join(t.split()).strip(" -–·|:")
 
 
+def _junta_marca(lineas, palabras):
+    """Tiendas con la marca en su propia línea («15%», «VANTAGE», «Pizarra blanca…», «76,51 € 90,01 €»): si buscas la
+    marca, ninguna línea de nombre la lleva y no salía nada. La marca suelta se une al nombre que la sigue; si detrás
+    viene ya el precio, la marca sola hace de nombre."""
+    q = " ".join(palabras)
+    out, i = [], 0
+    while i < len(lineas):
+        l = lineas[i]
+        if extract.normaliza(l).strip() == q and not _precios(l):
+            sig = lineas[i + 1] if i + 1 < len(lineas) else ""
+            if sig and not _precios(sig) and not all(extract.encaja(extract.normaliza(sig), w) for w in palabras):
+                out.append(f"{l} {sig}")
+                i += 2
+                continue
+            out.append(f"{l} (sin nombre en lo pegado)")    # distinto de la búsqueda: así cuenta como nombre
+            i += 1
+            continue
+        out.append(l)
+        i += 1
+    return out
+
+
 def parsea(texto, consulta, base=""):
     """Productos de un texto pegado: [{titulo, precio, agotado, preventa, estado, url?}]."""
     palabras = extract.normaliza(consulta).split()
@@ -30,6 +52,7 @@ def parsea(texto, consulta, base=""):
         return extract.extrae(texto, base or "https://tienda.invalid/", consulta)
     lineas = [" ".join(l.split()) for l in texto.splitlines()]
     lineas = [l for l in lineas if l]
+    lineas = _junta_marca(lineas, palabras)
 
     def es_titulo(l):
         n = extract.normaliza(_sin_precios(l))
