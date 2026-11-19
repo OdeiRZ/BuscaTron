@@ -38,5 +38,32 @@ class Pegados(unittest.TestCase):
         self.assertEqual([x["titulo"] for x in res], ["Marvel Champions Hulk"])
 
 
+
+class IdiomaDeLaFicha(unittest.TestCase):
+    """En la 0.19.6 se borró por error la tienda de verifica_idioma: el fallo se tragaba y nunca se leía el idioma."""
+
+    def setUp(self):
+        d = tempfile.mkdtemp()
+        self.parches = [mock.patch.object(bd, "RUTA", os.path.join(d, "t.db")), mock.patch.object(ajustes, "RUTA", os.path.join(d, "c.json"))]
+        for p in self.parches:
+            p.start()
+
+    def tearDown(self):
+        for p in reversed(self.parches):
+            p.stop()
+
+    def test_lee_la_ficha_de_una_tienda_normal(self):
+        lista = [{"host": "t.es", "js": False}]
+        html = "<html><body><table><tr><th>Idioma</th><td>Francés</td></tr></table></body></html>"
+        with mock.patch.object(motor.fetch, "get", return_value=(200, html)) as g:
+            motor.verifica_idioma({"url": "https://t.es/p/1", "tienda": "t.es"}, lista)
+        g.assert_called_once()
+
+    def test_no_consulta_una_tienda_solo_enlace(self):
+        with mock.patch.object(motor.fetch, "get", side_effect=AssertionError("no debe consultarse")):
+            self.assertIsNone(motor.verifica_idioma({"url": "https://bixoto.com/p/1", "tienda": "bixoto.com"},
+                                                    [{"host": "bixoto.com", "manual": True}]))
+
+
 if __name__ == "__main__":
     unittest.main()

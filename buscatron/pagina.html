@@ -739,7 +739,7 @@ function muestra(r,body,guardada){
   if($('ir-manuales'))$('ir-manuales').onclick=()=>$('manuales').scrollIntoView({behavior:'smooth',block:'start'});
   if($('orden-res'))$('orden-res').onchange=()=>{ordenRes=$('orden-res').value;try{localStorage.setItem('bt-orden-res',ordenRes)}catch(e){}pintaLista();};
   if($('actualizar'))$('actualizar').onclick=()=>$('f').requestSubmit();
-  if(guardada)refrescaPegados(tiendas.filter(t=>t.activa&&t.manual).map(t=>t.host));
+  if(guardada&&manuales.length)refrescaPegados(manuales.map(([h])=>h));     // solo las tiendas de esa búsqueda
   pintaLista();
   document.querySelectorAll('#out [data-pegar]').forEach(b=>b.onclick=()=>abrePegar(b.dataset.pegar));
   document.querySelectorAll('#out [data-add]').forEach(g=>g.onclick=async()=>{const r2=await api('tiendas',{anadir:g.dataset.add});

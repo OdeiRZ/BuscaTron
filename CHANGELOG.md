@@ -3,6 +3,18 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.19.8] - 2026-11-19
+
+### Corregido
+- La comprobación del idioma en la ficha del producto fallaba en silencio desde la 0.19.6 (se borró por error una línea al proteger las tiendas «solo enlace»): en «solo castellano confirmado», Amazon y otras tiendas que traducen títulos no se podían confirmar. Además, nunca consulta una tienda «solo enlace».
+- Al abrir una búsqueda guardada solo se traen los pegados de las tiendas de esa búsqueda, no de todas.
+- Lo pegado y una revisión de la misma vigilada ya no pueden ir a la vez (avisos repetidos): se reservan como hace una revisión.
+- Al pegar la dirección de una búsqueda para una tienda se elige el parámetro más claro (search, q…) y con letras, no un orden o una página.
+- Las direcciones de lo pegado antes de la 0.19.7 se han pasado al formato nuevo, para que repegar no vuelva a avisar de lo mismo.
+
+### Cambiado
+- Dynos: su enlace usa el buscador Doofinder de la tienda.
+
 ## [0.19.7] - 2026-11-19
 
 ### Añadido

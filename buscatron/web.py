@@ -150,8 +150,8 @@ def estado_trabajo(tid):
 
 
 # Parámetros con los que las tiendas suelen llevar lo buscado en la dirección
-PARAM_BUSQUEDA = ("q", "s", "k", "search", "search_query", "search_value", "query", "keywords", "keyword", "buscar", "busqueda",
-                  "txtbusqueda", "term", "text", "search_text", "_nkw")
+PARAM_BUSQUEDA = ("search_query", "search_value", "search_text", "search", "query", "keywords", "keyword", "txtbusqueda",
+                  "busqueda", "buscar", "q", "_nkw", "term", "k", "s", "text")       # los más claros primero
 
 
 def _con_hueco(entrada):
@@ -160,11 +160,13 @@ def _con_hueco(entrada):
     if not m:
         return entrada
     partes = m.group(2).split("&")
-    for i, par in enumerate(partes):
-        k, _, v = par.partition("=")
-        if k.lower() in PARAM_BUSQUEDA and v.strip():
-            partes[i] = k + "={q}"
-            return m.group(1) + "&".join(partes) + (m.group(3) or "")
+    claves = [p.partition("=")[0].lower() for p in partes]
+    for nombre in PARAM_BUSQUEDA:
+        for i, par in enumerate(partes):
+            k, _, v = par.partition("=")
+            if claves[i] == nombre and re.search(r"[A-Za-z]", v):     # con letras: no un orden o una página
+                partes[i] = k + "={q}"
+                return m.group(1) + "&".join(partes) + (m.group(3) or "")
     return entrada
 
 

@@ -332,6 +332,9 @@ def verifica_idioma(x, lista=None):
         f = c.execute("SELECT codigo, ts FROM idiomas WHERE url=?", (x["url"],)).fetchone()
     if f and time.time() - f["ts"] < 30 * 86400:
         return f["codigo"] or None
+    t = next((t for t in (lista or cfg.carga()) if t["host"] == x.get("tienda")), {})
+    if t.get("manual"):
+        return None                                       # tienda «solo enlace»: su ficha no se consulta nunca
     try:
         if t.get("js") and navegador.disponible() and ajustes.carga()["usar_navegador"]:
             st, html = navegador.get(x["url"], visible=False)
@@ -366,7 +369,6 @@ def ficha(x, lista=None):
         return {"idioma": f["idioma"] if f["idioma"] in ("es", "en", "otro") else None,
                 "agotado": None if f["agotado"] is None else bool(f["agotado"]),
                 "preventa": None if f["preventa"] is None else bool(f["preventa"])}
-    t = next((t for t in (lista or cfg.carga()) if t["host"] == x.get("tienda")), {})
     try:
         if t.get("js") and navegador.disponible() and ajustes.carga()["usar_navegador"]:
             st, html = navegador.get(x["url"], visible=False)

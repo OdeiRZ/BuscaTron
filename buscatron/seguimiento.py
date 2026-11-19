@@ -276,41 +276,52 @@ def avisa_pegados(host, enviar=True):
     se leen fichas. Devuelve el número de avisos nuevos."""
     with bd.conecta() as c:
         segs = [dict(r) for r in c.execute("SELECT * FROM seguimientos WHERE activo=1 ORDER BY id")]
-    with _cerrojo:
-        segs = [g for g in segs if g["id"] not in _en_curso]
     total = 0
     for seg in segs:
-        opc = opciones_de(seg)
-        busqueda = {k: v for k, v in opc.items() if k not in NO_SON_DE_BUSQUEDA}
-        busqueda["abierta"] = False
-        res, _ = motor.buscar(seg["consulta"], seg["incluir"], seg["excluir"], bool(seg["sin_agotados"]), [host],
-                              seg["pmin"], seg["pmax"], seg["id"], castellano=bool(seg["castellano"]), **busqueda)
-        res = [x for x in res if tipo_vale(opc, x["titulo"])]
-        modo = motor.modo_idioma(bool(seg["castellano"]), opc.get("idioma"))
-        ts, nuevos = time.time(), []
-        with bd.conecta() as c:
-            for x in res:
-                x["_ts"] = ts
-                motivo = _motivo(c, seg, x)
-                if not motivo or (x.get("agotado") and seg["sin_agotados"]) or (x.get("preventa") and not opc.get("preventas")):
-                    continue
-                if modo != "todos" and not motor.permite(x.get("idioma", "?"), x.get("idioma_seguro", False), modo):
-                    continue
-                if modo != "todos" and not (x.get("idioma") == "es" and x.get("idioma_seguro")):
-                    motivo += " · idioma sin confirmar"
-                if x.get("importado"):
-                    motivo += f" · precio pegado a mano {_edad(x['importado'])}, sin comprobar en directo"
-                if not _apunta_aviso(c, seg["id"], x, ts):
-                    continue
-                c.execute("INSERT INTO avisos(ts,seg_id,titulo,tienda,url,precio,motivo) VALUES(?,?,?,?,?,?,?)",
-                          (ts, seg["id"], x["titulo"], x["tienda"], x["url"], x["precio"], motivo))
-                nuevos.append({**x, "motivo": motivo})
-        total += len(nuevos)
-        if nuevos and enviar:
-            canales = [k for k in seg["canales"].split(",") if k in ("telegram", "correo")]
-            lineas = [linea_grupo(g, con_motivo=True) for g in agrupa(nuevos)[:10]]
-            notifica.envia(canales, f"BuscaTron · {seg['nombre']}", "\n\n".join(lineas))
+        with _cerrojo:          # como una revisión: si esa vigilada ya se está revisando, ella lo recoge
+            if seg["id"] in _en_curso:
+                continue
+            _en_curso[seg["id"]] = time.time()
+        try:
+            total += _avisa_pegados_en(seg, host, enviar)
+        finally:
+            with _cerrojo:
+                _en_curso.pop(seg["id"], None)
     return total
+
+
+def _avisa_pegados_en(seg, host, enviar):
+    """avisa_pegados para una vigilada. Devuelve el número de avisos nuevos."""
+    opc = opciones_de(seg)
+    busqueda = {k: v for k, v in opc.items() if k not in NO_SON_DE_BUSQUEDA}
+    busqueda["abierta"] = False
+    res, _ = motor.buscar(seg["consulta"], seg["incluir"], seg["excluir"], bool(seg["sin_agotados"]), [host],
+                          seg["pmin"], seg["pmax"], seg["id"], castellano=bool(seg["castellano"]), **busqueda)
+    res = [x for x in res if tipo_vale(opc, x["titulo"])]
+    modo = motor.modo_idioma(bool(seg["castellano"]), opc.get("idioma"))
+    ts, nuevos = time.time(), []
+    with bd.conecta() as c:
+        for x in res:
+            x["_ts"] = ts
+            motivo = _motivo(c, seg, x)
+            if not motivo or (x.get("agotado") and seg["sin_agotados"]) or (x.get("preventa") and not opc.get("preventas")):
+                continue
+            if modo != "todos" and not motor.permite(x.get("idioma", "?"), x.get("idioma_seguro", False), modo):
+                continue
+            if modo != "todos" and not (x.get("idioma") == "es" and x.get("idioma_seguro")):
+                motivo += " · idioma sin confirmar"
+            if x.get("importado"):
+                motivo += f" · precio pegado a mano {_edad(x['importado'])}, sin comprobar en directo"
+            if not _apunta_aviso(c, seg["id"], x, ts):
+                continue
+            c.execute("INSERT INTO avisos(ts,seg_id,titulo,tienda,url,precio,motivo) VALUES(?,?,?,?,?,?,?)",
+                      (ts, seg["id"], x["titulo"], x["tienda"], x["url"], x["precio"], motivo))
+            nuevos.append({**x, "motivo": motivo})
+    if nuevos and enviar:
+        canales = [k for k in seg["canales"].split(",") if k in ("telegram", "correo")]
+        lineas = [linea_grupo(g, con_motivo=True) for g in agrupa(nuevos)[:10]]
+        notifica.envia(canales, f"BuscaTron · {seg['nombre']}", "\n\n".join(lineas))
+    return len(nuevos)
 
 
 def tiendas_caidas(informe):
