@@ -3,6 +3,11 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.18.3] - 2026-11-19
+
+### Añadido
+- Arriba de los resultados, un atajo «Ir ↓» a las tiendas que tienes que mirar tú (con «📋 Pegar resultados»): la tarjeta va al final y con muchos resultados no se veía.
+
 ## [0.18.2] - 2026-11-19
 
 ### Añadido
