@@ -739,6 +739,7 @@ function muestra(r,body,guardada){
   if($('ir-manuales'))$('ir-manuales').onclick=()=>$('manuales').scrollIntoView({behavior:'smooth',block:'start'});
   if($('orden-res'))$('orden-res').onchange=()=>{ordenRes=$('orden-res').value;try{localStorage.setItem('bt-orden-res',ordenRes)}catch(e){}pintaLista();};
   if($('actualizar'))$('actualizar').onclick=()=>$('f').requestSubmit();
+  if(guardada)refrescaPegados(tiendas.filter(t=>t.activa&&t.manual).map(t=>t.host));
   pintaLista();
   document.querySelectorAll('#out [data-pegar]').forEach(b=>b.onclick=()=>abrePegar(b.dataset.pegar));
   document.querySelectorAll('#out [data-add]').forEach(g=>g.onclick=async()=>{const r2=await api('tiendas',{anadir:g.dataset.add});
@@ -1058,14 +1059,21 @@ function abrePegar(host){
     if(!r.importados){m.className='err';m.textContent=`No encontré ningún producto con «${consulta}» y su precio en lo que has pegado. Comprueba que copiaste la página de resultados de esa búsqueda.`;return;}
     cierraPegar();aviso(`${r.importados} producto${r.importados>1?'s':''} de ${nombreT(host)} guardado${r.importados>1?'s':''}`);
     // si hay resultados de esa misma búsqueda en pantalla, se mezclan al instante (es «solo enlace»: no hace ninguna petición)
-    if(!ultimoBody||!$('lista-res')||(ultimoBody.q||'').trim().toLowerCase()!==consulta.toLowerCase())return;
-    const r2=await api('buscar',{...ultimoBody,tiendas:[host],top:200,guardar:false,abierta:false});
-    if(r2.error)return;
-    ultimos=ultimos.filter(x=>x.tienda!==host).concat(r2.resultados);
-    ultimos.sort((a,b)=>(a.agotado-b.agotado)||(ultimoBody.con_envio?a.total-b.total:a.precio-b.precio));
-    if(ultimoId)api('busquedas',{accion:'actualizar',id:ultimoId,resultados:ultimos});
-    pintaLista();
-    const inf=(r2.informe[host]||{}),sp=$('imp-'+host);if(sp)sp.textContent=inf.importados?`${inf.importados} pegado${inf.importados>1?'s':''} ${relativo(inf.importado_ts)}`:'';};}
+    if(ultimoBody&&ultimoBody.q&&$('lista-res'))refrescaPegados([host]);};}
+
+// Lo pegado entra en la lista que tienes en pantalla sin repetir la búsqueda: se piden solo las tiendas «solo enlace»
+// (no hacen ninguna petición: devuelven lo pegado que encaje) y se reagrupa todo con las reglas actuales.
+async function refrescaPegados(hosts){
+  const body=ultimoBody;if(!hosts.length||!body||!body.q)return;
+  const r2=await api('buscar',{...body,tiendas:hosts,top:200,guardar:false,abierta:false});
+  if(r2.error||body!==ultimoBody)return;
+  ultimos=ultimos.filter(x=>!hosts.includes(x.tienda)).concat(r2.resultados);
+  const g=await api('agrupar',{q:body.q,alguna:body.alguna||'',titulos:ultimos.map(x=>x.titulo)});
+  if(g.grupos&&body===ultimoBody)ultimos.forEach((x,i)=>{x.grupo=g.grupos[i].grupo;x.clave=g.grupos[i].clave;});
+  ultimos.sort((a,b)=>(a.agotado-b.agotado)||(body.con_envio?a.total-b.total:a.precio-b.precio));
+  if(ultimoId)api('busquedas',{accion:'actualizar',id:ultimoId,resultados:ultimos});
+  pintaLista();
+  hosts.forEach(h=>{const inf=(r2.informe[h]||{}),sp=$('imp-'+h);if(sp)sp.textContent=inf.importados?`${inf.importados} pegado${inf.importados>1?'s':''} ${relativo(inf.importado_ts)}`:'';});}
 function graficaSVG(p){
   const W=320,H=170,L=46,R=12,T=14,B=26,xs=p.map(q=>q.ts),ys=p.map(q=>q.precio);
   let x0=Math.min(...xs),x1=Math.max(...xs),y0=Math.min(...ys),y1=Math.max(...ys);
@@ -1208,7 +1216,7 @@ async function revisa(id,b){esperando[id]=(segs.find(x=>x.id===id)||{}).ultima||
 
 /* avisos */
 const ORDEN_AV={reciente:'Más recientes primero',barato:'Precio: de menor a mayor',caro:'Precio: de mayor a menor',nombre:'Nombre: de la A a la Z',tienda:'Tienda: de la A a la Z'};
-let ordenAv='reciente';try{const o=localStorage.getItem('bt-orden-av');if(o in ORDEN_AV)ordenAv=o;}catch(e){}
+let ordenAv='barato';try{const o=localStorage.getItem('bt-orden-av2');if(o in ORDEN_AV)ordenAv=o;}catch(e){}
 function ordenaAvisos(l,modo){const az=(a,b)=>a.localeCompare(b,'es',{sensitivity:'base',numeric:true}),c=[...l];
   const f={reciente:(a,b)=>b.ts-a.ts,barato:(a,b)=>a.precio-b.precio||az(a.titulo,b.titulo),caro:(a,b)=>b.precio-a.precio||az(a.titulo,b.titulo),
     nombre:(a,b)=>az(a.titulo,b.titulo)||a.precio-b.precio,tienda:(a,b)=>az(nombreT(a.tienda),nombreT(b.tienda))||a.precio-b.precio}[modo]||((a,b)=>b.ts-a.ts);
@@ -1230,7 +1238,7 @@ async function cargaAvisos(){const [todos,vig]=await Promise.all([api('avisos'),
     :'<div class="card vacio-msg"><span class="em">🔔</span>No tienes avisos.<br>Cuando un producto de una búsqueda vigilada llegue a tu precio, aparecerá aquí.</div>';
   document.querySelectorAll('#av-lista .graf').forEach(g=>g.onclick=()=>{const a=l[+g.dataset.i];abreHist(a.url,a.titulo,a.tienda);});
   document.querySelectorAll('#av-lista .quita').forEach(g=>g.onclick=async()=>{await api('avisos',{accion:'borrar',id:+g.dataset.id});cargaAvisos();aviso('Aviso quitado. No se repetirá salvo que baje más de precio');});
-  if($('av-orden'))$('av-orden').onchange=()=>{ordenAv=$('av-orden').value;try{localStorage.setItem('bt-orden-av',ordenAv)}catch(e){}cargaAvisos();};
+  if($('av-orden'))$('av-orden').onchange=()=>{ordenAv=$('av-orden').value;try{localStorage.setItem('bt-orden-av2',ordenAv)}catch(e){}cargaAvisos();};
   if($('av-ref'))$('av-ref').onclick=()=>abreRef('avisos');
   if($('av-vaciar'))$('av-vaciar').onclick=async()=>{if(confirm('¿Borrar todos los avisos? Los productos que sigan a buen precio volverán a avisarte en la próxima revisión.')){await api('avisos',{accion:'vaciar'});cargaAvisos();aviso('Avisos borrados');}};}
 async function cargaNavAv(){try{const l=await api('avisos');const v=Number(localStorage.getItem('bt-vistos')||0);

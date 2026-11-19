@@ -402,6 +402,8 @@ class Handler(BaseHTTPRequestHandler):
             except RuntimeError as e:
                 raise ValueError(str(e))
             return {"disponible": arranque.disponible(), "activo": arranque.activo()}
+        if ruta == "/api/agrupar":            # reagrupar en la página (búsqueda guardada, pegados) sin consultar tiendas
+            return {"grupos": motor.grupos(c.get("titulos") or [], c.get("q") or "", c.get("alguna") or "")}
         if ruta == "/api/importar":           # productos pegados a mano de una tienda que no se puede consultar sola
             t = next((t for t in cfg.carga() if t["host"] == c.get("host")), None)
             consulta = (c.get("consulta") or "").strip()

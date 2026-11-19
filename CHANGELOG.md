@@ -3,6 +3,12 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.19.4] - 2026-11-19
+
+### Cambiado
+- Lo que pegas entra al momento en la lista que tienes en pantalla, aunque la búsqueda sea otra o una guardada, y se reagrupa con las demás tiendas sin repetir la búsqueda; al abrir una búsqueda guardada también se traen los pegados de ahora y se reagrupa todo.
+- Avisos se ordena por defecto por precio, de menor a mayor.
+
 ## [0.19.3] - 2026-11-19
 
 ### Corregido

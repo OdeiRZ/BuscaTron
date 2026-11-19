@@ -517,6 +517,15 @@ def grupo_de(titulo, frases=()):
     return "c:" + clave_producto(titulo)
 
 
+def grupos(titulos, consulta, alguna=""):
+    """El producto (grupo) de cada título con las reglas de ahora: la página lo usa para reagrupar una búsqueda guardada
+    o lo pegado a mano sin repetir la búsqueda."""
+    frases = [f for f in (extract.normaliza(x).strip() for x in (alguna or "").split(",")) if f]
+    palabras = set(extract.normaliza(consulta).split())
+    frases = [f for f in frases if not set(f.split()) <= palabras]
+    return [{"grupo": grupo_de(t, frases), "clave": clave_producto(t)} for t in titulos]
+
+
 def pvp_de(precios):
     """PVP aproximado de un producto: el precio (redondeado al euro) que más se repite entre tiendas, con al menos 3
     tiendas; si hay empate, el más alto. None si no hay datos suficientes."""
