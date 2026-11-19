@@ -41,5 +41,20 @@ class ManualSinPlantilla(unittest.TestCase):
         self.assertEqual([x["precio"] for x in res], [13.32])
 
 
+class Coletillas(unittest.TestCase):
+    """«Juego De Mesa … Pegi 14» (Dynos) es el mismo producto que en las demás tiendas."""
+
+    def test_misma_clave(self):
+        from buscatron import motor
+        self.assertEqual(motor.clave_producto("Juego De Mesa Marvel Champions: Los Mas Buscados De La Galaxia Pegi 14"),
+                         motor.clave_producto("Asmodee Marvel Champions: Los más buscados de la galaxia"))
+        self.assertEqual(motor.clave_producto("Juego De Mesa Marvel Champions La Proxima Evolucion Edad Recomendada 14 Años"),
+                         motor.clave_producto("Marvel Champions LCG - La próxima evolución"))
+
+    def test_conserva_numeros_que_distinguen(self):
+        from buscatron import motor
+        self.assertNotEqual(motor.clave_producto("Marvel Champions: Héroes Reunidos 1"), motor.clave_producto("Marvel Champions: Héroes Reunidos 2"))
+
+
 if __name__ == "__main__":
     unittest.main()

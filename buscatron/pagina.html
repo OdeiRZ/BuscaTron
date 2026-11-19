@@ -366,7 +366,7 @@ svg.graf-svg{width:100%;height:auto;display:block}
         <div><label for="excluir">Descartar títulos que contengan</label><input type="text" id="excluir" placeholder="sleeves tapete pack" autocapitalize="none"></div>
         <div><label for="pmin">Precio mínimo (€)</label><input type="number" id="pmin" inputmode="decimal" step="0.01" min="0"></div>
         <div><label for="pmax">Precio máximo (€)</label><input type="number" id="pmax" inputmode="decimal" step="0.01" min="0"></div>
-        <div><label for="top">Resultados que se muestran</label><input type="number" id="top" inputmode="numeric" value="10" min="1" max="200"></div>
+        <div><label for="top">Resultados que se muestran</label><input type="number" id="top" inputmode="numeric" value="30" min="1" max="200"></div>
       </div>
     </details>
 
@@ -661,7 +661,10 @@ function ordenaGrupos(gs,conE){const p=g=>conE&&g[0].envio!=null?g[0].total:g[0]
   return [...gs].sort((a,b)=>(a[0].agotado-b[0].agotado)||f(a,b));}
 function masBarato(conE){let k=-1,m=Infinity;   // la tarjeta más barata (con stock), esté donde esté según el orden elegido
   pintados.forEach((g,i)=>{const p=conE&&g[0].envio!=null?g[0].total:g[0].precio;if(!g[0].agotado&&p<m){m=p;k=i;}});return k;}
-function pintaLista(){const c=$('lista-res');if(!c)return;const N=Number($('top').value)||10,conE=ultimoBody.con_envio;
+// «Resultados que se muestran»: se recuerda en este navegador; por defecto 30 (con 10 solo cabían los packs pequeños)
+try{const v=localStorage.getItem('bt-top');if(v)$('top').value=v;}catch(e){}
+$('top').addEventListener('change',()=>{try{localStorage.setItem('bt-top',$('top').value)}catch(e){}if($('lista-res'))pintaLista();});
+function pintaLista(){const c=$('lista-res');if(!c)return;const N=Number($('top').value)||30,conE=ultimoBody.con_envio;
   let cuenta;const que={barato:'más barato',caro:'más caro',nombre:'por nombre',tienda:'por tienda'}[ordenRes];
   if($('agrupar').checked){pintados=ordenaGrupos(agrupa(ultimos),conE).slice(0,N);idxBarato=masBarato(conE);c.innerHTML=pintados.map((g,i)=>tarjeta(g[0],i,conE,g.slice(1))).join('');
     cuenta=`${pintados.length} producto${pintados.length===1?'':'s'}${ordenRes==='barato'||ordenRes==='caro'?' '+que+(pintados.length===1?'':'s'):', '+que}, con ${ofertas(ultimos.length)} de ${ultimoTotal} encontrada${ultimoTotal===1?'':'s'}${conE?' (precio con envío)':''}`;}
@@ -715,7 +718,7 @@ function cuerpoForm(){return {q:$('q').value,incluir:$('incluir').value,alguna:$
   top:$('top').value,sin_agotados:$('sinag').checked,castellano:$('idioma').value!=='todos',idioma:$('idioma').value,tiendas:tiendas.filter(t=>t.activa).map(t=>t.host),
   preventas:$('preventas').checked,con_envio:$('conenvio').checked,segunda_mano:$('segmano').checked,abierta:$('abierta').checked,region:$('region').value,paginas:$('paginas').value};}
 function aplicaParams(p){$('q').value=p.q||'';$('incluir').value=p.incluir||'';$('alguna').value=p.alguna||'';$('excluir').value=p.excluir||'';$('pmin').value=p.pmin??'';$('pmax').value=p.pmax??'';
-  if(p.top)$('top').value=p.top;$('sinag').checked=p.sin_agotados!==false;$('idioma').value=p.idioma||(p.castellano===false?'todos':'castellano');
+  $('sinag').checked=p.sin_agotados!==false;$('idioma').value=p.idioma||(p.castellano===false?'todos':'castellano');
   $('preventas').checked=!!p.preventas;$('conenvio').checked=!!p.con_envio;$('segmano').checked=!!p.segunda_mano;$('abierta').checked=!!p.abierta;
   if(p.region)$('region').value=p.region;if(p.paginas)$('paginas').value=p.paginas;filtrosN();opcionesN();}
 function muestra(r,body,guardada){

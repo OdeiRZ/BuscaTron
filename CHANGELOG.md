@@ -3,6 +3,12 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.19.3] - 2026-11-19
+
+### Corregido
+- La misma expansión no se agrupaba si una tienda añadía coletillas de ficha al título («Juego De Mesa … 60 Cartas Pegi 14», «Edad Recomendada 14 Años»): ahora no cuentan para saber qué producto es.
+- Se mostraban solo los 10 más baratos de toda la búsqueda y las expansiones grandes quedaban fuera aunque fueran las más baratas de su producto: ahora se muestran 30 por defecto, el número se recuerda en el navegador y una búsqueda guardada ya no lo devuelve a 10.
+
 ## [0.19.2] - 2026-11-19
 
 ### Corregido

@@ -492,11 +492,16 @@ RUIDO = {"asmodee", "fantasy", "flight", "games", "ffg", "lcg", "el", "la", "los
          "comprar", "barato", "producto", "agotado", "preventa", "nuevo", "nueva", "living", "eng", "es", "esp", "spanish"}
 
 
+# Coletillas de ficha que algunas tiendas añaden al título (Dynos: «Juego De Mesa … 60 Cartas Pegi 14»): con ellas, la misma
+# expansión no se agrupaba con las demás tiendas y quedaba fuera de los más baratos.
+COLETILLAS = re.compile(r"\bjuegos?\s+de\s+mesa\b|\bpegi\s+\d+|\bedad\s+recomendada\s+\d+(\s+anos?)?|\b\d+\s+cartas\b|\b\d+\s+anos?\b")
+
+
 def clave_producto(titulo):
     """Identificador de un producto independiente de la tienda: sus palabras significativas, sin orden ni ruido.
     «Asmodee Marvel Champions: La Era de Apocalipsis» y «La Era de Apocalípsis - Marvel Champions» dan la misma clave."""
     palabras = set()
-    for w in extract.normaliza(titulo).split():
+    for w in COLETILLAS.sub(" ", extract.normaliza(titulo)).split():
         if w in RUIDO or (re.search(r"\d", w) and re.search(r"[a-z]", w) and len(w) >= 5):    # referencias como ASM631069
             continue
         palabras.add(w[:-1] if len(w) > 4 and w.endswith("s") else w)                            # «apocalipsis» = «apocalipsi», plurales
