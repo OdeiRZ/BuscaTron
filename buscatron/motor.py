@@ -332,7 +332,6 @@ def verifica_idioma(x, lista=None):
         f = c.execute("SELECT codigo, ts FROM idiomas WHERE url=?", (x["url"],)).fetchone()
     if f and time.time() - f["ts"] < 30 * 86400:
         return f["codigo"] or None
-    t = next((t for t in (lista or cfg.carga()) if t["host"] == x.get("tienda")), {})
     try:
         if t.get("js") and navegador.disponible() and ajustes.carga()["usar_navegador"]:
             st, html = navegador.get(x["url"], visible=False)
@@ -358,8 +357,9 @@ def ficha(x, lista=None):
     None = no se pudo saber. Sirve para no avisar de algo que en su ficha está agotado, en preventa o en otro idioma
     (el listado de algunas tiendas no lo dice). Se guarda unas horas para no repetir la consulta."""
     nada = {"idioma": None, "agotado": None, "preventa": None}
-    if "btitem=" in x["url"]:
-        return nada                                       # lo importado a mano no tiene ficha
+    t = next((t for t in (lista or cfg.carga()) if t["host"] == x.get("tienda")), {})
+    if "btitem=" in x["url"] or x.get("importado") or t.get("manual"):
+        return nada         # lo pegado a mano, o de una tienda «solo enlace»: su ficha no se consulta nunca (ni con los enlaces del HTML)
     with bd.conecta() as c:
         f = c.execute("SELECT idioma, agotado, preventa, ts FROM fichas WHERE url=?", (x["url"],)).fetchone()
     if f and time.time() - f["ts"] < FICHA_HORAS * 3600:
@@ -808,5 +808,5 @@ def buscar(consulta, incluir="", excluir="", ocultar_agotados=True, hosts=None, 
     with bd.conecta() as c:
         c.executemany("INSERT INTO precios(ts,consulta,tienda,titulo,url,precio,agotado,seg_id,preventa,clave) VALUES(?,?,?,?,?,?,?,?,?,?)",
                       [(ts, consulta, x["tienda"], x["titulo"], x["url"], x["precio"], int(x["agotado"]), seg_id, int(x.get("preventa", False)), x["clave"])
-                       for x in res])
+                       for x in res if not x.get("importado")])    # lo pegado se apunta una vez, al pegarlo (importar.guarda)
     return res, informe

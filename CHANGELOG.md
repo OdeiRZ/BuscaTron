@@ -3,6 +3,12 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.19.6] - 2026-11-19
+
+### Corregido
+- Lo pegado se apuntaba otra vez en el historial de precios cada vez que salía en una búsqueda (y, desde la 0.19.4, cada vez que se abría la app): ahora se apunta una sola vez, al pegarlo. Se han limpiado las filas repetidas de Dynos, Bixoto y Ferretería Ibermadrid (634 → 140).
+- La ficha de un producto de una tienda «solo enlace» nunca se consulta, tampoco si pegaste su código HTML con enlaces reales.
+
 ## [0.19.5] - 2026-11-19
 
 ### Añadido

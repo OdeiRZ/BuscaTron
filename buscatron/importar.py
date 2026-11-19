@@ -91,12 +91,16 @@ def _url_item(base, titulo):
 
 def guarda(host, consulta, items, url_busqueda):
     """Guarda (y sustituye) lo importado de esa tienda para esa búsqueda."""
+    from . import motor          # aquí: motor ya importa este módulo
     ts = time.time()
     filas = [(host, ts, extract.normaliza(consulta), x["titulo"], x.get("url") or _url_item(url_busqueda, x["titulo"]), x["precio"],
               int(bool(x.get("agotado"))), int(bool(x.get("preventa")))) for x in items]
     with bd.conecta() as c:
         c.execute("DELETE FROM importados WHERE host=? AND consulta=?", (host, extract.normaliza(consulta)))
         c.executemany("INSERT INTO importados(host,ts,consulta,titulo,url,precio,agotado,preventa) VALUES(?,?,?,?,?,?,?,?)", filas)
+        # al historial de precios, una vez por pegado (las búsquedas ya no lo vuelven a apuntar cada vez que lo muestran)
+        c.executemany("INSERT INTO precios(ts,consulta,tienda,titulo,url,precio,agotado,seg_id,preventa,clave) VALUES(?,?,?,?,?,?,?,NULL,?,?)",
+                      [(f[1], f[2], host, f[3], f[4], f[5], f[6], f[7], motor.clave_producto(f[3])) for f in filas])
     return len(filas)
 
 
