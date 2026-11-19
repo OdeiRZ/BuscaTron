@@ -371,6 +371,7 @@ svg.graf-svg{width:100%;height:auto;display:block}
     </details>
 
     <p class="t-resumen"><span>🏪 Buscando en <b id="n-tiendas2">tus tiendas</b></span><button type="button" class="sec mini" id="ir-tiendas">Gestionar tiendas</button></p>
+    <p class="t-resumen"><span>🔗 Tiendas que no se consultan solas (Ferretería Ibermadrid…): miras tú y pegas lo que copies</span><button type="button" class="sec mini" id="ir-pegar">📋 Pegar resultados</button></p>
   </form>
   <details class="card oculto" id="rec" style="margin-top:0">
     <summary>🕘 Búsquedas recientes <span class="n" id="n-rec"></span></summary>
@@ -588,6 +589,7 @@ $('s-idioma').addEventListener('change',ayudaIdioma);
 
 /* tiendas */
 const porNombre=(l,nom)=>[...l].sort((a,b)=>nom(a).localeCompare(nom(b),'es',{sensitivity:'base',numeric:true}));
+$('ir-pegar').onclick=()=>abrePegar();
 function pintaT(){
   const act=tiendas.filter(t=>t.activa).length;
   $('n-tiendas').textContent=`${act} de ${tiendas.length} activas`;
@@ -601,8 +603,9 @@ function pintaT(){
     <div class="envio"><input type="number" class="te" inputmode="decimal" step="0.01" min="0" value="${t.envio??''}" placeholder="Envío €" aria-label="Gastos de envío en euros">
       <input type="number" class="tg" inputmode="decimal" step="0.01" min="0" value="${t.envio_gratis??''}" placeholder="Gratis desde €" aria-label="Envío gratis desde (euros)">
       <button type="button" class="sec mini td" title="Buscar en la web de la tienda cuánto cuesta el envío">Detectar envío</button></div>
-    <label class="sw"><input type="checkbox" class="tm" ${t.manual?'checked':''}> No consultar automáticamente${t.tipo==='segunda_mano'?' · segunda mano':''}</label>
+    <label class="sw"><input type="checkbox" class="tm" ${t.manual?'checked':''}> No consultar automáticamente${t.tipo==='segunda_mano'?' · segunda mano':''}</label>${t.manual?`<button type="button" class="sec mini" data-pegar-t="${esc(t.host)}">📋 Pegar resultados</button>`:''}
     <button type="button" class="peli mini" data-del="${esc(t.host)}" aria-label="Quitar de la lista" title="Quitar de la lista">🗑 Quitar</button></div>`).join('');
+  document.querySelectorAll('#gestion [data-pegar-t]').forEach(b=>b.onclick=()=>abrePegar(b.dataset.pegarT));
   document.querySelectorAll('#gestion .trow').forEach(f=>{const guarda=async()=>{
     const r=await api('tiendas',{editar:f.dataset.h,nombre:f.querySelector('.tn').value,url:f.querySelector('.tu').value,manual:f.querySelector('.tm').checked,
       envio:f.querySelector('.te').value,envio_gratis:f.querySelector('.tg').value});
@@ -734,7 +737,7 @@ function muestra(r,body,guardada){
   if($('orden-res'))$('orden-res').onchange=()=>{ordenRes=$('orden-res').value;try{localStorage.setItem('bt-orden-res',ordenRes)}catch(e){}pintaLista();};
   if($('actualizar'))$('actualizar').onclick=()=>$('f').requestSubmit();
   pintaLista();
-  document.querySelectorAll('#out [data-pegar]').forEach(b=>b.onclick=()=>abrePegar(b.dataset.pegar,b.dataset.enlace));
+  document.querySelectorAll('#out [data-pegar]').forEach(b=>b.onclick=()=>abrePegar(b.dataset.pegar));
   document.querySelectorAll('#out [data-add]').forEach(g=>g.onclick=async()=>{const r2=await api('tiendas',{anadir:g.dataset.add});
     if(r2.error){aviso(r2.error);return;}tiendas=r2;pintaT();g.remove();aviso('Tienda añadida a tu lista');});}
 /* La búsqueda corre en el servidor: aquí solo se lanza y se va preguntando cómo va. Si el móvil corta la conexión
@@ -1017,26 +1020,44 @@ function pintaRef(l,cab){
       await api('referencia',{clave:p.clave,quitar:true});aviso('Vínculo quitado');abreRef();});}}
 function cierraPegar(){cierraHoja('pegar');}
 $('pegar').onclick=e=>{if(e.target===$('pegar'))cierraPegar();};
-function abrePegar(host,enlace){
-  const consulta=(ultimoBody.q||$('q').value).trim();     // la de los resultados en pantalla, aunque hayas tocado la caja
-  $('hoja2').innerHTML=`<button type="button" class="cierra" aria-label="Cerrar">✕</button><h3>Pegar resultados de ${esc(nombreT(host))}</h3>
-    <p class="ayuda" style="margin-top:4px">Esta tienda bloquea a BuscaTron, así que miras tú en tu navegador y BuscaTron lee lo que copies.</p>
-    <ol class="ayuda" style="padding-left:18px;margin:6px 0 10px">
-      <li>Abre <a href="${esc(enlace)}" target="_blank" rel="noopener">${esc(nombreT(host))} ↗</a>: ya lleva tu búsqueda «${esc(consulta)}».</li>
+// Las tiendas que no se consultan solas: se abre su web con la búsqueda, copias la página y BuscaTron lee lo copiado.
+// No hace falta buscar antes: eliges tienda y búsqueda aquí mismo (desde la búsqueda, el formulario o Ajustes).
+function manualesT(){return porNombre(tiendas.filter(t=>t.manual),t=>nombreT(t.host));}
+function enlaceT(t,q){const p=t.plantilla||'';
+  return p.includes('{q}')?p.replace('{q}',encodeURIComponent(q)):(p.startsWith('http')?p:'https://'+t.host+'/');}
+function abrePegar(host){
+  const ms=manualesT();
+  if(!ms.length){aviso('No tienes tiendas marcadas como «No consultar automáticamente»');return;}
+  if(!host)try{host=localStorage.getItem('bt-pegar-t')}catch(e){}       // la última que usaste
+  if(!ms.some(t=>t.host===host))host=ms[0].host;
+  const q0=((ultimoBody&&ultimoBody.q)||$('q').value||'').trim();
+  $('hoja2').innerHTML=`<button type="button" class="cierra" aria-label="Cerrar">✕</button><h3>📋 Pegar resultados</h3>
+    <p class="ayuda" style="margin-top:4px">Para tiendas que no se consultan solas: miras tú en tu navegador y BuscaTron lee lo que copies.</p>
+    <div class="grid"><div><label for="pegar-t">Tienda</label><select id="pegar-t">${ms.map(t=>`<option value="${esc(t.host)}" ${t.host===host?'selected':''}>${esc(nombreT(t.host))}</option>`).join('')}</select></div>
+      <div><label for="pegar-q">Qué buscas</label><input type="text" id="pegar-q" value="${esc(q0)}" placeholder="p. ej. marvel champions"></div></div>
+    <ol class="ayuda" style="padding-left:18px;margin:10px 0">
+      <li><a id="pegar-ir" target="_blank" rel="noopener"></a> (si su buscador no recoge la búsqueda, búscala tú en su web).</li>
       <li>En esa página selecciona todo (Ctrl+A) y copia (Ctrl+C). En el móvil: mantén pulsado, «Seleccionar todo» y «Copiar».</li>
-      <li>Vuelve aquí, pega el texto y pulsa «Añadir a los resultados».</li></ol>
+      <li>Vuelve aquí, pega el texto y pulsa «Guardar».</li></ol>
     <textarea id="pegar-txt" placeholder="Pega aquí lo que has copiado"></textarea>
-    <p class="ayuda">Se toman los productos cuyo nombre contiene «${esc(consulta)}» y que llevan precio. Se mezclan con el resto de resultados y cuentan para los avisos durante 3 días; después hay que volver a pegarlos.</p>
-    <div class="acciones"><button type="button" id="pegar-ok">Añadir a los resultados</button></div><div id="pegar-msg" class="mut" style="margin-top:8px"></div>`;
-  abreHoja('pegar');$('hoja2').querySelector('.cierra').onclick=cierraPegar;$('pegar-txt').focus();
-  $('pegar-ok').onclick=async()=>{const b=$('pegar-ok');b.disabled=true;
-    const r=await api('importar',{host,consulta,texto:$('pegar-txt').value});b.disabled=false;
-    if(r.error){$('pegar-msg').className='err';$('pegar-msg').textContent=r.error;return;}
-    if(!r.importados){$('pegar-msg').className='err';$('pegar-msg').textContent=`No encontré ningún producto con «${consulta}» y su precio en lo que has pegado. Comprueba que copiaste la página de resultados de esa búsqueda, no otra.`;return;}
-    cierraPegar();aviso(`${r.importados} producto${r.importados>1?'s':''} añadido${r.importados>1?'s':''} a los resultados`);
-    // se mezcla al instante: solo se consulta esa tienda (es «solo enlace», no hace ninguna petición) y se fusiona con la lista en pantalla
-    const r2=await api('buscar',{...ultimoBody,tiendas:[host],top:200,guardar:false,abierta:false});   // sin repetir la búsqueda por internet
-    if(r2.error||!$('lista-res'))return;
+    <p class="ayuda">Se guardan los productos cuyo nombre contiene lo que buscas y llevan precio. Salen en tus búsquedas y cuentan para las vigiladas durante 3 días; después hay que volver a pegarlos.</p>
+    <div class="acciones"><button type="button" id="pegar-ok">Guardar</button></div><div id="pegar-msg" class="mut" style="margin-top:8px"></div>`;
+  abreHoja('pegar');$('hoja2').querySelector('.cierra').onclick=cierraPegar;
+  const enlace=()=>{const t=tiendas.find(x=>x.host===$('pegar-t').value),q=$('pegar-q').value.trim(),a=$('pegar-ir');
+    a.href=enlaceT(t,q);a.textContent=`Abre ${nombreT(t.host)} ↗`+(q?` con «${q}»`:'');};
+  $('pegar-t').onchange=()=>{try{localStorage.setItem('bt-pegar-t',$('pegar-t').value)}catch(e){}enlace();};$('pegar-q').oninput=enlace;enlace();
+  (q0?$('pegar-txt'):$('pegar-q')).focus();
+  $('pegar-ok').onclick=async()=>{const b=$('pegar-ok'),host=$('pegar-t').value,consulta=$('pegar-q').value.trim(),m=$('pegar-msg');
+    if(!consulta){m.className='err';m.textContent='Escribe qué buscas: se guardan los productos cuyo nombre lo contiene.';return;}
+    if(!$('pegar-txt').value.trim()){m.className='err';m.textContent='Pega primero lo que has copiado de la tienda.';return;}
+    b.disabled=true;const r=await api('importar',{host,consulta,texto:$('pegar-txt').value});b.disabled=false;
+    if(r.error){m.className='err';m.textContent=r.error;return;}
+    if(!r.importados){m.className='err';m.textContent=`No encontré ningún producto con «${consulta}» y su precio en lo que has pegado. Comprueba que copiaste la página de resultados de esa búsqueda.`;return;}
+    cierraPegar();aviso(`${r.importados} producto${r.importados>1?'s':''} de ${nombreT(host)} guardado${r.importados>1?'s':''}`);
+    // si hay resultados de esa misma búsqueda en pantalla, se mezclan al instante (es «solo enlace»: no hace ninguna petición)
+    if(!ultimoBody||!$('lista-res')||(ultimoBody.q||'').trim().toLowerCase()!==consulta.toLowerCase())return;
+    const r2=await api('buscar',{...ultimoBody,tiendas:[host],top:200,guardar:false,abierta:false});
+    if(r2.error)return;
     ultimos=ultimos.filter(x=>x.tienda!==host).concat(r2.resultados);
     ultimos.sort((a,b)=>(a.agotado-b.agotado)||(ultimoBody.con_envio?a.total-b.total:a.precio-b.precio));
     if(ultimoId)api('busquedas',{accion:'actualizar',id:ultimoId,resultados:ultimos});

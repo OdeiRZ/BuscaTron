@@ -3,6 +3,11 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.19.0] - 2026-11-19
+
+### Cambiado
+- «📋 Pegar resultados» ya no necesita una búsqueda antes: hay un botón fijo bajo el formulario de búsqueda y otro en cada tienda «No consultar automáticamente» de Ajustes. La hoja deja elegir la tienda (recuerda la última) y qué buscas, y el enlace a la tienda se actualiza con esa búsqueda.
+
 ## [0.18.3] - 2026-11-19
 
 ### Añadido

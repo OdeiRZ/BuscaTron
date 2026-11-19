@@ -6,7 +6,7 @@ Buscador y vigilante de precios **local** para tiendas online españolas, centra
 - **Datos en vivo**: no usa cachés ni comparadores intermedios, así que el precio es el que ves en la tienda.
 - **Tus datos se quedan en tu equipo**: lista de tiendas, historial y tokens se guardan en archivos locales que no se suben al repositorio.
 
-> Estado: **versión funcional** (v0.18.3). Consulta el [CHANGELOG](CHANGELOG.md).
+> Estado: **versión funcional** (v0.19.0). Consulta el [CHANGELOG](CHANGELOG.md).
 
 ## En el móvil y en el PC
 
@@ -131,11 +131,12 @@ El selector **«Idioma del juego»** (en la búsqueda y en cada seguimiento) tie
 
 Para las tiendas que no se pueden consultar solas (por ejemplo **Ferretería Ibérica**, cuya web está detrás de una comprobación de Cloudflare que rechaza cualquier navegador controlado por un programa), **tú miras en tu navegador y BuscaTron lee lo que copies**:
 
-1. En los resultados, en «Tiendas que tienes que mirar tú», abre el enlace de la tienda: ya lleva tu búsqueda puesta.
-2. En esa página selecciona todo (Ctrl+A) y copia (Ctrl+C). En el móvil: mantén pulsado, «Seleccionar todo» y «Copiar».
-3. Pulsa **📋 Pegar resultados**, pega el texto y pulsa **Añadir a los resultados**.
+1. Pulsa **📋 Pegar resultados**: está bajo el formulario de búsqueda, en cada tienda «No consultar automáticamente» de Ajustes y, tras una búsqueda, en «Tiendas que tienes que mirar tú». No hace falta buscar antes.
+2. Elige la tienda y escribe qué buscas; abre su enlace, que ya lleva la búsqueda (si su buscador no la recoge, búscala tú en su web).
+3. En esa página selecciona todo (Ctrl+A) y copia (Ctrl+C). En el móvil: mantén pulsado, «Seleccionar todo» y «Copiar».
+4. Vuelve, pega el texto y pulsa **Guardar**.
 
-Unas 12 horas antes de que caduquen, BuscaTron te lo **recuerda por Telegram** (una vez por pegado). Los avisos de productos importados lo indican («precio pegado a mano hace 5 h, sin comprobar en directo»), porque BuscaTron no puede comprobar esa tienda por su cuenta. Los productos y precios se mezclan **al instante** con el resto de la lista (y con el historial, las gráficas y los avisos de los seguimientos), con la etiqueta «Pegado a mano hace X h». Se recuerdan **72 horas** y se guardan también en la búsqueda reciente, así que no hace falta repetirlo al volver.
+Los avisos de productos importados lo indican («precio pegado a mano hace 5 h, sin comprobar en directo»), porque BuscaTron no puede comprobar esa tienda por su cuenta. Los productos y precios se mezclan **al instante** con el resto de la lista (y con el historial, las gráficas y los avisos de los seguimientos), con la etiqueta «Pegado a mano hace X h». Se recuerdan **72 horas** y se guardan también en la búsqueda reciente, así que no hace falta repetirlo al volver.
 
 - Acepta el texto de la página o su código HTML (en ese caso conserva los enlaces de cada producto). **No hace ninguna petición a la tienda.**
 - Se leen los productos cuyo título contiene tu búsqueda y que llevan un precio justo después; si hay dos precios seguidos (el anterior y el actual) se toma el menor. Las cabeceras («Resultados de búsqueda…»), los productos sin relación y los precios de lo que viene detrás no se cuentan. Reconoce «agotado» y «preventa» igual que en las demás tiendas. Probado con el texto real de Ferretería Ibérica: 47 productos leídos con sus precios.
