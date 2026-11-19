@@ -4,7 +4,7 @@ import json
 import re
 import unicodedata
 from html.parser import HTMLParser
-from urllib.parse import parse_qsl, urlencode, urljoin, urlparse, urlunparse
+from urllib.parse import parse_qsl, urlencode, urljoin, urlparse, urlsplit, urlunparse
 
 # «1.299 €» y «2.500€» llevan punto de miles (antes se leían 299 y 500); «29.99 €» y «1.50 €», punto decimal.
 PRECIO = re.compile(r"(?<![\d.,])(\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?|\d+,\d{1,2}|\d+(?:\.\d{1,2})?)\s*(?:€|eur(?:os?)?\b)", re.I)   # «eur» entero: «2 Europa» no es un precio
@@ -152,6 +152,9 @@ def a_numero(s):
         return None
 
 
+# Enlaces a archivos (fotos de la galería, PDF): llevan el nombre del producto en su «alt», pero no son su ficha.
+ARCHIVO = re.compile(r"\.(?:jpe?g|png|webp|gif|avif|svg|bmp|pdf)$|/wp-content/uploads/", re.I)
+
 class _Parser(HTMLParser):
     def __init__(self, base):
         super().__init__(convert_charrefs=True)
@@ -244,7 +247,8 @@ class _Parser(HTMLParser):
                 self._candidato_siguiente(2, a["raw"], palabra=bool(normaliza(txt).strip()))
             elif a["clase_next"]:
                 self._candidato_siguiente(3, a["raw"])
-            self.eventos.append(("a", a["href"], txt, a["p"], a["x"], a["ini"]))
+            if not ARCHIVO.search(urlsplit(a["href"]).path):   # el enlace a la foto (galerías de WooCommerce) no es el producto
+                self.eventos.append(("a", a["href"], txt, a["p"], a["x"], a["ini"]))
             self._a = None
 
     def _precio(self, v):
@@ -293,10 +297,33 @@ def _forma(url):
     return u.netloc, len(tramos), tramos[-1].rpartition(".")[2] if tramos and "." in tramos[-1] else ""
 
 
+_CANONICA = re.compile(r"""<link[^>]+rel=["']canonical["'][^>]*>""", re.I)
+_BUSQUEDA_URL = re.compile(r"[?&](?:s|q|k|search|search_query|query|keywords?|busqueda|buscar)=|/(?:search|buscar|busqueda)\b", re.I)
+
+
+def _ficha_unica(html, base, palabras):
+    """Si la página es la ficha de un producto (WooCommerce y otras saltan a ella cuando la búsqueda da un solo
+    resultado), ese producto con su precio y su dirección de verdad. Antes se tomaba el enlace de su foto y un precio
+    de otra parte de la página (MarketPvp: 19,75 € en vez de 35,95 €)."""
+    m = _CANONICA.search(html)
+    canonica = re.search(r"""href=["']([^"']+)""", m.group(0)) if m else None
+    canonica = urljoin(base, canonica.group(1)) if canonica else ""
+    if not canonica or _BUSQUEDA_URL.search(canonica) or urlparse(canonica).path in ("", "/"):
+        return None
+    d = datos_producto(html, canonica)
+    if not d or not d.get("titulo") or not all(encaja(normaliza(d["titulo"]), w) for w in palabras):
+        return None
+    return {"titulo": d["titulo"], "url": limpia_url(canonica), "precio": d["precio"], "agotado": bool(d.get("agotado")),
+            "preventa": bool(d.get("preventa")), "estado": ""}
+
+
 def analiza(html, base, consulta, ventana=40, con_estado=False):
     """Devuelve (productos, url_de_la_página_siguiente|None).
     Producto: {titulo, url, precio, agotado, preventa, estado}."""
     palabras = normaliza(consulta).split()
+    unica = _ficha_unica(html, base, palabras)
+    if unica:                     # la búsqueda encontró un solo producto y la tienda saltó directamente a su ficha
+        return [unica], None
     p = _Parser(base)
     p.feed(html)
     ev = p.eventos

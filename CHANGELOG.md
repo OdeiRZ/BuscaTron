@@ -3,6 +3,13 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.20.1] - 2026-11-19
+
+### Corregido
+- En tiendas WooCommerce el enlace del producto podía ser el de su foto (.jpg) y no el de su ficha: los enlaces a archivos ya no cuentan como producto.
+- Cuando la búsqueda da un solo resultado, muchas tiendas saltan directamente a su ficha: BuscaTron no la reconocía y tomaba el enlace de la foto y un precio de otra parte de la página (MarketPvp marcaba Eternal Decks a 19,75 € cuando cuesta 35,95 €, y llegó a avisar). Ahora lee esa ficha: su nombre, su precio, su stock y su dirección de verdad.
+- Se han borrado el aviso falso y los 45 precios guardados con enlaces a fotos.
+
 ## [0.20.0] - 2026-11-19
 
 Revisión completa de la aplicación (búsqueda y tiendas, vigiladas y avisos, página y servidor) en tres pasadas.
