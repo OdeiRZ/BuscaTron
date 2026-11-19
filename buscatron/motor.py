@@ -3,7 +3,7 @@ import concurrent.futures as cf
 import re
 import time
 
-from . import ajustes, bd, fetch, extract, descubre, importar, navegador, tiendas as cfg
+from . import ajustes, bd, fetch, extract, descubre, importar, navegador, progreso, tiendas as cfg
 
 DESAFIO_SIN_RESOLVER = ("pide demostrar que eres humano (captcha): se abrió una ventana de Chrome, pero no se resolvió en 90 s. "
                         "Resuélvelo en esa ventana en la próxima búsqueda y la sesión quedará guardada")
@@ -719,8 +719,17 @@ def buscar(consulta, incluir="", excluir="", ocultar_agotados=True, hosts=None, 
     # Con el ritmo por tienda cada una espera su turno, así que se consultan más a la vez (cada hilo, una tienda distinta).
     # Una tienda que acaba de volver de un bloqueo se consulta unos días con una sola página.
     pags = lambda t: 1 if t.get("suave_hasta", 0) > ahora else paginas
+    prog = progreso.actual()          # la barra de carga de la página: tiendas hechas de cuántas
+    progreso.total(prog, len(activas))
+
+    def una(t):
+        try:
+            return _tienda(t, consulta, nav, pags(t))
+        finally:
+            progreso.avanza(prog)
     with cf.ThreadPoolExecutor(12) as ex:
-        resultados = list(ex.map(lambda t: _tienda(t, consulta, nav, pags(t)), activas))
+        resultados = list(ex.map(una, activas))
+    progreso.fase(prog, "Ordenando resultados")
     if nav and aj["navegador_visible"]:
         # Solo las tiendas que piden comprobar que eres humano se reintentan con ventana, de una en una,
         # para que el usuario pueda resolverlo; el resto se consulta sin que salga nada en pantalla.

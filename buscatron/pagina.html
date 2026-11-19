@@ -172,6 +172,17 @@ summary:has(.n:not(:empty))::after{margin-left:8px}
 .carga{display:flex;align-items:center;gap:14px;color:var(--mut)}
 .spin{width:26px;height:26px;border:3px solid var(--bd);border-top-color:var(--ac);border-radius:50%;animation:g .8s linear infinite;flex:0 0 auto}
 @keyframes g{to{transform:rotate(360deg)}}
+/* ----- barra de carga de búsquedas y revisiones (fuera de las pestañas: se ve en todas) ----- */
+#progreso:empty{display:none}
+#progreso{display:flex;flex-direction:column;gap:8px;margin:0 0 14px}
+.prog{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:10px 14px}
+.prog-cab{display:flex;justify-content:space-between;gap:10px;font-size:14px;font-weight:700}
+.prog-cab span:last-child{font-weight:600;color:var(--mut);white-space:nowrap}
+.prog-det{font-size:12.5px;color:var(--mut);margin-top:2px}
+.prog-barra{height:8px;border-radius:5px;background:var(--bg2);overflow:hidden;margin-top:8px}
+.prog-barra i{display:block;height:100%;background:var(--ac);border-radius:5px;transition:width .6s ease}
+.prog-barra.ind i{width:35%;animation:ind 1.4s ease-in-out infinite}
+@keyframes ind{from{transform:translateX(-100%)}to{transform:translateX(290%)}}
 .rec-fila{display:flex;gap:8px;align-items:stretch;margin-top:8px}
 .rec-abre{flex:1;min-width:0;display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-height:50px;padding:9px 13px;text-align:left;background:var(--bg);color:var(--tx);border:1px solid var(--bd);font-weight:500}
 .rec-abre b{overflow-wrap:anywhere}
@@ -331,6 +342,7 @@ svg.graf-svg{width:100%;height:auto;display:block}
 </nav>
 
 <main>
+<div id="progreso" aria-live="polite"></div>
 <section id="t-buscar">
   <form id="f" class="card">
     <label for="q">¿Qué quieres comprar?</label>
@@ -753,7 +765,24 @@ function tiempoBusqueda(){const n=(typeof tiendas!=='undefined'?tiendas:[]).filt
   return n>40?`Suele tardar de 2 a 4 minutos con tus ${n} tiendas`:n>20?`Suele tardar de 1 a 3 minutos con tus ${n} tiendas`:'Suele tardar 1 o 2 minutos';}
 function pintaBuscando(lento){$('out').innerHTML=`<div class="card carga"><div class="spin"></div><div>Buscando en tus tiendas…<br><span class="mut">${tiempoBusqueda()}${lento?' (algo más buscando por internet o en segunda mano)':''}: cada tienda se consulta con calma para que no te bloquee. Puedes bloquear el móvil o cambiar de app: la búsqueda sigue y verás el resultado al volver.</span></div></div>`;}
 function estadoBoton(activo){const b=$('go');b.disabled=activo;b.textContent=activo?'Buscando…':'Buscar';}
+// Barra de carga: la pide al servidor (que es quien sabe qué está en marcha), así sigue aunque cambies de pestaña o recargues
+let progTimer=null;
+function durTxt(s){s=Math.max(0,Math.round(s));return s<60?`${s} s`:`${Math.floor(s/60)} min${s%60?` ${s%60} s`:''}`;}
+async function sigueProgreso(){
+  clearTimeout(progTimer);let l=[];
+  try{l=await api('progreso');}catch(e){}
+  if(!Array.isArray(l))l=[];
+  $('progreso').innerHTML=l.map(t=>{const pct=t.parte!=null?Math.round(t.parte*100):null;
+    const que=t.tipo==='busqueda'?`🔎 Buscando «${esc(t.nombre)}»`:`👁️ Revisando «${esc(t.nombre)}»`;
+    const cuanto=t.total?`${t.hechas} de ${t.total} tiendas`:'';
+    const queda=t.queda!=null?` · quedan unos ${durTxt(t.queda)}`:'';
+    return `<div class="prog"><div class="prog-cab"><span>${que}</span><span>${pct!=null?pct+' %':''}</span></div>
+      <div class="prog-det">${esc(t.fase)}${cuanto?' · '+cuanto:''} · lleva ${durTxt(t.lleva)}${queda}</div>
+      <div class="prog-barra ${pct==null?'ind':''}"><i style="${pct!=null?`width:${Math.max(3,pct)}%`:''}"></i></div></div>`;}).join('');
+  progTimer=setTimeout(sigueProgreso,l.length?1500:20000);}     // sin nada en marcha, un vistazo de vez en cuando (revisiones automáticas)
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)sigueProgreso();});
 async function sigueBusqueda(tid,body){
+  sigueProgreso();
   buscando=tid;estadoBoton(true);let fallos=0;
   try{
     while(buscando===tid){
@@ -1210,7 +1239,7 @@ async function pausa(id){const s=segs.find(x=>x.id===id);const l=await api('segu
   aviso(s.activo?'En pausa: no se revisará sola hasta que la reanudes (no se borra nada)'
     :(Date.now()/1000-(s.ultima||0)>=s.cada_horas*3600?`Reanudada: se revisa ahora mismo y luego cada ${s.cada_horas} h`:`Reanudada: la próxima revisión, ${proxima(s)}`));}
 async function borraSeg(id){if(confirm('¿Dejar de vigilar esta búsqueda? Se borran también sus avisos; el historial de precios se conserva.'))pintaSeg(await api('seguimientos',{accion:'borrar',id}));}
-async function revisa(id,b){esperando[id]=(segs.find(x=>x.id===id)||{}).ultima||0;
+async function revisa(id,b){setTimeout(sigueProgreso,800);esperando[id]=(segs.find(x=>x.id===id)||{}).ultima||0;
   b.disabled=true;b.textContent='Buscando… (unos minutos)';
   const r=await api('seguimientos',{accion:'revisar',id});if(r&&r.error){delete esperando[id];aviso(r.error);}
   pintaSeg(Array.isArray(r)?r:segs);}
@@ -1323,7 +1352,7 @@ async function prueba(canal){const g=await api('ajustes',ajustesForm());if(g.err
   const e=r.error||r[canal];msg(e?e:'Mensaje de prueba enviado: debería llegarte en unos segundos.',!e);}
 $('a-prueba-tg').onclick=()=>prueba('telegram');$('a-prueba-co').onclick=()=>prueba('correo');
 
-cargaT().then(()=>{if(!retomaBusqueda())cargaRec(true);});cargaNavAv();cargaServicio();
+cargaT().then(()=>{if(!retomaBusqueda())cargaRec(true);});cargaNavAv();cargaServicio();sigueProgreso();
 if('serviceWorker' in navigator&&window.isSecureContext)navigator.serviceWorker.register('/sw.js').catch(()=>{});
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&!buscando)retomaBusqueda();});
 {const h=location.hash.slice(1);let t=TABS.includes(h)?h:null;     // la de la dirección (#avisos) o la última que usaste

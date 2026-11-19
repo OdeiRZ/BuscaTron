@@ -4,7 +4,7 @@ import statistics
 import threading
 import time
 
-from . import bd, motor, notifica
+from . import bd, motor, notifica, progreso
 
 CAMPOS = ("nombre", "consulta", "incluir", "excluir", "pmin", "pmax", "objetivo", "bajo_historico",
           "sin_agotados", "castellano", "opciones", "canales", "cada_horas", "activo")
@@ -170,7 +170,10 @@ def revisa(seg_id, enviar=True):
             return {"ocupado": True}
         _en_curso[seg_id] = time.time()
     try:
-        with servicio.trabajo("revision"):
+        with bd.conecta() as c:
+            fila = c.execute("SELECT nombre, duracion FROM seguimientos WHERE id=?", (seg_id,)).fetchone()
+        with servicio.trabajo("revision"), progreso.tarea(f"vigilada:{seg_id}", "vigilada", fila["nombre"] if fila else "Vigilada",
+                                                           fila["duracion"] if fila else None):
             return _vueltas(seg_id, enviar)
     finally:
         with _cerrojo:
@@ -217,6 +220,7 @@ def _revisa(seg_id, enviar):
         for x in sorted(candidatos, key=lambda x: x["precio"]):
             if len(por_tienda.setdefault(x.get("tienda"), [])) < FICHAS_POR_AVISO:
                 por_tienda[x.get("tienda")].append(x)
+        progreso.fase(progreso.actual(), "Comprobando las fichas antes de avisar")
         for x in [x for xs in por_tienda.values() for x in xs]:
             f = motor.ficha(x, lista)
             if f["agotado"]:

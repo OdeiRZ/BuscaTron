@@ -17,7 +17,7 @@ from hashlib import sha256
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from urllib.parse import parse_qs, urlparse
 
-from . import (ajustes, arranque, busquedas, extract, fetch, historico, importar, motor, notifica, ocr, programador, referencia,
+from . import (ajustes, arranque, busquedas, extract, fetch, historico, importar, motor, notifica, ocr, programador, progreso, referencia,
                seguimiento, servicio, telegram_bot, tiendas as cfg)
 
 TAILSCALE = ipaddress.ip_network("100.64.0.0/10")
@@ -132,7 +132,8 @@ def lanza_busqueda(c):
 
     def corre():
         try:
-            r = {"estado": "hecho", "resp": busca(c)}
+            with progreso.tarea(f"busqueda:{tid}", "busqueda", (c.get("q") or "").strip() or "Búsqueda"):
+                r = {"estado": "hecho", "resp": busca(c)}
         except Exception as e:                       # noqa: BLE001  (se le cuenta a la página)
             r = {"estado": "error", "error": str(e) or e.__class__.__name__}
         with _cerrojo_trabajos:
@@ -274,7 +275,7 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json({"error": "pin"}, 401)
             return self._enviar(LOGIN.encode(), "text/html; charset=utf-8")
         url = urlparse(self.path)
-        rutas = {"/api/tiendas": cfg.carga, "/api/seguimientos": seguimiento.lista, "/api/avisos": seguimiento.avisos,
+        rutas = {"/api/tiendas": cfg.carga, "/api/progreso": progreso.lista, "/api/seguimientos": seguimiento.lista, "/api/avisos": seguimiento.avisos,
                  "/api/ajustes": ajustes.publico, "/api/red": self._red,
                  "/api/arranque": lambda: {"disponible": arranque.disponible(), "activo": arranque.activo()},
                  "/api/historial": lambda: (motor.historial_producto(parse_qs(url.query)["grupo"][0]) if parse_qs(url.query).get("grupo")

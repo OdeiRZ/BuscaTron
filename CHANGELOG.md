@@ -3,6 +3,11 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.19.9] - 2026-11-19
+
+### Añadido
+- Barra de carga para las búsquedas y las revisiones de vigiladas (también las automáticas): tiendas consultadas de cuántas, porcentaje, fase («Consultando tiendas», «Comprobando las fichas antes de avisar»…), cuánto lleva y cuánto le queda. La lleva el servidor, así que sigue ahí en todas las pestañas, al recargar y en el móvil.
+
 ## [0.19.8] - 2026-11-19
 
 ### Corregido
