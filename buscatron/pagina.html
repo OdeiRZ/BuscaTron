@@ -779,7 +779,7 @@ async function sigueProgreso(){
     return `<div class="prog"><div class="prog-cab"><span>${que}</span><span>${pct!=null?pct+' %':''}</span></div>
       <div class="prog-det">${esc(t.fase)}${cuanto?' · '+cuanto:''} · lleva ${durTxt(t.lleva)}${queda}</div>
       <div class="prog-barra ${pct==null?'ind':''}"><i style="${pct!=null?`width:${Math.max(3,pct)}%`:''}"></i></div></div>`;}).join('');
-  progTimer=setTimeout(sigueProgreso,l.length?1500:20000);}     // sin nada en marcha, un vistazo de vez en cuando (revisiones automáticas)
+  progTimer=setTimeout(sigueProgreso,l.length?1500:4000);}      // sin nada en marcha también se mira: revisiones automáticas, búsquedas desde el móvil
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)sigueProgreso();});
 async function sigueBusqueda(tid,body){
   sigueProgreso();

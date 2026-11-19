@@ -6,7 +6,7 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y e
 ## [0.19.9] - 2026-11-19
 
 ### Añadido
-- Barra de carga para las búsquedas y las revisiones de vigiladas (también las automáticas): tiendas consultadas de cuántas, porcentaje, fase («Consultando tiendas», «Comprobando las fichas antes de avisar»…), cuánto lleva y cuánto le queda. La lleva el servidor, así que sigue ahí en todas las pestañas, al recargar y en el móvil.
+- Barra de carga para las búsquedas y las revisiones de vigiladas (también las automáticas): tiendas consultadas de cuántas, porcentaje, fase («Consultando tiendas», «Comprobando las fichas antes de avisar»…), cuánto lleva y cuánto le queda. La lleva el servidor, así que sigue ahí en todas las pestañas, al recargar y en el móvil. Sin nada en marcha mira cada 4 s, para que las revisiones automáticas y las búsquedas lanzadas desde otro dispositivo salgan enseguida.
 
 ## [0.19.8] - 2026-11-19
 
