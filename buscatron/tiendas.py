@@ -52,6 +52,11 @@ REPASO = {"www.amazon.es": "https://www.amazon.es/s?k={q}"}
 
 
 # Tiendas que bloquean cualquier acceso automático: no se consultan, solo se ofrece el enlace de búsqueda.
+def nunca(host):
+    """¿Tienda que BuscaTron no consulta jamás por su cuenta (Bixoto bloqueó la IP de casa; Ferretería tiene Cloudflare)?"""
+    return host in MANUALES
+
+
 MANUALES = {
     "ferreteriaibermadrid.es": "https://ferreteriaibermadrid.es/#3273/fullscreen/m=and&q={q}",
     "bixoto.com": "https://bixoto.com/es?search={q}",     # bloquea la IP tras unas pocas consultas automáticas
@@ -103,8 +108,9 @@ def carga():
         t.setdefault("tipo", "tienda")
         if not t.get("plantilla") and t["host"] in CONOCIDAS:
             t["plantilla"] = CONOCIDAS[t["host"]]
-        if t["host"] in MANUALES and "manual" not in t:
-            t["manual"], t["plantilla"] = True, MANUALES[t["host"]]
+        if t["host"] in MANUALES:              # nunca se consultan solas, aunque se desmarque la casilla
+            t["manual"] = True
+            t["plantilla"] = t.get("plantilla") or MANUALES[t["host"]]
     return lista
 
 

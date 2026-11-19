@@ -18,6 +18,8 @@ REAVISO_DIAS = 30
 FICHAS_POR_AVISO = 4       # fichas que se leen por tienda antes de avisar (las más baratas; el resto, con lo ya sabido)
 _cerrojo = threading.Lock()
 _en_curso = {}         # id → cuándo empezó su revisión
+_turno = threading.Lock()          # las revisiones, de una en una
+_pegados_pendientes = {}           # id → tiendas pegadas mientras se revisaba
 
 
 def _num(v):
@@ -97,7 +99,7 @@ def borra(seg_id):
         c.execute("DELETE FROM seguimientos WHERE id=?", (seg_id,))
 
 
-def avisos(limite=100):
+def avisos(limite=500):
     with bd.conecta() as c:
         return [dict(r) for r in c.execute("SELECT * FROM avisos WHERE oculto=0 ORDER BY ts DESC LIMIT ?", (limite,))]
 
@@ -115,8 +117,10 @@ def _edad(ts):
 
 
 def vacia_avisos():
+    """Vacía la lista. Se ocultan en vez de borrarse, como al quitar uno: si no, la siguiente revisión volvía a mandar
+    por Telegram todo lo que sigue cumpliendo."""
     with bd.conecta() as c:
-        c.execute("DELETE FROM avisos")
+        c.execute("UPDATE avisos SET oculto=1")
 
 
 def limpia_avisos(seg_id, res, informe):
@@ -125,10 +129,13 @@ def limpia_avisos(seg_id, res, informe):
     vivas = {x["url"] for x in res}
     sin_respuesta = {h for h, i in informe.items() if i.get("caida")}
     abierta_fallida = bool(informe.get("Búsqueda abierta", {}).get("caida"))
+    mias = {t["host"] for t in motor.cfg.carga()}
     with bd.conecta() as c:
         for r in c.execute("SELECT id, url, tienda FROM avisos WHERE seg_id=?", (seg_id,)).fetchall():
             if r["tienda"] in informe:
                 intocable = r["tienda"] in sin_respuesta
+            elif r["tienda"] in mias:  # tienda tuya que no se consultó (bloqueada o desactivada): no se sabe nada nuevo
+                intocable = True
             else:                      # procede de la búsqueda abierta
                 intocable = abierta_fallida
             if r["url"] not in vivas and not intocable:
@@ -158,8 +165,29 @@ def _apunta_aviso(c, seg_id, x, ts):
     """¿Se avisa de este producto? No si ya hay un aviso suyo de los últimos REAVISO_DIAS a este precio o a uno más bajo.
     Si su aviso se retiró porque dejó de cumplir (p. ej. se agotó), al volver sí se avisa: es noticia. Lo usan las
     revisiones y lo pegado a mano, para que las dos decidan igual."""
-    ult = c.execute("SELECT precio, ts FROM avisos WHERE seg_id=? AND url=? ORDER BY ts DESC LIMIT 1", (seg_id, x["url"])).fetchone()
-    return not (ult and x["precio"] >= ult["precio"] - 0.005 and ts - ult["ts"] < REAVISO_DIAS * 86400)
+    ult = c.execute("SELECT precio, ts FROM avisos WHERE seg_id=? AND url=? AND pendiente=0 ORDER BY ts DESC LIMIT 1",
+                    (seg_id, x["url"])).fetchone()      # los que no llegaron a enviarse no cuentan: se reintentan
+    if ult and x["precio"] >= ult["precio"] - 0.005 and ts - ult["ts"] < REAVISO_DIAS * 86400:
+        return False
+    c.execute("DELETE FROM avisos WHERE seg_id=? AND url=? AND pendiente=1", (seg_id, x["url"]))   # lo sustituye el nuevo
+    return True
+
+
+def _envia_avisos(seg, nuevos, ts):
+    """Manda los avisos nuevos por los canales de la vigilada. Si no llegan por ninguno, quedan pendientes y la
+    siguiente revisión lo intenta otra vez (antes se daban por avisados y no se repetían en 30 días)."""
+    canales = [k for k in seg["canales"].split(",") if k in ("telegram", "correo")]
+    if not nuevos or not canales:
+        return {}
+    grupos = agrupa(nuevos)
+    lineas = [linea_grupo(g, con_motivo=True) for g in grupos[:10]]
+    if len(grupos) > 10:
+        lineas.append(f"… y {len(grupos) - 10} productos más en la pestaña Avisos")
+    envio = notifica.envia(canales, f"BuscaTron · {seg['nombre']}", "\n\n".join(lineas))
+    if envio and all(v for v in envio.values()):
+        with bd.conecta() as c:
+            c.executemany("UPDATE avisos SET pendiente=1 WHERE seg_id=? AND url=? AND ts=?", [(seg["id"], x["url"], ts) for x in nuevos])
+    return envio
 
 
 def revisa(seg_id, enviar=True):
@@ -172,12 +200,20 @@ def revisa(seg_id, enviar=True):
     try:
         with bd.conecta() as c:
             fila = c.execute("SELECT nombre, duracion FROM seguimientos WHERE id=?", (seg_id,)).fetchone()
-        with servicio.trabajo("revision"), progreso.tarea(f"vigilada:{seg_id}", "vigilada", fila["nombre"] if fila else "Vigilada",
-                                                           fila["duracion"] if fila else None):
-            return _vueltas(seg_id, enviar)
+        with progreso.tarea(f"vigilada:{seg_id}", "vigilada", fila["nombre"] if fila else "Vigilada", fila["duracion"] if fila else None):
+            progreso.fase(progreso.actual(), "Esperando a que acabe otra revisión")
+            with _turno:                  # una revisión consulta todas las tiendas: dos a la vez serían una ráfaga
+                if servicio.saliendo():
+                    return {"ocupado": True}
+                with servicio.trabajo("revision"):     # cuenta como trabajo solo al empezar: un reinicio no espera a toda la cola
+                    progreso.reinicia(progreso.actual())
+                    return _vueltas(seg_id, enviar)
     finally:
         with _cerrojo:
             _en_curso.pop(seg_id, None)
+            pendientes = _pegados_pendientes.pop(seg_id, set())
+        for h in pendientes:              # pegaste mientras se revisaba: ahora sí pasa por sus avisos
+            avisa_pegados(h, enviar)
 
 
 def _vueltas(seg_id, enviar):
@@ -254,16 +290,12 @@ def _revisa(seg_id, enviar):
             estado = (f"{productos(res)}, {n} aviso{'' if n == 1 else 's'} nuevo{'' if n == 1 else 's'}"
                       + (f", {caidas} tienda{'' if caidas == 1 else 's'} sin respuesta" if caidas else ""))
             c.execute("UPDATE seguimientos SET ultima=?, estado=?, duracion=? WHERE id=?", (ts, estado, time.time() - ts, seg_id))
-        envio = {}
-        if nuevos and enviar:
-            canales = [k for k in seg["canales"].split(",") if k in ("telegram", "correo")]
-            grupos = agrupa(nuevos)
-            lineas = [linea_grupo(g, con_motivo=True) for g in grupos[:10]]
-            if len(grupos) > 10:
-                lineas.append(f"… y {len(grupos) - 10} productos más en la pestaña Avisos")
-            envio = notifica.envia(canales, f"BuscaTron · {seg['nombre']}", "\n\n".join(lineas))
+        envio = _envia_avisos(seg, nuevos, ts) if enviar else {}
         if enviar:
-            envio = {**envio, **_avisa_limites(seg, res)}
+            # límites de Amazon con lo que de verdad vale: sin agotados, preventas (si no las quieres) ni otros idiomas
+            validos = [x for x in res if not (x.get("agotado") and seg["sin_agotados"]) and not (x.get("preventa") and not opc.get("preventas"))
+                       and (modo == "todos" or motor.permite(x.get("idioma", "?"), x.get("idioma_seguro", False), modo))]
+            envio = {**envio, **_avisa_limites(seg, validos)}
         return {"resultados": len(res), "avisos": nuevos, "envio": envio}, seg
     except Exception as e:
         # Se anota la revisión aunque falle: si no, el programador la repetiría cada minuto contra todas las tiendas
@@ -282,12 +314,15 @@ def avisa_pegados(host, enviar=True):
         segs = [dict(r) for r in c.execute("SELECT * FROM seguimientos WHERE activo=1 ORDER BY id")]
     total = 0
     for seg in segs:
-        with _cerrojo:          # como una revisión: si esa vigilada ya se está revisando, ella lo recoge
+        with _cerrojo:          # si esa vigilada se está revisando, se hace al terminar (puede haber leído ya lo pegado)
             if seg["id"] in _en_curso:
+                _pegados_pendientes.setdefault(seg["id"], set()).add(host)
                 continue
             _en_curso[seg["id"]] = time.time()
         try:
-            total += _avisa_pegados_en(seg, host, enviar)
+            from . import servicio
+            with servicio.trabajo("pegado"):
+                total += _avisa_pegados_en(seg, host, enviar)
         finally:
             with _cerrojo:
                 _en_curso.pop(seg["id"], None)
@@ -321,10 +356,8 @@ def _avisa_pegados_en(seg, host, enviar):
             c.execute("INSERT INTO avisos(ts,seg_id,titulo,tienda,url,precio,motivo) VALUES(?,?,?,?,?,?,?)",
                       (ts, seg["id"], x["titulo"], x["tienda"], x["url"], x["precio"], motivo))
             nuevos.append({**x, "motivo": motivo})
-    if nuevos and enviar:
-        canales = [k for k in seg["canales"].split(",") if k in ("telegram", "correo")]
-        lineas = [linea_grupo(g, con_motivo=True) for g in agrupa(nuevos)[:10]]
-        notifica.envia(canales, f"BuscaTron · {seg['nombre']}", "\n\n".join(lineas))
+    if enviar:
+        _envia_avisos(seg, nuevos, ts)
     return len(nuevos)
 
 

@@ -50,6 +50,14 @@ def avanza(clave):
                 _tareas[clave]["hechas"] += 1
 
 
+def reinicia(clave):
+    """La tarea empieza de verdad ahora (p. ej. tras esperar su turno): el tiempo y la estimación cuentan desde aquí."""
+    if clave:
+        with _cerrojo:
+            if clave in _tareas:
+                _tareas[clave].update(inicio=time.time(), fase="Empezando…", hechas=0, total=0)
+
+
 def fase(clave, texto):
     if clave:
         with _cerrojo:
@@ -82,6 +90,9 @@ def lista():
         en_tiendas = t["fase"] in ("Empezando…", "Consultando tiendas")
         suelo = TIENDAS * de_tiendas if en_tiendas else TIENDAS
         e = est[t["clave"]]
+        if t["fase"].startswith("Esperando"):     # aún no ha empezado: ni porcentaje ni cuenta atrás
+            t["parte"], t["queda"] = None, None
+            continue
         if e:
             parte = max(suelo, min(lleva / e, 0.99))
             queda = e - lleva if lleva < e else None          # ya tarda más de lo normal: no se inventa una cifra

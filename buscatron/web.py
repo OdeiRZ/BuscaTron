@@ -113,7 +113,7 @@ def _busca(c):
                             preventas=bool(c.get("preventas")), con_envio=bool(c.get("con_envio")), segunda_mano=bool(c.get("segunda_mano")),
                             abierta=bool(c.get("abierta")), region=c.get("region") if c.get("region") in ("es", "ue", "mundo") else "es",
                             paginas=int(_num(c.get("paginas", "")) or 0) or None, alguna=str(c.get("alguna") or ""))
-    resp = {"resultados": res[:300], "total": len(res), "informe": inf,          # la página agrupa y enseña los N primeros
+    resp = {"resultados": res[:1000], "total": len(res), "informe": inf,          # la página agrupa y enseña los N primeros
             "webs": sorted({x["tienda"] for x in res if x.get("origen") == "web"})}
     if c.get("guardar", True) and c.get("q", "").strip():        # se recuerda para no tener que repetirla
         resp["id"], resp["ts"] = busquedas.guarda(c, resp)
@@ -252,8 +252,8 @@ class Handler(BaseHTTPRequestHandler):
         ip = self.client_address[0]
         if not ip_permitida(ip):
             return "denegado"
-        if es_local(ip):
-            return "ok"
+        if es_local(ip) and not self.headers.get("X-Forwarded-For") and not self.headers.get("Tailscale-User-Login"):
+            return "ok"                  # este equipo (por tailscale serve también se llega desde 127.0.0.1, pero con esas cabeceras)
         pin = ajustes.carga()["pin"]
         if not pin:
             return "ok"
@@ -296,9 +296,27 @@ class Handler(BaseHTTPRequestHandler):
                 return self._fallo(e)
         self._enviar(_pagina().encode(), "text/html; charset=utf-8")
 
+    def _origen_ajeno(self):
+        """¿Petición enviada por otra web abierta en el navegador (Origin de fuera)? La página propia manda su mismo
+        origen; el móvil llega por la red local o por tailscale (*.ts.net)."""
+        origen = self.headers.get("Origin")
+        if not origen:
+            return False
+        if origen.strip().lower() == "null":       # iframe aislado o redirección: no es la página propia
+            return True
+        h = (urlparse(origen).hostname or "").lower()
+        propios = {(self.headers.get("Host") or "").split(":")[0].lower(), (self.headers.get("X-Forwarded-Host") or "").split(":")[0].lower()} - {""}
+        if h in propios or h in ("localhost", "127.0.0.1") or h.endswith(".ts.net"):
+            return False
+        try:
+            ip = ipaddress.ip_address(h)
+            return not (ip.is_private or ip.is_loopback)
+        except ValueError:
+            return True
+
     def do_POST(self):
         est = self._estado()
-        if est == "denegado":
+        if est == "denegado" or self._origen_ajeno():
             return self._json({"error": "acceso no permitido"}, 403)
         try:
             largo = int(self.headers.get("Content-Length", 0))
@@ -342,6 +360,10 @@ class Handler(BaseHTTPRequestHandler):
         if ruta == "/api/buscar" and c.get("asincrono"):
             return lanza_busqueda(c)
         if ruta == "/api/buscar":
+            if c.get("solo_pegados"):         # refrescar lo pegado en pantalla: jamás una tienda que se consulte en directo
+                c["tiendas"] = [t["host"] for t in cfg.carga() if t["host"] in (c.get("tiendas") or []) and (t.get("manual") or cfg.nunca(t["host"]))]
+                if not c["tiendas"]:
+                    return {"resultados": [], "total": 0, "informe": {}, "webs": []}
             return busca(c)
         if ruta == "/api/referencia":         # vincular a mano un producto con su ficha de Amazon (o quitar el vínculo)
             if c.get("extra"):                # añadir un producto de Amazon por su enlace, tenga o no stock

@@ -86,6 +86,8 @@ class _Hilo(threading.Thread):
                     url, sal, espera, empieza = self.cola.get()
                     if url is None:
                         break
+                    if getattr(empieza, "cancelada", False):
+                        continue            # quien la pidió ya se cansó de esperar: abrirla ahora sería una petición fuera de ritmo
                     empieza.set()
                     try:
                         resp = pag.goto(url, wait_until="domcontentloaded", timeout=45000)
@@ -178,6 +180,7 @@ def get(url, visible=False, timeout=120, esperar_humano=0):
     # Hay un solo Chrome y atiende las páginas de una en una: el tiempo límite cuenta desde que empieza con ESTA página,
     # no desde que entró en la cola (con muchas tiendas, las últimas caducaban sin haberse consultado).
     if not empieza.wait(EN_COLA):
+        empieza.cancelada = True
         raise TimeoutError("el navegador tenía demasiadas páginas pendientes") from None
     try:
         r = sal.get(timeout=timeout + espera)

@@ -20,7 +20,8 @@ FECHAS = _fechas()
 _cerrojo = threading.Lock()
 _en_curso = {}                 # {tipo: cuántos}
 _saliendo = {"si": False}
-NOMBRES = {"busqueda": "una búsqueda", "revision": "una revisión de una vigilada", "telegram": "una búsqueda del bot de Telegram"}
+NOMBRES = {"busqueda": "una búsqueda", "revision": "una revisión de una vigilada", "telegram": "una búsqueda del bot de Telegram",
+           "pegado": "un pegado pasando por tus vigiladas"}
 
 
 @contextlib.contextmanager

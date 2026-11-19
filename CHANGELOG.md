@@ -3,6 +3,26 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.20.0] - 2026-11-19
+
+Revisión completa de la aplicación (búsqueda y tiendas, vigiladas y avisos, página y servidor) en tres pasadas.
+
+### Corregido
+- **Tiendas que te rechazan:** un 401/403 ya no hace probar otras direcciones de búsqueda ni repetir enseguida con Chrome; los rechazos en páginas siguientes y en fichas cuentan para que la tienda espere (antes parecía sana y se le volvía a preguntar igual).
+- **Bixoto y Ferretería Ibermadrid** son siempre «solo enlace», aunque se desmarque la casilla. Las fichas y el idioma tampoco se consultan en tiendas caídas o bloqueadas.
+- **Chrome:** una página que caducó esperando su turno ya no se abre después, fuera del ritmo de la tienda.
+- **Abrir la app** ya no puede consultar una tienda: al refrescar lo pegado solo se piden tiendas que ahora son «solo enlace» (también lo comprueba el servidor).
+- **«Vaciar avisos»** los oculta en vez de borrarlos: la siguiente revisión ya no vuelve a mandar todo por Telegram.
+- **Si un aviso no llega** por ningún canal (Telegram caído), queda pendiente y se reintenta en la siguiente revisión, en vez de darse por avisado 30 días.
+- **Una tienda bloqueada o desactivada** ya no pierde sus avisos (y no se repiten cuando vuelve).
+- **Las revisiones van de una en una** (programador, «Buscar ahora» y /revisar de Telegram): nunca varias a la vez contra todas las tiendas. La barra dice «Esperando a que acabe otra revisión».
+- Lo pegado mientras se revisaba esa vigilada pasa por sus avisos al terminar la revisión.
+- Los avisos de límites de Amazon no cuentan agotados, preventas (si no las quieres) ni otros idiomas.
+- Lo pegado lleva su tipo de producto, como lo leído en directo.
+- Se guardan hasta 1000 resultados por búsqueda (antes 300, y los productos con muchas tiendas perdían ofertas) y la pestaña Avisos carga hasta 500.
+- **Accesos:** otra web abierta en el navegador ya no puede mandar órdenes a BuscaTron; quien entra por tailscale serve no cuenta como «este equipo» (si pones PIN, se le pide).
+- La barra muestra la fase «Comprobando el stock en las fichas».
+
 ## [0.19.10] - 2026-11-19
 
 ### Corregido

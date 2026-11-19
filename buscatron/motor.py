@@ -1,6 +1,7 @@
 """Motor de búsqueda: consulta tiendas en paralelo, pagina, filtra y ordena."""
 import concurrent.futures as cf
 import re
+import threading
 import time
 
 from . import ajustes, bd, fetch, extract, descubre, importar, navegador, progreso, tiendas as cfg
@@ -17,6 +18,18 @@ MAX_CAIDA = 86400           # …y cada vez que vuelve a fallar se espera 6 vece
 RECHAZOS_PARA_ESPERAR = 2   # 403 seguidos antes de dejar de llamarla un tiempo (un 429 basta con uno)
 BLOQUEO_FALLOS = 3          # esperas seguidas por rechazo tras las que se da por bloqueada (se prueba solo su portada)
 _rechazos = {}   # {host: 403/401 seguidos}
+_rechazo_ahora = set()   # tiendas que rechazaron una página siguiente en la consulta en curso
+_cerrojo_rechazo = threading.Lock()
+
+
+def _quita_rechazo_ahora(h):
+    with _cerrojo_rechazo:
+        if h in _rechazo_ahora:
+            _rechazo_ahora.discard(h)
+            return True
+    return False
+
+
 _caidas = {}     # {host: cuándo dejó de responder} (lo que queda en memoria; lo que manda está en la tabla «caidas»)
 
 
@@ -110,8 +123,10 @@ def _intenta(t, consulta, get, paginas=1, con_estado=False):
         st, html = get(url)
         if st == 429:
             return [], "pide esperar por demasiadas consultas (error 429): vuelve a probar más tarde"
+        if st in (401, 403):
+            return [], f"rechaza las consultas automáticas (error {st})"     # no se insiste con otras direcciones
         if st != 200:
-            err = ("rechaza las consultas automáticas" if st in (401, 403) else "no encuentra la página de búsqueda" if st == 404 else "su web no responde bien") + f" (error {st})"
+            err = ("no encuentra la página de búsqueda" if st == 404 else "su web no responde bien") + f" (error {st})"
             continue
         items, sig = extract.analiza(html, url, consulta, con_estado=con_estado)
         if not items:
@@ -127,6 +142,11 @@ def _intenta(t, consulta, get, paginas=1, con_estado=False):
             try:
                 st2, html2 = get(sig)
             except Exception:
+                break
+            if st2 in (401, 403, 429):
+                registra_rechazo(t["host"], f"rechazó la página siguiente (error {st2})")
+                with _cerrojo_rechazo:
+                    _rechazo_ahora.add(t["host"])    # que el éxito de la primera página no lo borre
                 break
             if st2 != 200:
                 break
@@ -233,6 +253,8 @@ def _tienda_viva(t, consulta, nav, paginas, estados):
     r = _tienda_consulta(t, consulta, nav, paginas, estados)
     if es_rechazo(r[2]):                                     # responde, pero rechazándote: no insistir
         registra_rechazo(h, r[2])
+    elif _quita_rechazo_ahora(h):
+        pass                                                 # respondió, pero rechazó una página siguiente: no se olvida
     else:
         _rechazos.pop(h, None)
         limpia_caida(h)                                      # ha respondido: se olvida que estuvo caída
@@ -252,6 +274,8 @@ def _tienda_consulta(t, consulta, nav, paginas, estados):
             r, err = [], None
         if r:
             return h, r, None
+        if es_rechazo(err):
+            return h, [], err          # nos ha rechazado: pedírselo enseguida con Chrome es insistir
     if nav is None:
         return h, [], (err or SIN_COINCIDENCIAS) + " (quizá solo la lea un navegador: activa «Usar Chrome» en Ajustes)"
     leida = not t.get("js") and err == SIN_COINCIDENCIAS          # su página se leyó bien, solo que sin ese producto
@@ -333,8 +357,8 @@ def verifica_idioma(x, lista=None):
     if f and time.time() - f["ts"] < 30 * 86400:
         return f["codigo"] or None
     t = next((t for t in (lista or cfg.carga()) if t["host"] == x.get("tienda")), {})
-    if t.get("manual"):
-        return None                                       # tienda «solo enlace»: su ficha no se consulta nunca
+    if not _ficha_permitida(t, x):
+        return None                                       # «solo enlace», caída o bloqueada: su ficha no se consulta
     try:
         if t.get("js") and navegador.disponible() and ajustes.carga()["usar_navegador"]:
             st, html = navegador.get(x["url"], visible=False)
@@ -355,14 +379,21 @@ FICHA_HORAS = 6       # el stock cambia: la ficha se vuelve a leer pasado este t
 FICHA_FALLO_HORAS = 2     # una ficha que no se pudo leer no se vuelve a pedir hasta pasado este tiempo
 
 
+def _ficha_permitida(t, x):
+    """¿Se puede leer la ficha de un producto de esta tienda? No si es «solo enlace» (o de las que nunca se consultan),
+    está bloqueada o está esperando tras no responder o rechazarnos."""
+    h = t.get("host") or x.get("tienda") or ""
+    return not (t.get("manual") or cfg.nunca(h) or t.get("bloqueo") or caida_hasta(h) > time.time())
+
+
 def ficha(x, lista=None):
     """Lo que dice la ficha del producto: {'idioma': 'es'|'en'|'otro'|None, 'agotado': bool|None, 'preventa': bool|None}.
     None = no se pudo saber. Sirve para no avisar de algo que en su ficha está agotado, en preventa o en otro idioma
     (el listado de algunas tiendas no lo dice). Se guarda unas horas para no repetir la consulta."""
     nada = {"idioma": None, "agotado": None, "preventa": None}
     t = next((t for t in (lista or cfg.carga()) if t["host"] == x.get("tienda")), {})
-    if "btitem=" in x["url"] or x.get("importado") or t.get("manual"):
-        return nada         # lo pegado a mano, o de una tienda «solo enlace»: su ficha no se consulta nunca (ni con los enlaces del HTML)
+    if "btitem=" in x["url"] or x.get("importado") or not _ficha_permitida(t, x):
+        return nada         # pegado a mano, tienda «solo enlace», caída o bloqueada: su ficha no se consulta
     with bd.conecta() as c:
         f = c.execute("SELECT idioma, agotado, preventa, ts FROM fichas WHERE url=?", (x["url"],)).fetchone()
     if f and time.time() - f["ts"] < FICHA_HORAS * 3600:
@@ -376,6 +407,8 @@ def ficha(x, lista=None):
             st, html = fetch.get(x["url"], timeout=20)
     except Exception:
         st = None
+    if st in (401, 403, 429):
+        registra_rechazo(t.get("host") or x.get("tienda"), f"rechazó la ficha (error {st})")
     if st != 200:                 # se recuerda el fallo un rato: si no, se pediría otra vez en cada búsqueda
         with bd.conecta() as c:
             c.execute("INSERT INTO fichas(url, idioma, agotado, preventa, ts) VALUES(?,?,?,?,?) "     # el idioma ya leído se conserva
@@ -690,7 +723,7 @@ def buscar(consulta, incluir="", excluir="", ocultar_agotados=True, hosts=None, 
     if not segunda_mano:
         activas = [t for t in activas if t.get("tipo") != "segunda_mano"]
     # «solo enlace» aunque no tenga dirección de búsqueda (su enlace es la portada): si no, se consultaba igual
-    manuales = [t for t in activas if t.get("manual")]
+    manuales = [t for t in activas if t.get("manual") or cfg.nunca(t["host"])]
     activas = [t for t in activas if t not in manuales]
     por_host = {t["host"]: t for t in lista}
     inc = extract.normaliza(incluir).split()
@@ -756,7 +789,7 @@ def buscar(consulta, incluir="", excluir="", ocultar_agotados=True, hosts=None, 
         previos = [x for x in importar.vigentes(t["host"], consulta)                   # lo que el usuario pegó a mano
                    if pasa(x) and solo_juego(t["host"], x["titulo"], consulta) and not es_no_juego(x["titulo"])]
         for x in previos:
-            x["tienda"], x["origen"] = t["host"], t.get("tipo", "tienda")
+            x["tienda"], x["origen"], x["tipo"] = t["host"], t.get("tipo", "tienda"), tipo_de(x["titulo"])
             res.append(x)
         if previos:
             informe[t["host"]].update(importados=len(previos), importado_ts=max(x["importado"] for x in previos))
@@ -795,6 +828,7 @@ def buscar(consulta, incluir="", excluir="", ocultar_agotados=True, hosts=None, 
         x["pvp"] = pvp if pvp and pvp > x["precio"] else None
         x["descuento"] = round(100 * (1 - x["precio"] / pvp)) if x["pvp"] else None
     res = [x for x in res if not (pmin is not None and x["precio"] < pmin) and not (pmax is not None and x["precio"] > pmax)]
+    progreso.fase(prog, "Comprobando el stock en las fichas")
     corrige_stock(res, lista)
     res = [x for x in res if not (ocultar_agotados and x["agotado"]) and not (x.get("preventa") and not preventas)]
     for h, i in informe.items():

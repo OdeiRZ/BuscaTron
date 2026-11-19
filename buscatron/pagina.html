@@ -1092,9 +1092,10 @@ function abrePegar(host){
 
 // Lo pegado entra en la lista que tienes en pantalla sin repetir la búsqueda: se piden solo las tiendas «solo enlace»
 // (no hacen ninguna petición: devuelven lo pegado que encaje) y se reagrupa todo con las reglas actuales.
-async function refrescaPegados(hosts){
+async function refrescaPegados(hosts){try{
+  hosts=hosts.filter(h=>(tiendas.find(t=>t.host===h)||{}).manual);     // solo las que ahora son «solo enlace»: nunca consulta una tienda
   const body=ultimoBody;if(!hosts.length||!body||!body.q)return;
-  const r2=await api('buscar',{...body,tiendas:hosts,top:200,guardar:false,abierta:false});
+  const r2=await api('buscar',{...body,tiendas:hosts,top:200,guardar:false,abierta:false,solo_pegados:true});
   if(r2.error||body!==ultimoBody)return;
   const lista=ultimos.filter(x=>!hosts.includes(x.tienda)).concat(r2.resultados);ultimos=lista;
   const g=await api('agrupar',{q:body.q,alguna:body.alguna||'',titulos:lista.map(x=>x.titulo)});
@@ -1103,7 +1104,8 @@ async function refrescaPegados(hosts){
   ultimos.sort((a,b)=>(a.agotado-b.agotado)||(body.con_envio?a.total-b.total:a.precio-b.precio));
   if(ultimoId)api('busquedas',{accion:'actualizar',id:ultimoId,resultados:ultimos});
   pintaLista();
-  hosts.forEach(h=>{const inf=(r2.informe[h]||{}),sp=$('imp-'+h);if(sp)sp.textContent=inf.importados?`${inf.importados} pegado${inf.importados>1?'s':''} ${relativo(inf.importado_ts)}`:'';});}
+  hosts.forEach(h=>{const inf=(r2.informe[h]||{}),sp=$('imp-'+h);if(sp)sp.textContent=inf.importados?`${inf.importados} pegado${inf.importados>1?'s':''} ${relativo(inf.importado_ts)}`:'';});
+  }catch(e){}}         // sin conexión o reiniciando: la lista se queda como estaba
 function graficaSVG(p){
   const W=320,H=170,L=46,R=12,T=14,B=26,xs=p.map(q=>q.ts),ys=p.map(q=>q.precio);
   let x0=Math.min(...xs),x1=Math.max(...xs),y0=Math.min(...ys),y1=Math.max(...ys);
