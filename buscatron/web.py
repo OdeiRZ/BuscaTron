@@ -412,7 +412,8 @@ class Handler(BaseHTTPRequestHandler):
             base = cfg.url_busqueda(t["plantilla"], consulta) if t.get("plantilla") else "https://" + t["host"] + "/"
             items = importar.parsea(c.get("texto", ""), consulta, base)
             n = importar.guarda(t["host"], consulta, items, base) if items else 0
-            return {"importados": n, "ejemplos": [{"titulo": x["titulo"], "precio": x["precio"]} for x in items[:5]], "caduca_horas": importar.CADUCA_HORAS}
+            avisos = seguimiento.avisa_pegados(t["host"]) if n else 0    # que salgan ya en Avisos, sin esperar a la revisión
+            return {"importados": n, "avisos": avisos, "ejemplos": [{"titulo": x["titulo"], "precio": x["precio"]} for x in items[:5]], "caduca_horas": importar.CADUCA_HORAS}
         if ruta == "/api/envio_detectar":     # pista a partir de la portada de la tienda; el usuario la revisa y guarda
             if not any(t["host"] == c.get("host") for t in cfg.carga()):
                 raise ValueError("tienda no encontrada")

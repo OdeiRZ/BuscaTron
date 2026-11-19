@@ -263,6 +263,49 @@ def _revisa(seg_id, enviar):
         raise
 
 
+def avisa_pegados(host, enviar=True):
+    """Lo que acabas de pegar de una tienda «solo enlace» pasa al momento por tus vigiladas activas y crea sus avisos, sin
+    esperar a la próxima revisión. No consulta ninguna tienda: esa tienda no se consulta (solo devuelve lo pegado) y no
+    se leen fichas. Devuelve el número de avisos nuevos."""
+    with bd.conecta() as c:
+        segs = [dict(r) for r in c.execute("SELECT * FROM seguimientos WHERE activo=1 ORDER BY id")]
+    total = 0
+    for seg in segs:
+        opc = opciones_de(seg)
+        busqueda = {k: v for k, v in opc.items() if k not in NO_SON_DE_BUSQUEDA}
+        busqueda["abierta"] = False
+        res, _ = motor.buscar(seg["consulta"], seg["incluir"], seg["excluir"], bool(seg["sin_agotados"]), [host],
+                              seg["pmin"], seg["pmax"], seg["id"], castellano=bool(seg["castellano"]), **busqueda)
+        res = [x for x in res if tipo_vale(opc, x["titulo"])]
+        modo = motor.modo_idioma(bool(seg["castellano"]), opc.get("idioma"))
+        ts, nuevos = time.time(), []
+        with bd.conecta() as c:
+            for x in res:
+                x["_ts"] = ts
+                motivo = _motivo(c, seg, x)
+                if not motivo or (x.get("agotado") and seg["sin_agotados"]) or (x.get("preventa") and not opc.get("preventas")):
+                    continue
+                if modo != "todos" and not motor.permite(x.get("idioma", "?"), x.get("idioma_seguro", False), modo):
+                    continue
+                if modo != "todos" and not (x.get("idioma") == "es" and x.get("idioma_seguro")):
+                    motivo += " · idioma sin confirmar"
+                if x.get("importado"):
+                    motivo += f" · precio pegado a mano {_edad(x['importado'])}, sin comprobar en directo"
+                ult = c.execute("SELECT precio, ts FROM avisos WHERE seg_id=? AND url=? ORDER BY ts DESC LIMIT 1",
+                                (seg["id"], x["url"])).fetchone()
+                if ult and x["precio"] >= ult["precio"] - 0.005 and ts - ult["ts"] < REAVISO_DIAS * 86400:
+                    continue
+                c.execute("INSERT INTO avisos(ts,seg_id,titulo,tienda,url,precio,motivo) VALUES(?,?,?,?,?,?,?)",
+                          (ts, seg["id"], x["titulo"], x["tienda"], x["url"], x["precio"], motivo))
+                nuevos.append({**x, "motivo": motivo})
+        total += len(nuevos)
+        if nuevos and enviar:
+            canales = [k for k in seg["canales"].split(",") if k in ("telegram", "correo")]
+            lineas = [linea_grupo(g, con_motivo=True) for g in agrupa(nuevos)[:10]]
+            notifica.envia(canales, f"BuscaTron · {seg['nombre']}", "\n\n".join(lineas))
+    return total
+
+
 def tiendas_caidas(informe):
     """Tiendas que no respondieron (la búsqueda abierta no es una tienda)."""
     return sum(1 for h, i in informe.items() if i.get("caida") and h != "Búsqueda abierta")

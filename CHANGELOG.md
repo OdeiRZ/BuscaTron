@@ -3,6 +3,11 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.19.5] - 2026-11-19
+
+### Añadido
+- Lo que pegas pasa al momento por tus vigiladas activas y crea sus avisos (y su mensaje de Telegram), sin esperar a la próxima revisión. No consulta ninguna tienda ni lee fichas; el aviso dice que es un precio pegado a mano.
+
 ## [0.19.4] - 2026-11-19
 
 ### Cambiado

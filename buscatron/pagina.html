@@ -1057,7 +1057,7 @@ function abrePegar(host){
     b.disabled=true;const r=await api('importar',{host,consulta,texto:$('pegar-txt').value});b.disabled=false;
     if(r.error){m.className='err';m.textContent=r.error;return;}
     if(!r.importados){m.className='err';m.textContent=`No encontré ningún producto con «${consulta}» y su precio en lo que has pegado. Comprueba que copiaste la página de resultados de esa búsqueda.`;return;}
-    cierraPegar();aviso(`${r.importados} producto${r.importados>1?'s':''} de ${nombreT(host)} guardado${r.importados>1?'s':''}`);
+    cierraPegar();aviso(`${r.importados} producto${r.importados>1?'s':''} de ${nombreT(host)} guardado${r.importados>1?'s':''}`+(r.avisos?` · ${r.avisos} aviso${r.avisos>1?'s':''} nuevo${r.avisos>1?'s':''} en Avisos`:' · ninguno cumple las condiciones de aviso de tus vigiladas activas'));if(r.avisos)cargaNavAv();
     // si hay resultados de esa misma búsqueda en pantalla, se mezclan al instante (es «solo enlace»: no hace ninguna petición)
     if(ultimoBody&&ultimoBody.q&&$('lista-res'))refrescaPegados([host]);};}
 
