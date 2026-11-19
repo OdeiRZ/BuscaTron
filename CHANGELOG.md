@@ -3,6 +3,11 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.19.10] - 2026-11-19
+
+### Corregido
+- El porcentaje de la barra de carga solo contaba tiendas: llegaba al 100 % con «quedan 0 s» a mitad, porque las tiendas lentas acaban las últimas y después aún queda trabajo (otras webs, idioma de las fichas, comprobación antes de avisar). Ahora manda el tiempo que suele tardar (la revisión anterior de esa vigilada, o la última búsqueda a escala de sus tiendas); las tiendas hechas son el 80 % de la barra como mucho, nunca marca 100 % antes de acabar y, si tarda más de lo normal, dice «terminando…» en vez de inventarse lo que queda. Se ven también las fases nuevas.
+
 ## [0.19.9] - 2026-11-19
 
 ### Añadido

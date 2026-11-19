@@ -729,7 +729,7 @@ def buscar(consulta, incluir="", excluir="", ocultar_agotados=True, hosts=None, 
             progreso.avanza(prog)
     with cf.ThreadPoolExecutor(12) as ex:
         resultados = list(ex.map(una, activas))
-    progreso.fase(prog, "Ordenando resultados")
+    progreso.fase(prog, "Revisando lo encontrado")
     if nav and aj["navegador_visible"]:
         # Solo las tiendas que piden comprobar que eres humano se reintentan con ventana, de una en una,
         # para que el usuario pueda resolverlo; el resto se consulta sin que salga nada en pantalla.
@@ -738,6 +738,7 @@ def buscar(consulta, incluir="", excluir="", ocultar_agotados=True, hosts=None, 
                 r = _tienda(por_host[host], consulta, {"visible": True}, pags(por_host[host]))
                 # La ventana ya se abrió y nadie resolvió la comprobación a tiempo: decir eso, no «activa la ventana».
                 resultados[i] = (r[0], r[1], DESAFIO_SIN_RESOLVER if r[2] == DESAFIO else r[2])
+    progreso.fase(prog, "Mirando el idioma en las fichas")
     idioma_ficha.update(idiomas_de_fichas([x["url"] for _, items, _ in resultados for x in items]))
     for host, items, err in resultados:
         kept = 0
@@ -760,6 +761,7 @@ def buscar(consulta, incluir="", excluir="", ocultar_agotados=True, hosts=None, 
         if previos:
             informe[t["host"]].update(importados=len(previos), importado_ts=max(x["importado"] for x in previos))
     if abierta:
+        progreso.fase(prog, "Buscando en otras webs")
         from . import abierta as web
         conocidos = {t["host"].replace("www.", "") for t in lista}
         items, info = web.busca(consulta, region=region, excluir_hosts=conocidos, castellano=(modo != "todos"), nav=nav)

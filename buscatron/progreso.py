@@ -10,6 +10,8 @@ import time
 _cerrojo = threading.Lock()
 _tareas = {}                  # clave → {tipo, nombre, inicio, hechas, total, fase, estimado}
 _local = threading.local()
+_ultimas = {}                 # tipo → (segundos, tiendas) de la última que terminó: para estimar las búsquedas
+TIENDAS = 0.8                 # parte de la barra para consultar las tiendas; el resto, lo que viene después
 
 
 @contextlib.contextmanager
@@ -24,7 +26,9 @@ def tarea(clave, tipo, nombre, estimado=None):
     finally:
         _local.clave = anterior
         with _cerrojo:
-            _tareas.pop(clave, None)
+            t = _tareas.pop(clave, None)
+            if t and t["total"]:
+                _ultimas[tipo] = (time.time() - t["inicio"], t["total"])
 
 
 def actual():
@@ -53,18 +57,39 @@ def fase(clave, texto):
                 _tareas[clave]["fase"] = texto
 
 
+def _estimado(t):
+    """Segundos que suele tardar: el de la tarea (revisión anterior de esa vigilada) o la última del mismo tipo,
+    a escala de las tiendas que consulta."""
+    if t["estimado"]:
+        return t["estimado"]
+    ult = _ultimas.get(t["tipo"])
+    if ult and t["total"]:
+        return ult[0] * t["total"] / ult[1]
+    return None
+
+
 def lista():
-    """Las tareas en marcha, con lo que llevan y una estimación de lo que les queda (s)."""
+    """Las tareas en marcha, con lo que llevan, la parte hecha (0-1) y lo que les queda (s; None si no se sabe).
+    Las tiendas lentas acaban las últimas y después aún queda trabajo (otras webs, fichas…): contar solo tiendas daba
+    100 % a mitad. Así que manda el tiempo que suele tardar, y las tiendas hechas solo sirven de suelo."""
     ahora = time.time()
     with _cerrojo:
         tareas = [dict(t) for t in _tareas.values()]
+        est = {t["clave"]: _estimado(t) for t in tareas}
     for t in tareas:
-        t["lleva"] = ahora - t["inicio"]
-        queda = None
-        if t["total"] and t["hechas"]:
-            queda = t["lleva"] / t["hechas"] * (t["total"] - t["hechas"])
-        elif t["estimado"]:
-            queda = max(0, t["estimado"] - t["lleva"])
+        lleva = t["lleva"] = ahora - t["inicio"]
+        de_tiendas = t["hechas"] / t["total"] if t["total"] else 0
+        en_tiendas = t["fase"] in ("Empezando…", "Consultando tiendas")
+        suelo = TIENDAS * de_tiendas if en_tiendas else TIENDAS
+        e = est[t["clave"]]
+        if e:
+            parte = max(suelo, min(lleva / e, 0.99))
+            queda = e - lleva if lleva < e else None          # ya tarda más de lo normal: no se inventa una cifra
+        elif t["total"] and t["hechas"]:
+            parte = suelo if en_tiendas else 0.9
+            queda = (lleva / t["hechas"] * (t["total"] - t["hechas"]) + 0.25 * lleva) if en_tiendas else None
+        else:
+            parte, queda = (suelo or None), None
+        t["parte"] = round(min(parte, 0.99), 3) if parte is not None else None
         t["queda"] = queda
-        t["parte"] = round(t["hechas"] / t["total"], 3) if t["total"] else None
     return sorted(tareas, key=lambda t: t["inicio"])

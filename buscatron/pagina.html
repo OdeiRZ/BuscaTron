@@ -775,7 +775,7 @@ async function sigueProgreso(){
   $('progreso').innerHTML=l.map(t=>{const pct=t.parte!=null?Math.round(t.parte*100):null;
     const que=t.tipo==='busqueda'?`🔎 Buscando «${esc(t.nombre)}»`:`👁️ Revisando «${esc(t.nombre)}»`;
     const cuanto=t.total?`${t.hechas} de ${t.total} tiendas`:'';
-    const queda=t.queda!=null?` · quedan unos ${durTxt(t.queda)}`:'';
+    const queda=t.queda!=null?` · quedan unos ${durTxt(t.queda)}`:(t.parte>=.8?' · terminando…':'');
     return `<div class="prog"><div class="prog-cab"><span>${que}</span><span>${pct!=null?pct+' %':''}</span></div>
       <div class="prog-det">${esc(t.fase)}${cuanto?' · '+cuanto:''} · lleva ${durTxt(t.lleva)}${queda}</div>
       <div class="prog-barra ${pct==null?'ind':''}"><i style="${pct!=null?`width:${Math.max(3,pct)}%`:''}"></i></div></div>`;}).join('');
