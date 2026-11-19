@@ -741,7 +741,8 @@ def buscar(consulta, incluir="", excluir="", ocultar_agotados=True, hosts=None, 
     for t in manuales:
         enlace = cfg.url_busqueda(t["plantilla"], consulta) if t.get("plantilla") else f"https://{t['host']}/"
         informe[t["host"]] = {"encontrados": 0, "error": None, "manual": enlace}
-        previos = [x for x in importar.vigentes(t["host"], consulta) if pasa(x)]      # lo que el usuario pegó a mano
+        previos = [x for x in importar.vigentes(t["host"], consulta)                   # lo que el usuario pegó a mano
+                   if pasa(x) and solo_juego(t["host"], x["titulo"], consulta) and not es_no_juego(x["titulo"])]
         for x in previos:
             x["tienda"], x["origen"] = t["host"], t.get("tipo", "tienda")
             res.append(x)

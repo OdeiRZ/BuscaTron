@@ -145,12 +145,21 @@ def _motivo(c, seg, x):
         return f"cuesta {x['precio']:.2f} €, por debajo de tu objetivo de {seg['objetivo']:.2f} €".replace(".", ",")
     if seg["bajo_historico"]:
         previos = [r[0] for r in c.execute(
-            "SELECT precio FROM precios WHERE url=? AND ts < ? AND agotado=0 AND preventa=0", (x["url"], x["_ts"]))]
+            "SELECT precio FROM precios WHERE url=? AND ts < ? AND agotado=0 AND preventa=0",
+            (x["url"], min(x["_ts"], x.get("importado") or x["_ts"])))]       # lo pegado: solo lo visto antes de pegarlo
         if len(previos) >= MIN_OBSERVACIONES:
             med = statistics.median(previos)
             if x["precio"] <= med * (1 - seg["bajo_historico"] / 100):
                 return f"un {(1 - x['precio'] / med) * 100:.0f} % más barato que su precio habitual ({med:.2f} €)".replace(".", ",")
     return None
+
+
+def _apunta_aviso(c, seg_id, x, ts):
+    """¿Se avisa de este producto? No si ya hay un aviso suyo de los últimos REAVISO_DIAS a este precio o a uno más bajo.
+    Si su aviso se retiró porque dejó de cumplir (p. ej. se agotó), al volver sí se avisa: es noticia. Lo usan las
+    revisiones y lo pegado a mano, para que las dos decidan igual."""
+    ult = c.execute("SELECT precio, ts FROM avisos WHERE seg_id=? AND url=? ORDER BY ts DESC LIMIT 1", (seg_id, x["url"])).fetchone()
+    return not (ult and x["precio"] >= ult["precio"] - 0.005 and ts - ult["ts"] < REAVISO_DIAS * 86400)
 
 
 def revisa(seg_id, enviar=True):
@@ -231,9 +240,7 @@ def _revisa(seg_id, enviar):
                     motivo += " · idioma sin confirmar"
                 if x.get("importado"):      # no se consulta en directo: es lo que el usuario pegó a mano
                     motivo += f" · precio pegado a mano {_edad(x['importado'])}, sin comprobar en directo"
-                ult = c.execute("SELECT precio, ts FROM avisos WHERE seg_id=? AND url=? ORDER BY ts DESC LIMIT 1",
-                                (seg_id, x["url"])).fetchone()
-                if ult and x["precio"] >= ult["precio"] - 0.005 and ts - ult["ts"] < REAVISO_DIAS * 86400:
+                if not _apunta_aviso(c, seg_id, x, ts):
                     continue
                 c.execute("INSERT INTO avisos(ts,seg_id,titulo,tienda,url,precio,motivo) VALUES(?,?,?,?,?,?,?)",
                           (ts, seg_id, x["titulo"], x["tienda"], x["url"], x["precio"], motivo))
@@ -269,6 +276,8 @@ def avisa_pegados(host, enviar=True):
     se leen fichas. Devuelve el número de avisos nuevos."""
     with bd.conecta() as c:
         segs = [dict(r) for r in c.execute("SELECT * FROM seguimientos WHERE activo=1 ORDER BY id")]
+    with _cerrojo:
+        segs = [g for g in segs if g["id"] not in _en_curso]
     total = 0
     for seg in segs:
         opc = opciones_de(seg)
@@ -291,9 +300,7 @@ def avisa_pegados(host, enviar=True):
                     motivo += " · idioma sin confirmar"
                 if x.get("importado"):
                     motivo += f" · precio pegado a mano {_edad(x['importado'])}, sin comprobar en directo"
-                ult = c.execute("SELECT precio, ts FROM avisos WHERE seg_id=? AND url=? ORDER BY ts DESC LIMIT 1",
-                                (seg["id"], x["url"])).fetchone()
-                if ult and x["precio"] >= ult["precio"] - 0.005 and ts - ult["ts"] < REAVISO_DIAS * 86400:
+                if not _apunta_aviso(c, seg["id"], x, ts):
                     continue
                 c.execute("INSERT INTO avisos(ts,seg_id,titulo,tienda,url,precio,motivo) VALUES(?,?,?,?,?,?,?)",
                           (ts, seg["id"], x["titulo"], x["tienda"], x["url"], x["precio"], motivo))

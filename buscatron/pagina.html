@@ -1067,9 +1067,10 @@ async function refrescaPegados(hosts){
   const body=ultimoBody;if(!hosts.length||!body||!body.q)return;
   const r2=await api('buscar',{...body,tiendas:hosts,top:200,guardar:false,abierta:false});
   if(r2.error||body!==ultimoBody)return;
-  ultimos=ultimos.filter(x=>!hosts.includes(x.tienda)).concat(r2.resultados);
-  const g=await api('agrupar',{q:body.q,alguna:body.alguna||'',titulos:ultimos.map(x=>x.titulo)});
-  if(g.grupos&&body===ultimoBody)ultimos.forEach((x,i)=>{x.grupo=g.grupos[i].grupo;x.clave=g.grupos[i].clave;});
+  const lista=ultimos.filter(x=>!hosts.includes(x.tienda)).concat(r2.resultados);ultimos=lista;
+  const g=await api('agrupar',{q:body.q,alguna:body.alguna||'',titulos:lista.map(x=>x.titulo)});
+  if(body!==ultimoBody||ultimos!==lista)return;          // otra búsqueda u otro pegado mientras tanto: manda el último
+  if(g.grupos)lista.forEach((x,i)=>{x.grupo=g.grupos[i].grupo;x.clave=g.grupos[i].clave;});
   ultimos.sort((a,b)=>(a.agotado-b.agotado)||(body.con_envio?a.total-b.total:a.precio-b.precio));
   if(ultimoId)api('busquedas',{accion:'actualizar',id:ultimoId,resultados:ultimos});
   pintaLista();
@@ -1194,7 +1195,7 @@ function proxima(s){const t=(s.ultima||0)+s.cada_horas*3600,ahora=Date.now()/100
   if(!s.ultima||t<=ahora)return 'en cuanto le toque (las automáticas van de una en una, cada 10 min, si BuscaTron está abierto)';
   const h=(t-ahora)/3600;return `dentro de ${h<1?Math.max(1,Math.round(h*60))+' min':String(Math.round(h*10)/10).replace('.',',')+' h'} (${new Date(t*1000).toLocaleString('es-ES',{weekday:'short',hour:'2-digit',minute:'2-digit'})})`;}
 function extrasSeg(s){const o=s.opciones||{};
-  const e=[o.alguna&&`con alguna de: ${o.alguna}`,o.tipos&&o.tipos.length&&`solo ${o.tipos.map(t=>NOMBRE_TIPO[t]).join(', ')}`,o.idioma==='estricto'&&'solo castellano confirmado',o.idioma==='todos'&&'cualquier idioma',o.preventas&&'cuenta las preventas',o.con_envio&&'con envío incluido',o.segunda_mano&&'también segunda mano',o.abierta&&`también webs fuera de tu lista (${{es:'España',ue:'UE',mundo:'cualquier país'}[o.region]||'España'})`,o.paginas&&`${o.paginas} páginas por tienda`,o.resumen&&'resumen por Telegram en cada revisión'].filter(Boolean);
+  const e=[o.alguna&&`con alguna de: ${o.alguna}`,o.tipos&&o.tipos.length&&`solo ${o.tipos.map(t=>NOMBRE_TIPO[t]).join(', ')}`,o.idioma==='estricto'&&'solo castellano confirmado',o.idioma==='todos'&&'cualquier idioma',o.preventas&&'cuenta las preventas',o.con_envio&&'con envío incluido',o.segunda_mano&&'también segunda mano',o.abierta&&`también webs fuera de tu lista (${{es:'España',ue:'UE',mundo:'cualquier país'}[o.region]||'España'})`,o.paginas&&`${o.paginas} páginas por tienda`].filter(Boolean);
   return e.length?`<div class="l">➕ ${esc(e.join(' · '))}</div>`:'';}
 /* el formulario de vigilar: al abrirlo para editar, que se vea (en el móvil queda arriba del todo) */
 function muestraFormSeg(){$('sf-det').open=true;$('sf-det').scrollIntoView({block:'start',behavior:'smooth'});setTimeout(()=>$('s-nombre').focus({preventScroll:true}),350);}

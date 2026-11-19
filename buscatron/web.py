@@ -3,6 +3,7 @@ import hmac
 import ipaddress
 import json
 import os
+import re
 import shutil
 import socket
 import subprocess
@@ -148,10 +149,31 @@ def estado_trabajo(tid):
         return {k: v for k, v in t.items() if k != "ts"}
 
 
+# Parámetros con los que las tiendas suelen llevar lo buscado en la dirección
+PARAM_BUSQUEDA = ("q", "s", "k", "search", "search_query", "search_value", "query", "keywords", "keyword", "buscar", "busqueda",
+                  "txtbusqueda", "term", "text", "search_text", "_nkw")
+
+
+def _con_hueco(entrada):
+    """La dirección de una búsqueda hecha en la tienda con el texto buscado cambiado por {q}; igual si no se reconoce."""
+    m = re.match(r"([^?#]*\?)([^#]*)(#.*)?$", entrada)
+    if not m:
+        return entrada
+    partes = m.group(2).split("&")
+    for i, par in enumerate(partes):
+        k, _, v = par.partition("=")
+        if k.lower() in PARAM_BUSQUEDA and v.strip():
+            partes[i] = k + "={q}"
+            return m.group(1) + "&".join(partes) + (m.group(3) or "")
+    return entrada
+
+
 def analiza_direccion(entrada):
     """Devuelve (host, plantilla|None). Admite 'tienda.es' o una URL de búsqueda con {q}."""
     entrada = entrada.strip()
     plantilla = None
+    if "{q}" not in entrada:
+        entrada = _con_hueco(entrada)       # una búsqueda hecha a mano («…/?q=Marvel+Champions»): su texto pasa a ser {q}
     if "{q}" in entrada:
         plantilla = entrada if entrada.startswith("http") else "https://" + entrada
         host = urlparse(plantilla).netloc
@@ -409,6 +431,8 @@ class Handler(BaseHTTPRequestHandler):
             consulta = (c.get("consulta") or "").strip()
             if not t or not consulta:
                 raise ValueError("falta la tienda o la búsqueda")
+            if not t.get("manual"):          # una tienda normal se consulta sola: pegar en ella dispararía consultas en directo
+                raise ValueError("esa tienda se consulta sola: solo se pegan resultados de tiendas «No consultar automáticamente»")
             base = cfg.url_busqueda(t["plantilla"], consulta) if t.get("plantilla") else "https://" + t["host"] + "/"
             items = importar.parsea(c.get("texto", ""), consulta, base)
             n = importar.guarda(t["host"], consulta, items, base) if items else 0

@@ -3,6 +3,22 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.19.7] - 2026-11-19
+
+### Añadido
+- Tienda Aquí Mejor (aquimejor.com).
+- Al añadir o editar una tienda puedes pegar la dirección de una búsqueda hecha en su web («…/?q=Marvel+Champions»): el texto buscado pasa a ser el hueco de la búsqueda. Antes había que escribir {q} a mano o la tienda se quedaba sin buscador.
+
+### Corregido
+- El mismo producto pegado desde dos búsquedas distintas tenía dos direcciones: salía dos veces, podía avisar dos veces y partía su historial. Ahora su dirección es la búsqueda del producto en la tienda, sea cual sea la búsqueda en la que lo pegaste, y repegarlo sustituye lo anterior.
+- Lo pegado pasa los mismos filtros que lo leído en directo (los que descartan lo que no es un juego).
+- Pegar mientras se revisa una vigilada ya no puede dar avisos repetidos: esa vigilada lo recoge en su revisión.
+- «Más barato que su precio habitual» ya no cuenta el propio precio pegado como precio anterior.
+- Solo se pueden pegar resultados de tiendas «No consultar automáticamente» (pegar en una tienda normal la habría consultado en directo una vez por vigilada).
+- Las claves de producto guardadas se recalculan con las reglas de la 0.19.3: las gráficas de esos productos no pierden historial.
+- La lista en pantalla no se puede reagrupar mal si pegas mientras se reagrupa otra cosa.
+- Fuera la mención «resumen por Telegram en cada revisión»: ese resumen se quitó en la 0.17.36 y la opción ya no hacía nada.
+
 ## [0.19.6] - 2026-11-19
 
 ### Corregido

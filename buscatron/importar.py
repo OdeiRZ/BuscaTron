@@ -84,19 +84,28 @@ def parsea(texto, consulta, base=""):
 
 
 def _url_item(base, titulo):
-    """Dirección propia de cada producto importado (para el historial y los avisos). Abre la misma búsqueda de la tienda."""
+    """Dirección propia de cada producto importado (para el historial y los avisos). Abre una búsqueda en la tienda."""
     slug = re.sub(r"[^a-z0-9]+", "-", extract.normaliza(titulo)).strip("-")[:60]
     return base + ("&" if "?" in base or "#" in base else "?") + "btitem=" + slug
+
+
+def _base_item(host, titulo, url_busqueda):
+    """La búsqueda de la tienda con el nombre del producto, no con lo que buscabas: pegar el mismo producto desde dos
+    búsquedas daba dos direcciones (salía dos veces, avisaba dos veces y partía su historial)."""
+    from . import tiendas as cfg
+    t = next((t for t in cfg.carga() if t["host"] == host), {})
+    return cfg.url_busqueda(t["plantilla"], titulo) if t.get("plantilla") else (f"https://{host}/" if host else url_busqueda)
 
 
 def guarda(host, consulta, items, url_busqueda):
     """Guarda (y sustituye) lo importado de esa tienda para esa búsqueda."""
     from . import motor          # aquí: motor ya importa este módulo
     ts = time.time()
-    filas = [(host, ts, extract.normaliza(consulta), x["titulo"], x.get("url") or _url_item(url_busqueda, x["titulo"]), x["precio"],
+    filas = [(host, ts, extract.normaliza(consulta), x["titulo"], x.get("url") or _url_item(_base_item(host, x["titulo"], url_busqueda), x["titulo"]), x["precio"],
               int(bool(x.get("agotado"))), int(bool(x.get("preventa")))) for x in items]
     with bd.conecta() as c:
         c.execute("DELETE FROM importados WHERE host=? AND consulta=?", (host, extract.normaliza(consulta)))
+        c.executemany("DELETE FROM importados WHERE host=? AND url=?", [(host, f[4]) for f in filas])   # el mismo producto, pegado antes con otra búsqueda
         c.executemany("INSERT INTO importados(host,ts,consulta,titulo,url,precio,agotado,preventa) VALUES(?,?,?,?,?,?,?,?)", filas)
         # al historial de precios, una vez por pegado (las búsquedas ya no lo vuelven a apuntar cada vez que lo muestran)
         c.executemany("INSERT INTO precios(ts,consulta,tienda,titulo,url,precio,agotado,seg_id,preventa,clave) VALUES(?,?,?,?,?,?,?,NULL,?,?)",
