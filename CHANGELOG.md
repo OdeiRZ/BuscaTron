@@ -3,6 +3,11 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.20.3] - 2026-11-20
+
+### Cambiado
+- Avisos agrupados por producto: las variantes de nombre del mismo juego en distintas tiendas (Civil War, La Próxima Evolución, Los Más Buscados de la Galaxia…) van en una sola tarjeta, con la oferta más barata delante y las demás en «N tiendas más, hasta X €». Se agrupa igual que en la búsqueda (por los títulos de «alguna» de la vigilada o, si no, por el nombre del producto). De cada enlace solo cuenta su aviso más reciente. «Quitar avisos» quita los de ese producto. El banner y el número de la pestaña cuentan productos con novedades.
+
 ## [0.20.2] - 2026-11-20
 
 ### Añadido

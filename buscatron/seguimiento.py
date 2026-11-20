@@ -100,8 +100,16 @@ def borra(seg_id):
 
 
 def avisos(limite=500):
+    """Avisos visibles, del más reciente al más antiguo. «grupo»: el producto al que pertenece (vigilada + producto), para
+    juntar en la página las variantes de nombre del mismo juego (Civil War en cinco tiendas, cinco títulos distintos)."""
     with bd.conecta() as c:
-        return [dict(r) for r in c.execute("SELECT * FROM avisos WHERE oculto=0 ORDER BY ts DESC LIMIT ?", (limite,))]
+        filas = [dict(r) for r in c.execute("SELECT * FROM avisos WHERE oculto=0 ORDER BY ts DESC LIMIT ?", (limite,))]
+        segs = {r["id"]: dict(r) for r in c.execute("SELECT id, consulta, opciones FROM seguimientos")}
+    for a in filas:
+        s = segs.get(a["seg_id"]) or {}
+        g = motor.grupos([a["titulo"]], s.get("consulta") or "", opciones_de(s).get("alguna", "") if s else "")[0]["grupo"]
+        a["grupo"] = f"{a['seg_id']}|{g}"
+    return filas
 
 
 def borra_aviso(aviso_id):

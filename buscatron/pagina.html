@@ -268,6 +268,7 @@ summary:has(.n:not(:empty))::after{margin-left:8px}
 /* ----- avisos ----- */
 .motivo{margin-top:7px;font-size:13px;font-weight:700;color:var(--ok);line-height:1.4}
 .av .t{font-weight:700}
+.av-otros{font-size:12.5px;color:var(--mut);margin-left:2px}
 .av.es-nuevo .res{box-shadow:0 0 0 2px var(--ac);background:var(--ac2)}
 .av-banner{display:flex;flex-wrap:wrap;align-items:baseline;column-gap:8px;row-gap:2px;background:var(--ac);color:var(--ac-tx);border-radius:14px;padding:10px 14px;margin:0 0 12px;font-weight:700}
 .av-banner small{font-weight:600;opacity:.9}
@@ -1266,27 +1267,35 @@ async function cargaAvisos(){const [todos,vig]=await Promise.all([api('avisos'),
   if(vistosAntes===null)try{vistosAntes=Number(localStorage.getItem('bt-vistos')||0)}catch(e){vistosAntes=0}
   try{localStorage.setItem('bt-vistos',String(todos.length?Math.max(...todos.map(a=>a.id)):0))}catch(e){}
   $('nav-av').textContent='';
-  const ord=ordenaAvisos(todos,ordenAv),l=[...ord.filter(a=>a.id>vistosAntes),...ord.filter(a=>a.id<=vistosAntes)];   // los nuevos, primero
-  const nuevos=l.filter(a=>a.id>vistosAntes).length,seg=id=>segs.find(s=>s.id===id)||{},deSeg=id=>seg(id).nombre;
+  // Un producto, una tarjeta: las variantes de nombre del mismo juego (vienen agrupadas del servidor) van juntas, con la más
+  // barata delante; de cada enlace solo cuenta su aviso más reciente (el de antes, si bajó de precio, ya no vale).
+  const porGrupo=new Map();
+  for(const a of todos){const k=a.grupo||('id'+a.id);if(!porGrupo.has(k))porGrupo.set(k,new Map());const m=porGrupo.get(k);if(!m.has(a.url))m.set(a.url,a);}
+  const grupos=[...porGrupo.values()].map(m=>{const it=[...m.values()].sort((a,b)=>a.precio-b.precio);
+    return {...it[0],items:it,ids:it.map(x=>x.id),nuevo:it.some(x=>x.id>vistosAntes),ts:Math.max(...it.map(x=>x.ts))};});
+  const ord=ordenaAvisos(grupos,ordenAv),l=[...ord.filter(g=>g.nuevo),...ord.filter(g=>!g.nuevo)];   // los nuevos, primero
+  const nuevos=l.filter(g=>g.nuevo).length,seg=id=>segs.find(s=>s.id===id)||{},deSeg=id=>seg(id).nombre;
   // Novedades: los avisos llegados desde que abriste la app siguen marcados hasta que recargues la página
-  const banner=nuevos?`<div class="av-banner" role="status">🆕 ${nuevos} aviso${nuevos>1?'s':''} nuevo${nuevos>1?'s':''}<small>arriba y resaltado${nuevos>1?'s':''} hasta que recargues la página</small></div>`:'';
+  const banner=nuevos?`<div class="av-banner" role="status">🆕 ${nuevos} producto${nuevos>1?'s':''} con avisos nuevos<small>arriba y resaltado${nuevos>1?'s':''} hasta que recargues la página</small></div>`:'';
   const activas=segs.filter(s=>s.activo&&s.ultima).sort((a,b)=>b.ultima-a.ultima);
   const busq=activas.length?`<div class="av-busq">🕘 Última búsqueda: ${activas.map(s=>`<b>${esc(s.nombre)}</b> ${fecha(s.ultima)}`).join(' · ')}</div>`:'';
-  $('av-lista').innerHTML=l.length?banner+busq+`<div class="cuenta" style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><span>${l.length} aviso${l.length>1?'s':''}${nuevos?` · <b style="color:var(--ac)">${nuevos} nuevo${nuevos>1?'s':''}</b>`:''}</span>
+  $('av-lista').innerHTML=l.length?banner+busq+`<div class="cuenta" style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><span>${l.length} producto${l.length>1?'s':''} (${l.reduce((n,g)=>n+g.items.length,0)} ofertas)${nuevos?` · <b style="color:var(--ac)">${nuevos} con novedades</b>`:''}</span>
     <span style="display:flex;gap:8px"><button type="button" class="sec mini" id="av-ref" title="Cada aviso comparado con lo visto en Amazon, con enlaces a camelcamelcamel y Keepa">📊 Referencia de Amazon</button><button type="button" class="peli mini" id="av-vaciar">Borrar todos</button></span></div>
-    <div class="orden-av" style="margin:0 0 10px"><label for="av-orden">Ordenar por</label><select id="av-orden">${Object.entries(ORDEN_AV).map(([k,v])=>`<option value="${k}" ${k===ordenAv?'selected':''}>${v}</option>`).join('')}</select></div>`+l.map((a,i)=>`<div class="gr av${a.id>vistosAntes?' es-nuevo':''}"><div class="res con-acc"><a class="cuerpo" href="${esc(a.url)}" target="_blank" rel="noopener"><div class="pr">${euro(a.precio)}</div>
-    <div class="info"><div class="t">${esc(a.titulo)}</div><div class="meta">${a.id>vistosAntes?'<span class="tag nuevo">Nuevo</span>':''}<span class="tag">${esc(nombreT(a.tienda))}</span></div>
+    <div class="orden-av" style="margin:0 0 10px"><label for="av-orden">Ordenar por</label><select id="av-orden">${Object.entries(ORDEN_AV).map(([k,v])=>`<option value="${k}" ${k===ordenAv?'selected':''}>${v}</option>`).join('')}</select></div>`+l.map((a,i)=>`<div class="gr av${a.nuevo?' es-nuevo':''}"><div class="res con-acc"><a class="cuerpo" href="${esc(a.url)}" target="_blank" rel="noopener"><div class="pr">${euro(a.precio)}</div>
+    <div class="info"><div class="t">${esc(a.titulo)}</div><div class="meta">${a.nuevo?'<span class="tag nuevo">Nuevo</span>':''}<span class="tag">${esc(nombreT(a.tienda))}</span>${a.items.length>1?`<span class="av-otros">y ${a.items.length-1} tienda${a.items.length>2?'s':''} más</span>`:''}</div>
     <div class="motivo">${esc(a.motivo)}</div>
     <div class="mut" style="margin-top:4px">Aviso del ${fecha(a.ts)}${deSeg(a.seg_id)?` · ${esc(deSeg(a.seg_id))}`:''}${seg(a.seg_id).ultima?` · última búsqueda ${fecha(seg(a.seg_id).ultima)}`:''}</div></div></a></div>
-    <div class="accs"><button type="button" class="graf" data-i="${i}" title="Historial de precios">📈 Historial de precio</button><button type="button" class="quita no" data-id="${a.id}" title="Quitar este aviso (no se repetirá salvo que baje más)">✕ Quitar aviso</button></div></div>`).join('')
+    <div class="accs"><button type="button" class="graf" data-i="${i}" title="Historial de precios">📈 Historial de precio</button><button type="button" class="quita no" data-ids="${a.ids.join(',')}" title="Quitar los avisos de este producto (no se repetirán salvo que baje más)">✕ Quitar aviso${a.items.length>1?'s':''}</button></div>
+    ${a.items.length>1?`<details class="otras"><summary>${a.items.length-1} tienda${a.items.length>2?'s':''} más, hasta ${euro(a.items[a.items.length-1].precio)}</summary>${a.items.slice(1).map(o=>`<a href="${esc(o.url)}" target="_blank" rel="noopener"><b>${euro(o.precio)}</b><span>${esc(nombreT(o.tienda))}${o.id>vistosAntes?' · <b style="color:var(--ac);min-width:0">nuevo</b>':''} · ${esc(o.titulo)} · ${fecha(o.ts)}</span></a>`).join('')}</details>`:''}</div>`).join('')
     :'<div class="card vacio-msg"><span class="em">🔔</span>No tienes avisos.<br>Cuando un producto de una búsqueda vigilada llegue a tu precio, aparecerá aquí.</div>';
   document.querySelectorAll('#av-lista .graf').forEach(g=>g.onclick=()=>{const a=l[+g.dataset.i];abreHist(a.url,a.titulo,a.tienda);});
-  document.querySelectorAll('#av-lista .quita').forEach(g=>g.onclick=async()=>{await api('avisos',{accion:'borrar',id:+g.dataset.id});cargaAvisos();aviso('Aviso quitado. No se repetirá salvo que baje más de precio');});
+  document.querySelectorAll('#av-lista .quita').forEach(g=>g.onclick=async()=>{const ids=g.dataset.ids.split(',').map(Number);
+    for(const id of ids)await api('avisos',{accion:'borrar',id});cargaAvisos();aviso(`Aviso${ids.length>1?'s':''} quitado${ids.length>1?'s':''}. No se repetirá${ids.length>1?'n':''} salvo que baje${ids.length>1?'n':''} más de precio`);});
   if($('av-orden'))$('av-orden').onchange=()=>{ordenAv=$('av-orden').value;try{localStorage.setItem('bt-orden-av2',ordenAv)}catch(e){}cargaAvisos();};
   if($('av-ref'))$('av-ref').onclick=()=>abreRef('avisos');
   if($('av-vaciar'))$('av-vaciar').onclick=async()=>{if(confirm('¿Quitar todos los avisos de la lista? No volverán a avisarte salvo que bajen más de precio.')){await api('avisos',{accion:'vaciar'});cargaAvisos();aviso('Avisos borrados');}};}
 async function cargaNavAv(){try{const l=await api('avisos');const v=Number(localStorage.getItem('bt-vistos')||0);
-  const n=l.filter(a=>a.id>v).length;$('nav-av').textContent=n?String(n):'';}catch(e){}}
+  const n=new Set(l.filter(a=>a.id>v).map(a=>a.grupo||a.id)).size;$('nav-av').textContent=n?String(n):'';}catch(e){}}
 
 /* servicio: reiniciar y cerrar, como en PixelatIA (nunca con un trabajo en marcha) */
 let srv=null;
