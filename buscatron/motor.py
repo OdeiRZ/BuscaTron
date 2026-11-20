@@ -160,7 +160,7 @@ JUEGO = re.compile(r"\b(juegos?|games?|cartas|expansion|tablero|boardgame|lcg|co
 # juego no tiene que decir «juego» para valer, así que lo que no se reconoce se queda.
 NO_JUEGO = re.compile(r"\b(zapatillas?|deportivas|camisetas?|sudaderas?|calcetines|gorras?|pantalon(?:es)?|chaquetas?|talla\s+\d+|rociador|protector(?:es)? de pantalla|correas?|pulseras?|coche de juguete|"
                       r"pulverizador|manguera|taladro|cortacesped|desbrozadora|guantes|"
-                      r"figuras? (?:de )?\d+\s*cm|marvel legends|funko)\b")      # figuras de colección («Marvel Legends figura 15cm … Civil Warrior»)
+                      r"figuras?\s+(?:de\s+)?\d+\s*cm|marvel\s+legends|funko)\b")      # figuras de colección («Marvel Legends figura 15cm … Civil Warrior»)
 TIPOS = ("juego", "expansion", "complemento", "accesorio")
 ACCESORIO = re.compile(r"\b(fundas?|sleeves?|tapete|playmat|neopreno|organizador|inserto|insert|deck ?box|portacartas|protectores)\b")
 COMPLEMENTO = re.compile(r"\b(add ?on|addon|character|promos?|mini ?expansion)\b")

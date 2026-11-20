@@ -3,6 +3,14 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.20.7] - 2026-11-21
+
+### Corregido (revisiones de código)
+- Ficha de un solo resultado: título sin entidades HTML, solo el producto de la ficha si hay varios, dirección canónica bien leída y solo http(s), preventa/agotado también por el nombre.
+- Avisos: un aviso por enlace en toda la lista; fecha y «Nuevo» de su propia oferta; «N ofertas más (M tiendas)»; cada oferta con su motivo, 📈 y ✕; desplegables abiertos al repintar; títulos sin cortar y con la serie seguida de «:»; revisión fallida marcada.
+- El mismo producto de la misma tienda con otra dirección no vuelve a avisar; al bajar el objetivo los avisos caros se ocultan y no se repiten.
+- Figuras de colección detectadas aunque el título lleve puntuación.
+
 ## [0.20.6] - 2026-11-20
 
 ### Corregido

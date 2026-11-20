@@ -1,5 +1,6 @@
 """Extractor genérico de productos: enlaces cuyo texto encaja con la búsqueda y el primer precio
 vigente de su tarjeta (dentro del enlace o justo después, antes del siguiente producto)."""
+import html as _html
 import json
 import re
 import unicodedata
@@ -320,15 +321,31 @@ def _ficha_unica(html, base, palabras):
     resultado), ese producto con su precio y su dirección de verdad. Antes se tomaba el enlace de su foto y un precio
     de otra parte de la página (MarketPvp: 19,75 € en vez de 35,95 €)."""
     m = _CANONICA.search(html)
-    canonica = re.search(r"""href=["']([^"']+)""", m.group(0)) if m else None
-    canonica = urljoin(base, canonica.group(1)) if canonica else ""
-    if not canonica or _BUSQUEDA_URL.search(canonica) or urlparse(canonica).path in ("", "/"):
+    canonica = re.search(r"""\shref=(["'])(.*?)\1""", m.group(0)) if m else None      # el href de verdad (no data-href) y con su comilla
+    canonica = urljoin(base, _html.unescape(canonica.group(2))) if canonica else ""
+    if (not canonica or urlparse(canonica).scheme not in ("http", "https") or _BUSQUEDA_URL.search(canonica)
+            or urlparse(canonica).path in ("", "/")):
         return None
-    d = datos_producto(html, canonica)
-    if not d or not d.get("titulo") or not all(encaja(normaliza(d["titulo"]), w) for w in palabras):
+    # Varios productos en la página (relacionados en JSON-LD): solo vale el de la ficha (su url es la canónica) o el único
+    productos = []
+    for bloque in _LD.findall(html):
+        try:
+            productos += [n for n in _nodos(json.loads(bloque.strip())) if "Product" in (n.get("@type") if isinstance(n.get("@type"), list) else [n.get("@type")]) and "offers" in n]
+        except ValueError:
+            continue
+    propios = [n for n in productos if n.get("url") and urlparse(urljoin(base, n["url"])).path.rstrip("/") == urlparse(canonica).path.rstrip("/")]
+    if len(productos) > 1 and not propios:
         return None
-    return {"titulo": d["titulo"], "url": limpia_url(canonica), "precio": d["precio"], "agotado": bool(d.get("agotado")),
-            "preventa": bool(d.get("preventa")), "estado": ""}
+    d = datos_producto(html, canonica) if len(productos) <= 1 else datos_producto('<script type="application/ld+json">' + json.dumps(propios[0]) + "</script>", canonica)
+    if not d or not d.get("titulo"):
+        return None
+    d["titulo"] = " ".join(_html.unescape(_html.unescape(d["titulo"])).split())     # WooCommerce lo escapa (a veces dos veces): «&amp;amp;»
+    if not all(encaja(normaliza(d["titulo"]), w) for w in palabras):
+        return None
+    # como en un listado: el nombre también dice si es una preventa o está agotado («PREVENTA Civil War»)
+    return {"titulo": d["titulo"], "url": limpia_url(canonica), "precio": d["precio"],
+            "agotado": bool(d.get("agotado")) or bool(AGOTADO.search(d["titulo"])),
+            "preventa": bool(d.get("preventa")) or bool(PREVENTA.search(d["titulo"])), "estado": ""}
 
 
 def analiza(html, base, consulta, ventana=40, con_estado=False):

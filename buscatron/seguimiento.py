@@ -173,8 +173,10 @@ def _apunta_aviso(c, seg_id, x, ts):
     """¿Se avisa de este producto? No si ya hay un aviso suyo de los últimos REAVISO_DIAS a este precio o a uno más bajo.
     Si su aviso se retiró porque dejó de cumplir (p. ej. se agotó), al volver sí se avisa: es noticia. Lo usan las
     revisiones y lo pegado a mano, para que las dos decidan igual."""
-    ult = c.execute("SELECT precio, ts FROM avisos WHERE seg_id=? AND url=? AND pendiente=0 ORDER BY ts DESC LIMIT 1",
-                    (seg_id, x["url"])).fetchone()      # los que no llegaron a enviarse no cuentan: se reintentan
+    # El mismo producto de la misma tienda puede llegar por dos direcciones (su ficha, cuando la búsqueda salta a ella, o
+    # el enlace del listado): también cuenta como ya avisado si coinciden tienda y nombre.
+    ult = c.execute("SELECT precio, ts FROM avisos WHERE seg_id=? AND (url=? OR (tienda=? AND titulo=? AND ts<?)) AND pendiente=0 ORDER BY ts DESC LIMIT 1",
+                    (seg_id, x["url"], x.get("tienda"), x.get("titulo"), ts)).fetchone()      # los no enviados no cuentan: se reintentan
     if ult and x["precio"] >= ult["precio"] - 0.005 and ts - ult["ts"] < REAVISO_DIAS * 86400:
         return False
     c.execute("DELETE FROM avisos WHERE seg_id=? AND url=? AND pendiente=1", (seg_id, x["url"]))   # lo sustituye el nuevo
@@ -497,10 +499,13 @@ def limpia_avisos_por_filtros(seg_id):
         if not fila:
             return 0
         seg = dict(fila)
-        malos = [r["id"] for r in c.execute("SELECT id, titulo, precio, tienda, motivo FROM avisos WHERE seg_id=?", (seg_id,))
-                 if not cumple(seg, r["titulo"], r["precio"], r["tienda"]) or _fuera_de_objetivo(seg, r)]
+        filas = c.execute("SELECT id, titulo, precio, tienda, motivo, oculto FROM avisos WHERE seg_id=?", (seg_id,)).fetchall()
+        malos = [r["id"] for r in filas if not cumple(seg, r["titulo"], r["precio"], r["tienda"])]
+        # por encima del objetivo nuevo: se ocultan (no se borran), así se recuerda que ya avisó y no se repite si vuelves a subirlo
+        caros = [r["id"] for r in filas if r["id"] not in malos and not r["oculto"] and _fuera_de_objetivo(seg, r)]
         c.executemany("DELETE FROM avisos WHERE id=?", [(i,) for i in malos])
-    return len(malos)
+        c.executemany("UPDATE avisos SET oculto=1 WHERE id=?", [(i,) for i in caros])
+    return len(malos) + len(caros)
 
 
 def cubren(titulo, precio=None):
