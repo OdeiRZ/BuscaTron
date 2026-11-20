@@ -3,6 +3,11 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.20.4] - 2026-11-20
+
+### Cambiado
+- Cada tarjeta de Avisos lleva el nombre propio del juego («Marvel Champions: La Próxima Evolución») en vez del título de la tienda más barata con su ruido («ASMODEE JUEGO DE MESA … PEGI 14»): se limpian los títulos de todas sus tiendas (marca, «juego de mesa», PEGI, «Expansión en español», LCG, mayúsculas sueltas) y se elige el mejor (sin mayúsculas sostenidas, con tildes, el más corto). El título de cada tienda sigue en «N tiendas más» y al pasar el ratón.
+
 ## [0.20.3] - 2026-11-20
 
 ### Cambiado

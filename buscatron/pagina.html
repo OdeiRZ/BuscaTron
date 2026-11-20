@@ -1260,6 +1260,24 @@ function ordenaAvisos(l,modo){const az=(a,b)=>a.localeCompare(b,'es',{sensitivit
   const f={reciente:(a,b)=>b.ts-a.ts,barato:(a,b)=>a.precio-b.precio||az(a.titulo,b.titulo),caro:(a,b)=>b.precio-a.precio||az(a.titulo,b.titulo),
     nombre:(a,b)=>az(a.titulo,b.titulo)||a.precio-b.precio,tienda:(a,b)=>az(nombreT(a.tienda),nombreT(b.tienda))||a.precio-b.precio}[modo]||((a,b)=>b.ts-a.ts);
   return c.sort(f);}
+// Título de una tarjeta de avisos: el nombre propio del juego, no el de la tienda más barata con su ruido
+// («ASMODEE JUEGO DE MESA … PEGI 14»). Se limpia cada título del grupo y se elige el mejor: sin mayúsculas sostenidas,
+// con tildes, con «:» tras la serie y el más corto.
+function limpiaTitulo(t){
+  let x=' '+t+' ';
+  x=x.replace(/\s(asmodee|fantasy flight games|fantasy flight|ffg|edge entertainment|devir)\b\s*[-|:]?/gi,' ')
+     .replace(/\sjuegos? de mesa\b/gi,' ').replace(/\s(pegi\s*\d+|edad recomendada.*|\d+\s*cartas)\b.*$/i,' ')
+     .replace(/\s[-–|]\s*(expansi[oó]n|juego de cartas|card game).*$/i,' ').replace(/\s(expansi[oó]n|expansion)\s*$/i,' ')
+     .replace(/\bLCG\b/g,' ').replace(/\s+/g,' ').trim()
+     .replace(/^([^:\-–]{3,40}?)\s*[-–]\s+/,'$1: ').replace(/\s+:/g,':').replace(/^[-–:\s]+|[-–:\s]+$/g,'');
+  // «PróXima» → «Próxima» (mayúscula suelta dentro de una palabra)
+  x=x.split(' ').map(w=>/^\p{Lu}?\p{Ll}+\p{Lu}+\p{Ll}*$/u.test(w)?w[0]+w.slice(1).toLowerCase():w).join(' ');
+  return x||t;}
+function tituloProducto(items){
+  const c=items.map(i=>limpiaTitulo(i.titulo));
+  const tildes=c.some(t=>/[áéíóúñü]/i.test(t));
+  const nota=t=>(t===t.toUpperCase()&&/[A-Z]/.test(t)?100:0)+(tildes&&!/[áéíóúñü]/i.test(t)?20:0)+(t.includes(':')?0:5)+t.length/100-(t.match(/(^|\s)\p{Lu}/gu)||[]).length/1000;   // a igualdad, el de nombre propio («La Próxima Evolución»)
+  return c.slice().sort((a,b)=>nota(a)-nota(b))[0];}
 let vistosAntes=null;      // el último aviso que ya habías visto al entrar: los posteriores llevan «Nuevo»
 async function cargaAvisos(){const [todos,vig]=await Promise.all([api('avisos'),api('seguimientos')]);   // vigiladas al día: su «última búsqueda»
  if(!Array.isArray(todos))return;
@@ -1272,7 +1290,7 @@ async function cargaAvisos(){const [todos,vig]=await Promise.all([api('avisos'),
   const porGrupo=new Map();
   for(const a of todos){const k=a.grupo||('id'+a.id);if(!porGrupo.has(k))porGrupo.set(k,new Map());const m=porGrupo.get(k);if(!m.has(a.url))m.set(a.url,a);}
   const grupos=[...porGrupo.values()].map(m=>{const it=[...m.values()].sort((a,b)=>a.precio-b.precio);
-    return {...it[0],items:it,ids:it.map(x=>x.id),nuevo:it.some(x=>x.id>vistosAntes),ts:Math.max(...it.map(x=>x.ts))};});
+    return {...it[0],nombre:tituloProducto(it),items:it,ids:it.map(x=>x.id),nuevo:it.some(x=>x.id>vistosAntes),ts:Math.max(...it.map(x=>x.ts))};});
   const ord=ordenaAvisos(grupos,ordenAv),l=[...ord.filter(g=>g.nuevo),...ord.filter(g=>!g.nuevo)];   // los nuevos, primero
   const nuevos=l.filter(g=>g.nuevo).length,seg=id=>segs.find(s=>s.id===id)||{},deSeg=id=>seg(id).nombre;
   // Novedades: los avisos llegados desde que abriste la app siguen marcados hasta que recargues la página
@@ -1282,7 +1300,7 @@ async function cargaAvisos(){const [todos,vig]=await Promise.all([api('avisos'),
   $('av-lista').innerHTML=l.length?banner+busq+`<div class="cuenta" style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><span>${l.length} producto${l.length>1?'s':''} (${l.reduce((n,g)=>n+g.items.length,0)} ofertas)${nuevos?` · <b style="color:var(--ac)">${nuevos} con novedades</b>`:''}</span>
     <span style="display:flex;gap:8px"><button type="button" class="sec mini" id="av-ref" title="Cada aviso comparado con lo visto en Amazon, con enlaces a camelcamelcamel y Keepa">📊 Referencia de Amazon</button><button type="button" class="peli mini" id="av-vaciar">Borrar todos</button></span></div>
     <div class="orden-av" style="margin:0 0 10px"><label for="av-orden">Ordenar por</label><select id="av-orden">${Object.entries(ORDEN_AV).map(([k,v])=>`<option value="${k}" ${k===ordenAv?'selected':''}>${v}</option>`).join('')}</select></div>`+l.map((a,i)=>`<div class="gr av${a.nuevo?' es-nuevo':''}"><div class="res con-acc"><a class="cuerpo" href="${esc(a.url)}" target="_blank" rel="noopener"><div class="pr">${euro(a.precio)}</div>
-    <div class="info"><div class="t">${esc(a.titulo)}</div><div class="meta">${a.nuevo?'<span class="tag nuevo">Nuevo</span>':''}<span class="tag">${esc(nombreT(a.tienda))}</span>${a.items.length>1?`<span class="av-otros">y ${a.items.length-1} tienda${a.items.length>2?'s':''} más</span>`:''}</div>
+    <div class="info"><div class="t" title="${esc(a.titulo)}">${esc(a.nombre)}</div><div class="meta">${a.nuevo?'<span class="tag nuevo">Nuevo</span>':''}<span class="tag">${esc(nombreT(a.tienda))}</span>${a.items.length>1?`<span class="av-otros">y ${a.items.length-1} tienda${a.items.length>2?'s':''} más</span>`:''}</div>
     <div class="motivo">${esc(a.motivo)}</div>
     <div class="mut" style="margin-top:4px">Aviso del ${fecha(a.ts)}${deSeg(a.seg_id)?` · ${esc(deSeg(a.seg_id))}`:''}${seg(a.seg_id).ultima?` · última búsqueda ${fecha(seg(a.seg_id).ultima)}`:''}</div></div></a></div>
     <div class="accs"><button type="button" class="graf" data-i="${i}" title="Historial de precios">📈 Historial de precio</button><button type="button" class="quita no" data-ids="${a.ids.join(',')}" title="Quitar los avisos de este producto (no se repetirán salvo que baje más)">✕ Quitar aviso${a.items.length>1?'s':''}</button></div>
