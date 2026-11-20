@@ -3,6 +3,12 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.20.5] - 2026-11-20
+
+### Corregido
+- Las figuras de colección (Marvel Legends, Funko, «figura 15 cm») ya no cuentan como juegos: una figura «Civil Warrior» salía como si fuera Civil War a 24,65 €.
+- Al bajar el objetivo de una vigilada se quitan los avisos «por debajo de tu objetivo» que ya no lo están (con el objetivo en 38 €, los de 38,21 € y 38,65 € seguían).
+
 ## [0.20.4] - 2026-11-20
 
 ### Cambiado

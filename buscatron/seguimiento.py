@@ -482,6 +482,13 @@ def cumple(seg, titulo, precio=None, tienda=None):
     return True
 
 
+def _fuera_de_objetivo(seg, aviso):
+    """¿Aviso «por debajo de tu objetivo» que ya no lo está porque bajaste el objetivo (39 → 38: el de 38,65 € sobra)?"""
+    m = aviso["motivo"] or ""
+    return ("por debajo de tu objetivo de" in m and "para este producto" not in m and seg["objetivo"] is not None
+            and aviso["precio"] > seg["objetivo"] + 0.005)
+
+
 def limpia_avisos_por_filtros(seg_id):
     """Quita los avisos de esa vigilada que ya no cumplen sus filtros (se llama al editarla y guardar). Devuelve cuántos."""
     with bd.conecta() as c:
@@ -489,7 +496,8 @@ def limpia_avisos_por_filtros(seg_id):
         if not fila:
             return 0
         seg = dict(fila)
-        malos = [r["id"] for r in c.execute("SELECT id, titulo, precio, tienda FROM avisos WHERE seg_id=?", (seg_id,)) if not cumple(seg, r["titulo"], r["precio"], r["tienda"])]
+        malos = [r["id"] for r in c.execute("SELECT id, titulo, precio, tienda, motivo FROM avisos WHERE seg_id=?", (seg_id,))
+                 if not cumple(seg, r["titulo"], r["precio"], r["tienda"]) or _fuera_de_objetivo(seg, r)]
         c.executemany("DELETE FROM avisos WHERE id=?", [(i,) for i in malos])
     return len(malos)
 
