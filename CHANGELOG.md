@@ -3,6 +3,17 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.20.2] - 2026-11-20
+
+### Añadido
+- Avisos nuevos bien a la vista: un banner «🆕 N avisos nuevos» y las tarjetas nuevas arriba del todo y resaltadas, hasta que recargues la página (se mantienen al cambiar de pestaña).
+- La pestaña Avisos se actualiza sola al acabar una búsqueda o revisión, con lo nuevo ya resaltado.
+- Fecha de la última búsqueda: arriba de Avisos, la de cada vigilada activa, y en cada aviso, «Aviso del … · última búsqueda …».
+
+### Corregido
+- Títulos con el nombre repetido y la marca entre medias (Aquí Mejor: «ASMODEE … EVOLUCIÓN ASMODEE ASMODEE … EVOLUCIÓN»): ahora sale una vez; arreglados también los ya guardados.
+- El aviso de «Borrar todos» decía que volverían a avisar; desde la 0.20.0 no lo hacen salvo que bajen más.
+
 ## [0.20.1] - 2026-11-19
 
 ### Corregido

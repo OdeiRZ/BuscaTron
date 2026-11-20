@@ -124,6 +124,20 @@ def limpia_titulo(t):
     m = re.match(r"^(.{4,}?)\s+\1(?:\s+(?=\d)|\s*$)", t)
     if m and (not t[m.end():].strip() or PRECIO.match(t[m.end():].strip())):
         return m.group(1)
+    return _sin_repeticion(t)
+
+
+def _sin_repeticion(t):
+    """Aquí Mejor repite el nombre con la marca entre medias: «ASMODEE JUEGO DE MESA … EVOLUCIÓN ASMODEE ASMODEE JUEGO DE
+    MESA … EVOLUCIÓN» → «ASMODEE JUEGO DE MESA … EVOLUCIÓN». Solo si las 5 primeras palabras vuelven a empezar más adelante."""
+    w = t.split()
+    n = [normaliza(x).strip() for x in w]
+    for i in range(5, len(w) - 4):
+        if n[i:i + 5] == n[:5]:
+            corte = w[:i]
+            while len(corte) > 5 and n[len(corte) - 1] == n[0]:      # la marca suelta que queda delante de la repetición
+                corte = corte[:-1]
+            return " ".join(corte)
     return t
 
 

@@ -268,6 +268,10 @@ summary:has(.n:not(:empty))::after{margin-left:8px}
 /* ----- avisos ----- */
 .motivo{margin-top:7px;font-size:13px;font-weight:700;color:var(--ok);line-height:1.4}
 .av .t{font-weight:700}
+.av.es-nuevo .res{box-shadow:0 0 0 2px var(--ac);background:var(--ac2)}
+.av-banner{display:flex;flex-wrap:wrap;align-items:baseline;column-gap:8px;row-gap:2px;background:var(--ac);color:var(--ac-tx);border-radius:14px;padding:10px 14px;margin:0 0 12px;font-weight:700}
+.av-banner small{font-weight:600;opacity:.9}
+.av-busq{font-size:12.5px;color:var(--mut);margin:0 0 10px}
 
 /* ----- hojas (historial, pegar, referencia) ----- */
 #hist,#pegar,#ref{position:fixed;inset:0;z-index:30;display:none;align-items:flex-end;justify-content:center;background:rgba(20,14,6,.55)}
@@ -766,12 +770,14 @@ function tiempoBusqueda(){const n=(typeof tiendas!=='undefined'?tiendas:[]).filt
 function pintaBuscando(lento){$('out').innerHTML=`<div class="card carga"><div class="spin"></div><div>Buscando en tus tiendas…<br><span class="mut">${tiempoBusqueda()}${lento?' (algo más buscando por internet o en segunda mano)':''}: cada tienda se consulta con calma para que no te bloquee. Puedes bloquear el móvil o cambiar de app: la búsqueda sigue y verás el resultado al volver.</span></div></div>`;}
 function estadoBoton(activo){const b=$('go');b.disabled=activo;b.textContent=activo?'Buscando…':'Buscar';}
 // Barra de carga: la pide al servidor (que es quien sabe qué está en marcha), así sigue aunque cambies de pestaña o recargues
-let progTimer=null;
+let progTimer=null,progHabia=false;
 function durTxt(s){s=Math.max(0,Math.round(s));return s<60?`${s} s`:`${Math.floor(s/60)} min${s%60?` ${s%60} s`:''}`;}
 async function sigueProgreso(){
   clearTimeout(progTimer);let l=[];
   try{l=await api('progreso');}catch(e){}
   if(!Array.isArray(l))l=[];
+  if(progHabia&&!l.length){cargaNavAv();if(tabActual==='avisos')cargaAvisos();}   // acabó algo: puede haber avisos nuevos
+  progHabia=l.length>0;
   $('progreso').innerHTML=l.map(t=>{const pct=t.parte!=null?Math.round(t.parte*100):null;
     const que=t.tipo==='busqueda'?`🔎 Buscando «${esc(t.nombre)}»`:`👁️ Revisando «${esc(t.nombre)}»`;
     const cuanto=t.total?`${t.hechas} de ${t.total} tiendas`:'';
@@ -1254,25 +1260,31 @@ function ordenaAvisos(l,modo){const az=(a,b)=>a.localeCompare(b,'es',{sensitivit
     nombre:(a,b)=>az(a.titulo,b.titulo)||a.precio-b.precio,tienda:(a,b)=>az(nombreT(a.tienda),nombreT(b.tienda))||a.precio-b.precio}[modo]||((a,b)=>b.ts-a.ts);
   return c.sort(f);}
 let vistosAntes=null;      // el último aviso que ya habías visto al entrar: los posteriores llevan «Nuevo»
-async function cargaAvisos(){const [todos,vig]=await Promise.all([api('avisos'),segs.length?segs:api('seguimientos')]);if(!Array.isArray(todos))return;
+async function cargaAvisos(){const [todos,vig]=await Promise.all([api('avisos'),api('seguimientos')]);   // vigiladas al día: su «última búsqueda»
+ if(!Array.isArray(todos))return;
   if(Array.isArray(vig))segs=vig;
   if(vistosAntes===null)try{vistosAntes=Number(localStorage.getItem('bt-vistos')||0)}catch(e){vistosAntes=0}
   try{localStorage.setItem('bt-vistos',String(todos.length?Math.max(...todos.map(a=>a.id)):0))}catch(e){}
   $('nav-av').textContent='';
-  const l=ordenaAvisos(todos,ordenAv),nuevos=l.filter(a=>a.id>vistosAntes).length,deSeg=id=>(segs.find(s=>s.id===id)||{}).nombre;
-  $('av-lista').innerHTML=l.length?`<div class="cuenta" style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><span>${l.length} aviso${l.length>1?'s':''}${nuevos?` · <b style="color:var(--ac)">${nuevos} nuevo${nuevos>1?'s':''}</b>`:''}</span>
+  const ord=ordenaAvisos(todos,ordenAv),l=[...ord.filter(a=>a.id>vistosAntes),...ord.filter(a=>a.id<=vistosAntes)];   // los nuevos, primero
+  const nuevos=l.filter(a=>a.id>vistosAntes).length,seg=id=>segs.find(s=>s.id===id)||{},deSeg=id=>seg(id).nombre;
+  // Novedades: los avisos llegados desde que abriste la app siguen marcados hasta que recargues la página
+  const banner=nuevos?`<div class="av-banner" role="status">🆕 ${nuevos} aviso${nuevos>1?'s':''} nuevo${nuevos>1?'s':''}<small>arriba y resaltado${nuevos>1?'s':''} hasta que recargues la página</small></div>`:'';
+  const activas=segs.filter(s=>s.activo&&s.ultima).sort((a,b)=>b.ultima-a.ultima);
+  const busq=activas.length?`<div class="av-busq">🕘 Última búsqueda: ${activas.map(s=>`<b>${esc(s.nombre)}</b> ${fecha(s.ultima)}`).join(' · ')}</div>`:'';
+  $('av-lista').innerHTML=l.length?banner+busq+`<div class="cuenta" style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><span>${l.length} aviso${l.length>1?'s':''}${nuevos?` · <b style="color:var(--ac)">${nuevos} nuevo${nuevos>1?'s':''}</b>`:''}</span>
     <span style="display:flex;gap:8px"><button type="button" class="sec mini" id="av-ref" title="Cada aviso comparado con lo visto en Amazon, con enlaces a camelcamelcamel y Keepa">📊 Referencia de Amazon</button><button type="button" class="peli mini" id="av-vaciar">Borrar todos</button></span></div>
-    <div class="orden-av" style="margin:0 0 10px"><label for="av-orden">Ordenar por</label><select id="av-orden">${Object.entries(ORDEN_AV).map(([k,v])=>`<option value="${k}" ${k===ordenAv?'selected':''}>${v}</option>`).join('')}</select></div>`+l.map((a,i)=>`<div class="gr av"><div class="res con-acc"><a class="cuerpo" href="${esc(a.url)}" target="_blank" rel="noopener"><div class="pr">${euro(a.precio)}</div>
+    <div class="orden-av" style="margin:0 0 10px"><label for="av-orden">Ordenar por</label><select id="av-orden">${Object.entries(ORDEN_AV).map(([k,v])=>`<option value="${k}" ${k===ordenAv?'selected':''}>${v}</option>`).join('')}</select></div>`+l.map((a,i)=>`<div class="gr av${a.id>vistosAntes?' es-nuevo':''}"><div class="res con-acc"><a class="cuerpo" href="${esc(a.url)}" target="_blank" rel="noopener"><div class="pr">${euro(a.precio)}</div>
     <div class="info"><div class="t">${esc(a.titulo)}</div><div class="meta">${a.id>vistosAntes?'<span class="tag nuevo">Nuevo</span>':''}<span class="tag">${esc(nombreT(a.tienda))}</span></div>
     <div class="motivo">${esc(a.motivo)}</div>
-    <div class="mut" style="margin-top:4px">${fecha(a.ts)}${deSeg(a.seg_id)?` · ${esc(deSeg(a.seg_id))}`:''}</div></div></a></div>
+    <div class="mut" style="margin-top:4px">Aviso del ${fecha(a.ts)}${deSeg(a.seg_id)?` · ${esc(deSeg(a.seg_id))}`:''}${seg(a.seg_id).ultima?` · última búsqueda ${fecha(seg(a.seg_id).ultima)}`:''}</div></div></a></div>
     <div class="accs"><button type="button" class="graf" data-i="${i}" title="Historial de precios">📈 Historial de precio</button><button type="button" class="quita no" data-id="${a.id}" title="Quitar este aviso (no se repetirá salvo que baje más)">✕ Quitar aviso</button></div></div>`).join('')
     :'<div class="card vacio-msg"><span class="em">🔔</span>No tienes avisos.<br>Cuando un producto de una búsqueda vigilada llegue a tu precio, aparecerá aquí.</div>';
   document.querySelectorAll('#av-lista .graf').forEach(g=>g.onclick=()=>{const a=l[+g.dataset.i];abreHist(a.url,a.titulo,a.tienda);});
   document.querySelectorAll('#av-lista .quita').forEach(g=>g.onclick=async()=>{await api('avisos',{accion:'borrar',id:+g.dataset.id});cargaAvisos();aviso('Aviso quitado. No se repetirá salvo que baje más de precio');});
   if($('av-orden'))$('av-orden').onchange=()=>{ordenAv=$('av-orden').value;try{localStorage.setItem('bt-orden-av2',ordenAv)}catch(e){}cargaAvisos();};
   if($('av-ref'))$('av-ref').onclick=()=>abreRef('avisos');
-  if($('av-vaciar'))$('av-vaciar').onclick=async()=>{if(confirm('¿Borrar todos los avisos? Los productos que sigan a buen precio volverán a avisarte en la próxima revisión.')){await api('avisos',{accion:'vaciar'});cargaAvisos();aviso('Avisos borrados');}};}
+  if($('av-vaciar'))$('av-vaciar').onclick=async()=>{if(confirm('¿Quitar todos los avisos de la lista? No volverán a avisarte salvo que bajen más de precio.')){await api('avisos',{accion:'vaciar'});cargaAvisos();aviso('Avisos borrados');}};}
 async function cargaNavAv(){try{const l=await api('avisos');const v=Number(localStorage.getItem('bt-vistos')||0);
   const n=l.filter(a=>a.id>v).length;$('nav-av').textContent=n?String(n):'';}catch(e){}}
 
