@@ -773,9 +773,11 @@ function estadoBoton(activo){const b=$('go');b.disabled=activo;b.textContent=act
 // Barra de carga: la pide al servidor (que es quien sabe qué está en marcha), así sigue aunque cambies de pestaña o recargues
 let progTimer=null,progHabia=false;
 function durTxt(s){s=Math.max(0,Math.round(s));return s<60?`${s} s`:`${Math.floor(s/60)} min${s%60?` ${s%60} s`:''}`;}
+let progVuelta=0;
 async function sigueProgreso(){
-  clearTimeout(progTimer);let l=[];
+  clearTimeout(progTimer);const mia=++progVuelta;let l=[];
   try{l=await api('progreso');}catch(e){}
+  if(mia!==progVuelta)return;          // otra llamada empezó mientras tanto: sigue ella (si no, se acumulaban sondeos)
   if(!Array.isArray(l))l=[];
   if(progHabia&&!l.length){cargaNavAv();if(tabActual==='avisos')cargaAvisos();}   // acabó algo: puede haber avisos nuevos
   progHabia=l.length>0;

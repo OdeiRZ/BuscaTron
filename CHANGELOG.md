@@ -3,6 +3,12 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.20.6] - 2026-11-20
+
+### Corregido
+- La barra de carga podía acumular sondeos repetidos al servidor si se pedía dos veces a la vez (al volver a la pestaña durante una búsqueda): ahora solo sigue la última.
+- La marca de «la tienda rechazó una página siguiente» es de cada consulta (antes global): ni se queda puesta tras un rechazo ni se mezcla entre búsquedas simultáneas (móvil y revisión automática).
+
 ## [0.20.5] - 2026-11-20
 
 ### Corregido

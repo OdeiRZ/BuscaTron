@@ -18,16 +18,9 @@ MAX_CAIDA = 86400           # …y cada vez que vuelve a fallar se espera 6 vece
 RECHAZOS_PARA_ESPERAR = 2   # 403 seguidos antes de dejar de llamarla un tiempo (un 429 basta con uno)
 BLOQUEO_FALLOS = 3          # esperas seguidas por rechazo tras las que se da por bloqueada (se prueba solo su portada)
 _rechazos = {}   # {host: 403/401 seguidos}
-_rechazo_ahora = set()   # tiendas que rechazaron una página siguiente en la consulta en curso
-_cerrojo_rechazo = threading.Lock()
-
-
-def _quita_rechazo_ahora(h):
-    with _cerrojo_rechazo:
-        if h in _rechazo_ahora:
-            _rechazo_ahora.discard(h)
-            return True
-    return False
+# Rechazo en una página siguiente durante la consulta en curso. Cada tienda se consulta entera en un mismo hilo
+# (_tienda_viva → _intenta), así que la marca es de ese hilo: búsquedas simultáneas no se mezclan.
+_hilo_rechazo = threading.local()
 
 
 _caidas = {}     # {host: cuándo dejó de responder} (lo que queda en memoria; lo que manda está en la tabla «caidas»)
@@ -145,8 +138,7 @@ def _intenta(t, consulta, get, paginas=1, con_estado=False):
                 break
             if st2 in (401, 403, 429):
                 registra_rechazo(t["host"], f"rechazó la página siguiente (error {st2})")
-                with _cerrojo_rechazo:
-                    _rechazo_ahora.add(t["host"])    # que el éxito de la primera página no lo borre
+                _hilo_rechazo.hubo = True            # que el éxito de la primera página no lo borre
                 break
             if st2 != 200:
                 break
@@ -251,10 +243,11 @@ def _tienda_base(t, consulta, nav=None, paginas=1):
 
 def _tienda_viva(t, consulta, nav, paginas, estados):
     h = t["host"]
+    _hilo_rechazo.hubo = False
     r = _tienda_consulta(t, consulta, nav, paginas, estados)
     if es_rechazo(r[2]):                                     # responde, pero rechazándote: no insistir
         registra_rechazo(h, r[2])
-    elif _quita_rechazo_ahora(h):
+    elif _hilo_rechazo.hubo:
         pass                                                 # respondió, pero rechazó una página siguiente: no se olvida
     else:
         _rechazos.pop(h, None)
