@@ -485,7 +485,8 @@ def cumple(seg, titulo, precio=None, tienda=None):
 def _fuera_de_objetivo(seg, aviso):
     """¿Aviso «por debajo de tu objetivo» que ya no lo está porque bajaste el objetivo (39 → 38: el de 38,65 € sobra)?"""
     m = aviso["motivo"] or ""
-    return ("por debajo de tu objetivo de" in m and "para este producto" not in m and seg["objetivo"] is not None
+    de_objetivo = "por debajo de tu objetivo de" in m or m.startswith("≤ tu objetivo")       # el segundo, de versiones antiguas
+    return (de_objetivo and "para este producto" not in m and seg["objetivo"] is not None
             and aviso["precio"] > seg["objetivo"] + 0.005)
 
 
