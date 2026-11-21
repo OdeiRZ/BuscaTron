@@ -305,12 +305,14 @@ class Handler(BaseHTTPRequestHandler):
         if origen.strip().lower() == "null":       # iframe aislado o redirección: no es la página propia
             return True
         h = (urlparse(origen).hostname or "").lower()
-        propios = {(self.headers.get("Host") or "").split(":")[0].lower(), (self.headers.get("X-Forwarded-Host") or "").split(":")[0].lower()} - {""}
-        if h in propios or h in ("localhost", "127.0.0.1") or h.endswith(".ts.net"):
+        equipo = socket.gethostname().lower()
+        # este equipo por su nombre, o su nombre en tu tailnet («odei-pc-gaming.tailXXXX.ts.net»); no cualquier *.ts.net ni
+        # lo que diga la cabecera Host (otra web puede hacer que su nombre apunte a 127.0.0.1)
+        if h in ("localhost", equipo) or (h.endswith(".ts.net") and h.split(".")[0] == equipo):
             return False
         try:
             ip = ipaddress.ip_address(h)
-            return not (ip.is_private or ip.is_loopback)
+            return not (ip.is_private or ip.is_loopback or ip in TAILSCALE)   # 100.x: tailscale
         except ValueError:
             return True
 
@@ -357,6 +359,8 @@ class Handler(BaseHTTPRequestHandler):
         return self._json({"error": "PIN incorrecto"}, 401)
 
     def _post(self, ruta, c):
+        if ruta == "/api/buscar" and c.get("solo_pegados"):
+            c.pop("asincrono", None)
         if ruta == "/api/buscar" and c.get("asincrono"):
             return lanza_busqueda(c)
         if ruta == "/api/buscar":
@@ -438,6 +442,8 @@ class Handler(BaseHTTPRequestHandler):
         if ruta == "/api/avisos":
             if c.get("accion") == "vaciar":
                 seguimiento.vacia_avisos()
+            elif c.get("accion") == "borrar" and c.get("ids"):
+                seguimiento.borra_avisos(c["ids"])
             elif c.get("accion") == "borrar":
                 seguimiento.borra_aviso(int(c["id"]))
             return seguimiento.avisos()

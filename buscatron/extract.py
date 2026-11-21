@@ -336,6 +336,9 @@ def _ficha_unica(html, base, palabras):
     propios = [n for n in productos if n.get("url") and urlparse(urljoin(base, n["url"])).path.rstrip("/") == urlparse(canonica).path.rstrip("/")]
     if len(productos) > 1 and not propios:
         return None
+    es_ficha = bool(propios) or re.search(r"""og:type["']\s+content=["'](?:og:)?product""", html, re.I) or "single-product" in html
+    if not es_ficha:              # p. ej. una categoría con el precio de su primera tarjeta en los metadatos
+        return None
     d = datos_producto(html, canonica) if len(productos) <= 1 else datos_producto('<script type="application/ld+json">' + json.dumps(propios[0]) + "</script>", canonica)
     if not d or not d.get("titulo"):
         return None

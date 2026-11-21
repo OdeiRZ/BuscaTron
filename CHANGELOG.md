@@ -3,6 +3,18 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.20.9] - 2026-11-21
+
+### Corregido (revisión exhaustiva v0.18.1..v0.20.8)
+- Un aviso que no se pudo enviar ya no reaparece como «Nuevo» en cada revisión: si lo ocultaste se respeta, y con Telegram sin configurar no queda pendiente.
+- Lo pegado durante una revisión se procesa luego solo en esa vigilada y solo si la tienda sigue siendo «solo enlace» (nunca una consulta en directo); un fallo ahí no tapa el resultado de la revisión. Pegar ya no marca las vigiladas como «Revisándose…».
+- Órdenes desde otras webs: solo se aceptan los nombres de este equipo, su tailnet, la red local y las IP de Tailscale (no cualquier *.ts.net ni el truco de DNS rebinding).
+- La «ficha de un solo resultado» solo se usa si la página es de verdad una ficha (no una categoría con un precio en los metadatos).
+- Al pegar, la marca suelta solo se une a la línea siguiente si detrás viene su precio (no el buscador ni los filtros).
+- Los avisos de tiendas «solo enlace» no se borran cuando caduca lo pegado (repegar no vuelve a avisar).
+- Una cola larga de Chrome ya no marca la tienda como caída; un rechazo en una ficha tampoco.
+- «solo_pegados» se aplica también en segundo plano; «Quitar todos» va en una sola petición; el botón de pegar de una tienda que ya se consulta sola avisa en vez de cambiarla por otra; el enlace de las tiendas con plantilla «{q-}».
+
 ## [0.20.8] - 2026-11-21
 
 ### Corregido (revisión de código de la página)

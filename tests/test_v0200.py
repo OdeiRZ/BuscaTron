@@ -16,6 +16,7 @@ class Base(unittest.TestCase):
             p.start()
 
     def tearDown(self):
+        motor._caidas.clear()            # marca_caida también apunta en memoria
         for p in reversed(self.parches):
             p.stop()
 
@@ -96,7 +97,11 @@ class Accesos(unittest.TestCase):
 
     def test_otra_web_no_puede_mandar_ordenes(self):
         self.assertTrue(self.manejador({"Origin": "https://malo.example", "Host": "127.0.0.1:8790"})._origen_ajeno())
-        for o in ("http://127.0.0.1:8790", "https://odei-pc.tail1.ts.net", "http://192.168.1.20:8790"):
+        import socket
+        equipo = socket.gethostname().lower()
+        self.assertTrue(self.manejador({"Origin": "https://otro.tail1.ts.net", "Host": "127.0.0.1:8790"})._origen_ajeno())   # otra máquina de tailscale
+        self.assertTrue(self.manejador({"Origin": "http://malo.example:8790", "Host": "malo.example:8790"})._origen_ajeno())  # DNS rebinding
+        for o in ("http://127.0.0.1:8790", f"https://{equipo}.tail1.ts.net", "http://192.168.1.20:8790", f"http://{equipo}:8790"):
             self.assertFalse(self.manejador({"Origin": o, "Host": "127.0.0.1:8790"})._origen_ajeno(), o)
         self.assertFalse(self.manejador({"Host": "127.0.0.1:8790"})._origen_ajeno())
 

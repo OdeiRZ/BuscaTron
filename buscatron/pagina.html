@@ -1069,13 +1069,16 @@ $('pegar').onclick=e=>{if(e.target===$('pegar'))cierraPegar();};
 // Las tiendas que no se consultan solas: se abre su web con la búsqueda, copias la página y BuscaTron lee lo copiado.
 // No hace falta buscar antes: eliges tienda y búsqueda aquí mismo (desde la búsqueda, el formulario o Ajustes).
 function manualesT(){return porNombre(tiendas.filter(t=>t.manual),t=>nombreT(t.host));}
-function enlaceT(t,q){const p=t.plantilla||'';
-  return p.includes('{q}')?p.replace('{q}',encodeURIComponent(q)):(p.startsWith('http')?p:'https://'+t.host+'/');}
+function enlaceT(t,q){const p=(t.plantilla||'').split('{q-}').join(q.trim().split(/\s+/).join('-'));
+  return p.includes('{q}')?p.split('{q}').join(encodeURIComponent(q)):(p.startsWith('http')?p:'https://'+t.host+'/');}
 function abrePegar(host){
   const ms=manualesT();
   if(!ms.length){aviso('No tienes tiendas marcadas como «No consultar automáticamente»');return;}
   if(!host)try{host=localStorage.getItem('bt-pegar-t')}catch(e){}       // la última que usaste
-  if(!ms.some(t=>t.host===host))host=ms[0].host;
+  const pedida=host;
+  if(!ms.some(t=>t.host===host)){
+    if(pedida&&tiendas.some(t=>t.host===pedida)&&arguments.length){aviso(`${nombreT(pedida)} ya se consulta sola: no hace falta pegar sus resultados`);return;}
+    host=ms[0].host;}
   const q0=((ultimoBody&&ultimoBody.q)||$('q').value||'').trim();
   $('hoja2').innerHTML=`<button type="button" class="cierra" aria-label="Cerrar">✕</button><h3>📋 Pegar resultados</h3>
     <p class="ayuda" style="margin-top:4px">Para tiendas que no se consultan solas: miras tú en tu navegador y BuscaTron lee lo que copies.</p>
@@ -1326,7 +1329,7 @@ async function cargaAvisos(){const mia=++avVuelta;const [todos,vig]=await Promis
   document.querySelectorAll('#av-lista .graf').forEach(g=>g.onclick=()=>{const a=l[+g.dataset.i];abreHist(a.url,a.tituloTienda,a.tienda);});
   document.querySelectorAll('#av-lista .graf-o').forEach(g=>g.onclick=()=>abreHist(g.dataset.u,g.dataset.t,g.dataset.h));
   document.querySelectorAll('#av-lista .quita').forEach(g=>g.onclick=async()=>{const ids=g.dataset.ids.split(',').map(Number);g.disabled=true;
-    let r;try{r=await Promise.all(ids.map(id=>api('avisos',{accion:'borrar',id})));}catch(e){r=null;}
+    let r;try{r=[await api('avisos',{accion:'borrar',ids})];}catch(e){r=null;}     // todas en una sola petición
     cargaAvisos();if(!r||r.some(x=>x&&x.error)){aviso('No se pudo quitar: comprueba la conexión con BuscaTron');return;}aviso(`Aviso${ids.length>1?'s':''} quitado${ids.length>1?'s':''}. No se repetirá${ids.length>1?'n':''} salvo que baje${ids.length>1?'n':''} más de precio`);});
   if($('av-orden'))$('av-orden').onchange=()=>{ordenAv=$('av-orden').value;try{localStorage.setItem('bt-orden-av2',ordenAv)}catch(e){}cargaAvisos();};
   if($('av-ref'))$('av-ref').onclick=()=>abreRef('avisos');

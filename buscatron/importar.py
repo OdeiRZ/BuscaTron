@@ -31,15 +31,19 @@ def _junta_marca(lineas, palabras):
     out, i = [], 0
     while i < len(lineas):
         l = lineas[i]
+        sig = lineas[i + 1] if i + 1 < len(lineas) else ""
+        tras = lineas[i + 2] if i + 2 < len(lineas) else ""
         if extract.normaliza(l).strip() == q and not _precios(l):
-            sig = lineas[i + 1] if i + 1 < len(lineas) else ""
-            if sig and not _precios(sig) and not all(extract.encaja(extract.normaliza(sig), w) for w in palabras):
-                out.append(f"{l} {sig}")
+            interfaz = extract.normaliza(sig).startswith(IGNORAR + ("precio", "ordenar", "categoria", "marca", "disponibilidad"))
+            if sig and not interfaz and not _precios(sig) and _precios(tras) \
+                    and not all(extract.encaja(extract.normaliza(sig), w) for w in palabras):
+                out.append(f"{l} {sig}")             # marca + nombre, y justo detrás su precio
                 i += 2
                 continue
-            out.append(f"{l} (sin nombre en lo pegado)")    # distinto de la búsqueda: así cuenta como nombre
-            i += 1
-            continue
+            if _precios(sig):
+                out.append(f"{l} (sin nombre en lo pegado)")    # la marca y enseguida el precio
+                i += 1
+                continue
         out.append(l)
         i += 1
     return out

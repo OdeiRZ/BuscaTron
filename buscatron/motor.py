@@ -236,7 +236,7 @@ def _tienda_base(t, consulta, nav=None, paginas=1):
     except navegador.Desafio:
         return h, [], DESAFIO
     except Exception as e:
-        if isinstance(e, OSError):                           # tiempo agotado, conexión rechazada…
+        if isinstance(e, OSError) and "navegador" not in str(e):   # tiempo agotado, conexión rechazada… (no la cola de Chrome)
             marca_caida(h)
         return h, [], f"no se pudo conectar ({str(e)[:60]})"
 
@@ -401,8 +401,6 @@ def ficha(x, lista=None):
             st, html = fetch.get(x["url"], timeout=20)
     except Exception:
         st = None
-    if st in (401, 403, 429):
-        registra_rechazo(t.get("host") or x.get("tienda"), f"rechazó la ficha (error {st})")
     if st != 200:                 # se recuerda el fallo un rato: si no, se pediría otra vez en cada búsqueda
         with bd.conecta() as c:
             c.execute("INSERT INTO fichas(url, idioma, agotado, preventa, ts) VALUES(?,?,?,?,?) "     # el idioma ya leído se conserva

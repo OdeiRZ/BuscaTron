@@ -7,7 +7,7 @@ LISTADO = """<ul class="products"><li class="product"><a href="https://t.es/wp-c
 <h2><a href="https://t.es/producto/eternal-decks/">Eternal Decks</a></h2><span class="price">39,99 €</span></li></ul>"""
 
 FICHA = """<html><head><link rel="canonical" href="https://t.es/shop/eternal-decks/">
-<script type="application/ld+json">{"@type":"Product","name":"Eternal Decks","offers":{"@type":"Offer","price":"35.95",
+<script type="application/ld+json">{"@type":"Product","name":"Eternal Decks","url":"https://t.es/shop/eternal-decks/","offers":{"@type":"Offer","price":"35.95",
 "availability":"https://schema.org/InStock"}}</script></head><body>
 <a href="https://t.es/wp-content/uploads/2026/10/eternal-face3d.jpg"><img alt="Eternal Decks"></a>
 <section class="related"><a href="https://t.es/shop/otro/">Otro juego</a> 19,75 €</section></body></html>"""

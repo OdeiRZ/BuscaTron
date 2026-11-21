@@ -119,6 +119,12 @@ def borra_aviso(aviso_id):
         c.execute("UPDATE avisos SET oculto=1 WHERE id=?", (aviso_id,))
 
 
+def borra_avisos(ids):
+    """Quita varios avisos de una vez (los de un producto en todas sus tiendas)."""
+    with bd.conecta() as c:
+        c.executemany("UPDATE avisos SET oculto=1 WHERE id=?", [(int(i),) for i in ids])
+
+
 def _edad(ts):
     h = (time.time() - ts) / 3600
     return "hace menos de 1 h" if h < 1 else f"hace {round(h)} h" if h < 48 else f"hace {round(h / 24)} días"
@@ -137,7 +143,9 @@ def limpia_avisos(seg_id, res, informe):
     vivas = {x["url"] for x in res}
     sin_respuesta = {h for h, i in informe.items() if i.get("caida")}
     abierta_fallida = bool(informe.get("Búsqueda abierta", {}).get("caida"))
-    mias = {t["host"] for t in motor.cfg.carga()}
+    lista = motor.cfg.carga()
+    mias = {t["host"] for t in lista}
+    manuales = {t["host"] for t in lista if t.get("manual") or motor.cfg.nunca(t["host"])}
     with bd.conecta() as c:
         for r in c.execute("SELECT id, url, tienda FROM avisos WHERE seg_id=?", (seg_id,)).fetchall():
             if r["tienda"] in informe:
@@ -146,6 +154,8 @@ def limpia_avisos(seg_id, res, informe):
                 intocable = True
             else:                      # procede de la búsqueda abierta
                 intocable = abierta_fallida
+            if r["tienda"] in manuales:
+                intocable = True       # «solo enlace»: si ya no está, es que caducó lo pegado, no que haya cambiado
             if r["url"] not in vivas and not intocable:
                 c.execute("DELETE FROM avisos WHERE id=?", (r["id"],))
 
@@ -175,11 +185,11 @@ def _apunta_aviso(c, seg_id, x, ts):
     revisiones y lo pegado a mano, para que las dos decidan igual."""
     # El mismo producto de la misma tienda puede llegar por dos direcciones (su ficha, cuando la búsqueda salta a ella, o
     # el enlace del listado): también cuenta como ya avisado si coinciden tienda y nombre.
-    ult = c.execute("SELECT precio, ts FROM avisos WHERE seg_id=? AND (url=? OR (tienda=? AND titulo=? AND ts<?)) AND pendiente=0 ORDER BY ts DESC LIMIT 1",
+    ult = c.execute("SELECT precio, ts FROM avisos WHERE seg_id=? AND (url=? OR (tienda=? AND titulo=? AND ts<?)) AND NOT (pendiente=1 AND oculto=0) ORDER BY ts DESC LIMIT 1",
                     (seg_id, x["url"], x.get("tienda"), x.get("titulo"), ts)).fetchone()      # los no enviados no cuentan: se reintentan
     if ult and x["precio"] >= ult["precio"] - 0.005 and ts - ult["ts"] < REAVISO_DIAS * 86400:
         return False
-    c.execute("DELETE FROM avisos WHERE seg_id=? AND url=? AND pendiente=1", (seg_id, x["url"]))   # lo sustituye el nuevo
+    c.execute("DELETE FROM avisos WHERE seg_id=? AND url=? AND pendiente=1 AND oculto=0", (seg_id, x["url"]))   # lo sustituye el nuevo
     # los anteriores del mismo producto en esa tienda dejan de verse: si no, al quitar el nuevo reaparecía el viejo (más caro)
     c.execute("UPDATE avisos SET oculto=1 WHERE seg_id=? AND oculto=0 AND ts<? AND (url=? OR (tienda=? AND titulo=?))",
               (seg_id, ts, x["url"], x.get("tienda"), x.get("titulo")))     # solo de revisiones anteriores
@@ -197,7 +207,7 @@ def _envia_avisos(seg, nuevos, ts):
     if len(grupos) > 10:
         lineas.append(f"… y {len(grupos) - 10} productos más en la pestaña Avisos")
     envio = notifica.envia(canales, f"BuscaTron · {seg['nombre']}", "\n\n".join(lineas))
-    if envio and all(v for v in envio.values()):
+    if envio and all(v and "falta" not in v for v in envio.values()):     # «falta el token…»: no es pasajero, no se reintenta
         with bd.conecta() as c:
             c.executemany("UPDATE avisos SET pendiente=1 WHERE seg_id=? AND url=? AND ts=?", [(seg["id"], x["url"], ts) for x in nuevos])
     return envio
@@ -225,8 +235,11 @@ def revisa(seg_id, enviar=True):
         with _cerrojo:
             _en_curso.pop(seg_id, None)
             pendientes = _pegados_pendientes.pop(seg_id, set())
-        for h in pendientes:              # pegaste mientras se revisaba: ahora sí pasa por sus avisos
-            avisa_pegados(h, enviar)
+        for h in pendientes:              # pegaste mientras se revisaba: ahora sí pasa por sus avisos (solo esta vigilada)
+            try:
+                _pegado_diferido(seg_id, h, enviar)
+            except Exception:             # noqa: BLE001  (no debe tapar el resultado o el error de la revisión)
+                pass
 
 
 def _vueltas(seg_id, enviar):
@@ -319,10 +332,28 @@ def _revisa(seg_id, enviar):
         raise
 
 
+def _solo_enlace(host):
+    t = next((t for t in motor.cfg.carga() if t["host"] == host), None)
+    return bool(t and (t.get("manual") or motor.cfg.nunca(host)))
+
+
+def _pegado_diferido(seg_id, host, enviar):
+    if not _solo_enlace(host):            # la pasaste a automática mientras tanto: no se consulta por aquí
+        return
+    with bd.conecta() as c:
+        seg = c.execute("SELECT * FROM seguimientos WHERE id=? AND activo=1", (seg_id,)).fetchone()
+    if seg:
+        from . import servicio
+        with servicio.trabajo("pegado"):
+            _avisa_pegados_en(dict(seg), host, enviar)
+
+
 def avisa_pegados(host, enviar=True):
     """Lo que acabas de pegar de una tienda «solo enlace» pasa al momento por tus vigiladas activas y crea sus avisos, sin
     esperar a la próxima revisión. No consulta ninguna tienda: esa tienda no se consulta (solo devuelve lo pegado) y no
     se leen fichas. Devuelve el número de avisos nuevos."""
+    if not _solo_enlace(host):            # nunca una tienda que se consulta en directo (sería una petición por vigilada)
+        return 0
     with bd.conecta() as c:
         segs = [dict(r) for r in c.execute("SELECT * FROM seguimientos WHERE activo=1 ORDER BY id")]
     total = 0
@@ -331,14 +362,9 @@ def avisa_pegados(host, enviar=True):
             if seg["id"] in _en_curso:
                 _pegados_pendientes.setdefault(seg["id"], set()).add(host)
                 continue
-            _en_curso[seg["id"]] = time.time()
-        try:
-            from . import servicio
-            with servicio.trabajo("pegado"):
-                total += _avisa_pegados_en(seg, host, enviar)
-        finally:
-            with _cerrojo:
-                _en_curso.pop(seg["id"], None)
+        from . import servicio
+        with servicio.trabajo("pegado"):
+            total += _avisa_pegados_en(seg, host, enviar)
     return total
 
 
