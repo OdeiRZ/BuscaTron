@@ -3,6 +3,16 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.20.8] - 2026-11-21
+
+### Corregido (revisión de código de la página)
+- Al quitar un aviso ya no reaparece el anterior, más caro, del mismo producto: cada aviso nuevo oculta los previos de esa tienda (siguen contando para no repetir).
+- Un aviso por enlace dentro de cada vigilada (dos vigiladas con el mismo enlace ya no se pisan).
+- «Nombre de la A a la Z» ordena por el nombre que se ve en la tarjeta.
+- «y N ofertas más en M tiendas» cuenta solo las demás tiendas.
+- Títulos: fuera «PEGI 14+», «10+ años», «a partir de 8 años», «2-4 jugadores»; un subtítulo con «:» ya no se mueve.
+- Una carga vieja de Avisos ya no pinta encima de una nueva; «Quitar» quita todas a la vez, no admite doble toque y avisa si falla.
+
 ## [0.20.7] - 2026-11-21
 
 ### Corregido (revisiones de código)

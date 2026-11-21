@@ -1272,7 +1272,7 @@ function ordenaAvisos(l,modo){const az=(a,b)=>a.localeCompare(b,'es',{sensitivit
 function limpiaTitulo(t){
   let x=' '+t+' ';
   x=x.replace(/\s(asmodee|fantasy flight games|fantasy flight|ffg|edge entertainment|devir)\b\s*[-|:]?/gi,' ')
-     .replace(/\sjuegos? de mesa\b/gi,' ').replace(/\s(pegi\s*\d+|edad recomendada(\s*\d+(\s*a[ñn]os?)?)?|\d+\s*cartas)\b/gi,' ')
+     .replace(/\sjuegos? de mesa\b/gi,' ').replace(/\s(pegi\s*\d+\+?|edad recomendada:?(\s*\+?\d+\+?)?(\s*a[ñn]os?)?|(desde|a partir de)\s*\d+\+?\s*a[ñn]os?|\d+\+?\s*a[ñn]os?|\d+\s*(-|a)\s*\d+\s*jugadores|\d+\s*cartas)(?=\s|$)/gi,' ')
      .replace(/\s[-–|]\s*(expansi[oó]n|juego de cartas|card game).*$/i,' ').replace(/\s(expansi[oó]n|expansion)\s*$/i,' ')
      .replace(/\bLCG\b/g,' ').replace(/\s+/g,' ').trim()
      .replace(/^([^:\-–]{3,40}?)\s*[-–]\s+/,'$1: ').replace(/\s+:/g,':').replace(/^[-–:\s]+|[-–:\s]+$/g,'');
@@ -1284,25 +1284,27 @@ function tituloProducto(items){
   // La serie («Marvel Champions»): lo que algún título ya separa con «:» y empieza todos los demás; en todos, seguida de «:»
   const serie=c.filter(t=>t.includes(':')).map(t=>t.split(':')[0].trim()).sort((a,b)=>a.length-b.length)
     .find(se=>c.every(t=>t.toLowerCase().replace(/:/g,' ').replace(/\s+/g,' ').startsWith(se.toLowerCase()+' ')));
-  if(serie)c=c.map(t=>{const r=t.replace(/:/g,' ').replace(/\s+/g,' ').trim();return r.slice(0,serie.length)+': '+r.slice(serie.length).trim();});
+  if(serie)c=c.map(t=>t.includes(':')?t:t.slice(0,serie.length)+': '+t.slice(serie.length).trim());
   const tildes=c.some(t=>/[áéíóúñü]/i.test(t));
   const nota=t=>(t===t.toUpperCase()&&/[A-Z]/.test(t)?100:0)+(tildes&&!/[áéíóúñü]/i.test(t)?20:0)+(t.includes(':')?0:5)+t.length/100-(t.match(/(^|\s)\p{Lu}/gu)||[]).length/1000;   // a igualdad, el de nombre propio («La Próxima Evolución»)
   return c.slice().sort((a,b)=>nota(a)-nota(b))[0];}
 let vistosAntes=null;      // el último aviso que ya habías visto al entrar: los posteriores llevan «Nuevo»
-async function cargaAvisos(){const [todos,vig]=await Promise.all([api('avisos').catch(()=>null),api('seguimientos').catch(()=>segs)]);   // sin red: lo que haya   // vigiladas al día: su «última búsqueda»
- if(!Array.isArray(todos))return;
+let avVuelta=0;
+async function cargaAvisos(){const mia=++avVuelta;const [todos,vig]=await Promise.all([api('avisos').catch(()=>null),api('seguimientos').catch(()=>segs)]);   // sin red: lo que haya   // vigiladas al día: su «última búsqueda»
+ if(mia!==avVuelta||!Array.isArray(todos))return;     // otra carga más reciente manda
   if(Array.isArray(vig))segs=vig;
   if(vistosAntes===null)try{vistosAntes=Number(localStorage.getItem('bt-vistos')||0)}catch(e){vistosAntes=0}
   try{localStorage.setItem('bt-vistos',String(todos.length?Math.max(...todos.map(a=>a.id)):0))}catch(e){}
   $('nav-av').textContent='';
   // Un producto, una tarjeta: las variantes de nombre del mismo juego (vienen agrupadas del servidor) van juntas, con la más
   // barata delante; de cada enlace solo cuenta su aviso más reciente (el de antes, si bajó de precio, ya no vale).
-  const ultimoPorEnlace=new Map();for(const a of todos)if(!ultimoPorEnlace.has(a.url))ultimoPorEnlace.set(a.url,a);   // vienen del más reciente
+  const ultimoPorEnlace=new Map();for(const a of todos){const k=a.seg_id+'|'+a.url;if(!ultimoPorEnlace.has(k))ultimoPorEnlace.set(k,a);}   // vienen del más reciente
   const porGrupo=new Map();
   for(const a of ultimoPorEnlace.values()){const k=a.grupo||('id'+a.id);if(!porGrupo.has(k))porGrupo.set(k,[]);porGrupo.get(k).push(a);}
   const grupos=[...porGrupo.values()].map(v=>{const it=v.sort((a,b)=>a.precio-b.precio);
-    return {...it[0],nombre:tituloProducto(it),items:it,ids:it.map(x=>x.id),propioNuevo:it[0].id>vistosAntes,nuevo:it.some(x=>x.id>vistosAntes),
-            tsOferta:it[0].ts,ts:Math.max(...it.map(x=>x.ts)),tiendas:new Set(it.map(x=>x.tienda)).size};});
+    const nombre=tituloProducto(it);
+    return {...it[0],clave:it[0].grupo||('id'+it[0].id),titulo:nombre,nombre,tituloTienda:it[0].titulo,items:it,ids:it.map(x=>x.id),propioNuevo:it[0].id>vistosAntes,nuevo:it.some(x=>x.id>vistosAntes),
+            tsOferta:it[0].ts,ts:Math.max(...it.map(x=>x.ts)),tiendas:new Set(it.slice(1).map(x=>x.tienda)).size};});
   const ord=ordenaAvisos(grupos,ordenAv),l=[...ord.filter(g=>g.nuevo),...ord.filter(g=>!g.nuevo)];   // los nuevos, primero
   const nuevos=l.filter(g=>g.nuevo).length,seg=id=>segs.find(s=>s.id===id)||{},deSeg=id=>seg(id).nombre;
   // Novedades: los avisos llegados desde que abriste la app siguen marcados hasta que recargues la página
@@ -1312,8 +1314,8 @@ async function cargaAvisos(){const [todos,vig]=await Promise.all([api('avisos').
   const abiertos=new Set([...document.querySelectorAll('#av-lista .av details[open]')].map(d=>d.closest('.av').dataset.g));
   $('av-lista').innerHTML=l.length?banner+busq+`<div class="cuenta" style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><span>${l.length} producto${l.length>1?'s':''} (${l.reduce((n,g)=>n+g.items.length,0)} ofertas)${nuevos?` · <b style="color:var(--ac)">${nuevos} con novedades</b>`:''}</span>
     <span style="display:flex;gap:8px"><button type="button" class="sec mini" id="av-ref" title="Cada aviso comparado con lo visto en Amazon, con enlaces a camelcamelcamel y Keepa">📊 Referencia de Amazon</button><button type="button" class="peli mini" id="av-vaciar">Borrar todos</button></span></div>
-    <div class="orden-av" style="margin:0 0 10px"><label for="av-orden">Ordenar por</label><select id="av-orden">${Object.entries(ORDEN_AV).map(([k,v])=>`<option value="${k}" ${k===ordenAv?'selected':''}>${v}</option>`).join('')}</select></div>`+l.map((a,i)=>`<div class="gr av${a.nuevo?' es-nuevo':''}" data-g="${esc(a.grupo||'')}"><div class="res con-acc"><a class="cuerpo" href="${esc(a.url)}" target="_blank" rel="noopener"><div class="pr">${euro(a.precio)}</div>
-    <div class="info"><div class="t" title="${esc(a.titulo)}">${esc(a.nombre)}</div><div class="meta">${a.propioNuevo?'<span class="tag nuevo">Nuevo</span>':a.nuevo?'<span class="tag nuevo">Novedad en otra oferta</span>':''}<span class="tag">${esc(nombreT(a.tienda))}</span>${a.items.length>1?`<span class="av-otros">y ${a.items.length-1} oferta${a.items.length>2?'s':''} más${a.tiendas>1?` (${a.tiendas} tiendas)`:''}</span>`:''}</div>
+    <div class="orden-av" style="margin:0 0 10px"><label for="av-orden">Ordenar por</label><select id="av-orden">${Object.entries(ORDEN_AV).map(([k,v])=>`<option value="${k}" ${k===ordenAv?'selected':''}>${v}</option>`).join('')}</select></div>`+l.map((a,i)=>`<div class="gr av${a.nuevo?' es-nuevo':''}" data-g="${esc(a.clave)}"><div class="res con-acc"><a class="cuerpo" href="${esc(a.url)}" target="_blank" rel="noopener"><div class="pr">${euro(a.precio)}</div>
+    <div class="info"><div class="t" title="${esc(a.tituloTienda)}">${esc(a.nombre)}</div><div class="meta">${a.propioNuevo?'<span class="tag nuevo">Nuevo</span>':a.nuevo?'<span class="tag nuevo">Novedad en otra oferta</span>':''}<span class="tag">${esc(nombreT(a.tienda))}</span>${a.items.length>1?`<span class="av-otros">y ${a.items.length-1} oferta${a.items.length>2?'s':''} más${a.tiendas>1?` en ${a.tiendas} tiendas`:''}</span>`:''}</div>
     <div class="motivo">${esc(a.motivo)}</div>
     <div class="mut" style="margin-top:4px">Aviso del ${fecha(a.tsOferta)}${deSeg(a.seg_id)?` · ${esc(deSeg(a.seg_id))}`:''}${seg(a.seg_id).ultima?` · última búsqueda ${fecha(seg(a.seg_id).ultima)}`:''}</div></div></a></div>
     <div class="accs"><button type="button" class="graf" data-i="${i}" title="Historial de precios">📈 Historial de precio</button><button type="button" class="quita no" data-ids="${a.ids.join(',')}" title="Quitar los avisos de este producto, en todas sus tiendas (no se repetirán salvo que bajen más)">✕ Quitar ${a.items.length>1?'todos':'aviso'}</button></div>
@@ -1321,10 +1323,11 @@ async function cargaAvisos(){const [todos,vig]=await Promise.all([api('avisos').
       <button type="button" class="sec mini graf-o" data-u="${esc(o.url)}" data-t="${esc(o.titulo)}" data-h="${esc(o.tienda)}" title="Historial de precio de esta oferta">📈</button><button type="button" class="sec mini quita" data-ids="${o.id}" title="Quitar solo esta oferta">✕</button></div>`).join('')}</details>`:''}</div>`).join('')
     :'<div class="card vacio-msg"><span class="em">🔔</span>No tienes avisos.<br>Cuando un producto de una búsqueda vigilada llegue a tu precio, aparecerá aquí.</div>';
   document.querySelectorAll('#av-lista .av').forEach(c=>{const d=c.querySelector('details');if(d&&abiertos.has(c.dataset.g))d.open=true;});
-  document.querySelectorAll('#av-lista .graf').forEach(g=>g.onclick=()=>{const a=l[+g.dataset.i];abreHist(a.url,a.titulo,a.tienda);});
+  document.querySelectorAll('#av-lista .graf').forEach(g=>g.onclick=()=>{const a=l[+g.dataset.i];abreHist(a.url,a.tituloTienda,a.tienda);});
   document.querySelectorAll('#av-lista .graf-o').forEach(g=>g.onclick=()=>abreHist(g.dataset.u,g.dataset.t,g.dataset.h));
-  document.querySelectorAll('#av-lista .quita').forEach(g=>g.onclick=async()=>{const ids=g.dataset.ids.split(',').map(Number);
-    for(const id of ids)await api('avisos',{accion:'borrar',id});cargaAvisos();aviso(`Aviso${ids.length>1?'s':''} quitado${ids.length>1?'s':''}. No se repetirá${ids.length>1?'n':''} salvo que baje${ids.length>1?'n':''} más de precio`);});
+  document.querySelectorAll('#av-lista .quita').forEach(g=>g.onclick=async()=>{const ids=g.dataset.ids.split(',').map(Number);g.disabled=true;
+    let r;try{r=await Promise.all(ids.map(id=>api('avisos',{accion:'borrar',id})));}catch(e){r=null;}
+    cargaAvisos();if(!r||r.some(x=>x&&x.error)){aviso('No se pudo quitar: comprueba la conexión con BuscaTron');return;}aviso(`Aviso${ids.length>1?'s':''} quitado${ids.length>1?'s':''}. No se repetirá${ids.length>1?'n':''} salvo que baje${ids.length>1?'n':''} más de precio`);});
   if($('av-orden'))$('av-orden').onchange=()=>{ordenAv=$('av-orden').value;try{localStorage.setItem('bt-orden-av2',ordenAv)}catch(e){}cargaAvisos();};
   if($('av-ref'))$('av-ref').onclick=()=>abreRef('avisos');
   if($('av-vaciar'))$('av-vaciar').onclick=async()=>{if(confirm('¿Quitar todos los avisos de la lista? No volverán a avisarte salvo que bajen más de precio.')){await api('avisos',{accion:'vaciar'});cargaAvisos();aviso('Avisos borrados');}};}

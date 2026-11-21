@@ -180,6 +180,9 @@ def _apunta_aviso(c, seg_id, x, ts):
     if ult and x["precio"] >= ult["precio"] - 0.005 and ts - ult["ts"] < REAVISO_DIAS * 86400:
         return False
     c.execute("DELETE FROM avisos WHERE seg_id=? AND url=? AND pendiente=1", (seg_id, x["url"]))   # lo sustituye el nuevo
+    # los anteriores del mismo producto en esa tienda dejan de verse: si no, al quitar el nuevo reaparecía el viejo (más caro)
+    c.execute("UPDATE avisos SET oculto=1 WHERE seg_id=? AND oculto=0 AND ts<? AND (url=? OR (tienda=? AND titulo=?))",
+              (seg_id, ts, x["url"], x.get("tienda"), x.get("titulo")))     # solo de revisiones anteriores
     return True
 
 

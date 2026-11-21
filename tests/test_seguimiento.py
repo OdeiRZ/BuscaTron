@@ -56,7 +56,7 @@ class Avisos(Base):
         self.assertEqual(len(self.enviados), 1)
         self.assertEqual(self.busca(39)["avisos"], [])          # mismo precio: no repite
         self.assertEqual(len(self.busca(35)["avisos"]), 1)      # baja más: avisa otra vez
-        self.assertEqual(len(seguimiento.avisos()), 2)
+        self.assertEqual([x["precio"] for x in seguimiento.avisos()], [35])     # y sustituye al de antes (v0.20.8)
 
     def test_media_historica(self):
         self.sid = seguimiento.guarda({"consulta": "marvel", "bajo_historico": "15"})
