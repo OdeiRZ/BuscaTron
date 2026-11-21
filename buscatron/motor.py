@@ -525,6 +525,13 @@ DESCRIPCION = {"cooperativo", "cooperativa", "cooperativos", "competitivo", "com
                "oferta", "novedad", "para", "con", "por", "un", "una", "o", "u", "e", "and", "for", "board", "cooperative",
                "strategy", "strategic", "family", "solitario", "solo", "edad", "anos", "partir", "desde", "recomendada"}
 RUIDO |= DESCRIPCION
+# Tiendas y editoriales que se cuelan en el título («Eternal Decks - Gigamesh», «… Salt and Pepper Games», «ugi games
+# toys …», «Oferta Online …») y abreviaturas de idioma («SPA»).
+RUIDO |= {"salt", "pepper", "gigamesh", "devir", "edge", "entertainment", "ludonova", "tranjis", "maldito", "zacatrus",
+          "ugi", "toys", "online", "spa", "envio", "gratis", "stock", "disponible"}
+# Mismo producto con su nombre en inglés o en castellano según la tienda: se cuenta como la misma palabra
+SINONIMOS = {"avispa": "wasp", "tormenta": "storm", "mercurio": "quicksilver", "tapete": "mat", "playmat": "mat",
+             "funda": "sleeve", "protector": "sleeve"}
 
 
 # Coletillas de ficha que algunas tiendas añaden al título (Dynos: «Juego De Mesa … 60 Cartas Pegi 14»): con ellas, la misma
@@ -539,7 +546,8 @@ def clave_producto(titulo):
     for w in COLETILLAS.sub(" ", extract.normaliza(titulo)).split():
         if w in RUIDO or (re.search(r"\d", w) and re.search(r"[a-z]", w) and len(w) >= 5):    # referencias como ASM631069
             continue
-        palabras.add(w[:-1] if len(w) > 4 and w.endswith("s") else w)                            # «apocalipsis» = «apocalipsi», plurales
+        w = w[:-1] if len(w) > 4 and w.endswith("s") else w                                      # «apocalipsis» = «apocalipsi», plurales
+        palabras.add(SINONIMOS.get(w, w))
     return " ".join(sorted(palabras))
 
 
@@ -621,7 +629,7 @@ def objetivo_para(x, objs):
     return None
 
 
-VERSION_CLAVES = 2      # súbela al cambiar clave_producto (RUIDO, DESCRIPCION, COLETILLAS): se recalcula todo lo guardado
+VERSION_CLAVES = 3      # súbela al cambiar clave_producto (RUIDO, DESCRIPCION, COLETILLAS): se recalcula todo lo guardado
 
 
 def rellena_claves():

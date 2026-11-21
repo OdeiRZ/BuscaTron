@@ -3,6 +3,11 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.21.2] - 2026-11-22
+
+### Corregido
+- Más productos iguales que salían separados, encontrados revisando todo el historial de la última semana: nombres de tienda o editorial dentro del título («Eternal Decks - Gigamesh», «… Salt and Pepper Games», «ugi games toys …», «Oferta Online …», «SPA») y el mismo nombre en inglés o castellano («Wasp»/«Avispa», «Storm»/«Tormenta», «Quicksilver»/«Mercurio», «Mat»/«Tapete»). Lo que sigue separado son productos distintos (fundas frente al juego, otro héroe). Se recalcula lo guardado al arrancar.
+
 ## [0.21.1] - 2026-11-21
 
 ### Corregido
