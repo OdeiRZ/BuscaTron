@@ -517,6 +517,14 @@ def historial_previo(urls):
 RUIDO = {"asmodee", "fantasy", "flight", "games", "ffg", "lcg", "el", "la", "los", "las", "de", "del", "al", "the", "of", "a", "y", "en",
          "card", "game", "cards", "juego", "juegos", "cartas", "expansion", "exp", "castellano", "espanol", "espanola", "edicion",
          "comprar", "barato", "producto", "agotado", "preventa", "nuevo", "nueva", "living", "eng", "es", "esp", "spanish"}
+# Palabras que describen el juego en general, no cuál es («Eternal Decks: juego de cartas cooperativo y estratégico»):
+# con ellas, el mismo juego salía como otro producto en las tiendas que añaden una descripción al título.
+DESCRIPCION = {"cooperativo", "cooperativa", "cooperativos", "competitivo", "competitiva", "estrategico", "estrategica",
+               "estrategia", "familiar", "familia", "tablero", "mesa", "rol", "party", "fiesta", "adulto", "adultos", "nino",
+               "ninos", "jugador", "jugadores", "version", "oficial", "original", "divertido", "divertida", "ideal", "regalo",
+               "oferta", "novedad", "para", "con", "por", "un", "una", "o", "u", "e", "and", "for", "board", "cooperative",
+               "strategy", "strategic", "family", "solitario", "solo", "edad", "anos", "partir", "desde", "recomendada"}
+RUIDO |= DESCRIPCION
 
 
 # Coletillas de ficha que algunas tiendas añaden al título (Dynos: «Juego De Mesa … 60 Cartas Pegi 14»): con ellas, la misma
@@ -613,11 +621,28 @@ def objetivo_para(x, objs):
     return None
 
 
+VERSION_CLAVES = 2      # súbela al cambiar clave_producto (RUIDO, DESCRIPCION, COLETILLAS): se recalcula todo lo guardado
+
+
 def rellena_claves():
-    """Pone la clave de producto a los precios guardados antes de que existiera la columna (una vez; luego no hay nada que hacer)."""
+    """Al arrancar: pone la clave de producto a los precios que no la tienen y, si cambió la forma de calcularla, la
+    recalcula en todo lo guardado (historial, «No me interesa» y objetivos 🎯), para que nada pierda su historial ni deje
+    de aplicarse."""
+    hecha = int(ajustes.carga().get("version_claves") or 0)
     with bd.conecta() as c:
-        titulos = [r[0] for r in c.execute("SELECT DISTINCT titulo FROM precios WHERE clave IS NULL")]
-        c.executemany("UPDATE precios SET clave=? WHERE titulo=? AND clave IS NULL", [(clave_producto(t), t) for t in titulos])
+        sql = "SELECT DISTINCT titulo FROM precios" + ("" if hecha < VERSION_CLAVES else " WHERE clave IS NULL")
+        titulos = [r[0] for r in c.execute(sql)]
+        c.executemany("UPDATE precios SET clave=? WHERE titulo=?", [(clave_producto(t), t) for t in titulos])
+        if hecha < VERSION_CLAVES:
+            for tabla in ("ignorados", "objetivos"):
+                for clave, titulo in c.execute(f"SELECT clave, titulo FROM {tabla}").fetchall():
+                    if not titulo or clave.startswith("f:"):
+                        continue
+                    nueva = ("c:" if clave.startswith("c:") else "") + clave_producto(titulo)
+                    if nueva != clave:
+                        c.execute(f"UPDATE OR IGNORE {tabla} SET clave=? WHERE clave=?", (nueva, clave))
+    if hecha < VERSION_CLAVES:
+        ajustes.guarda({"version_claves": VERSION_CLAVES})
     return len(titulos)
 
 

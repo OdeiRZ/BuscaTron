@@ -3,6 +3,12 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.21.1] - 2026-11-21
+
+### Corregido
+- El mismo juego salía como dos productos si una tienda añadía una descripción al título («Eternal Decks: juego de cartas cooperativo y estratégico» frente a «Eternal Decks»): las palabras que describen un juego en general (cooperativo, estratégico, familiar, de tablero, para adultos, jugadores…) ya no cuentan para saber qué producto es. Vale para todos los juegos, en avisos, búsquedas e historial.
+- Al cambiar la forma de identificar productos, BuscaTron recalcula solo al arrancar las claves guardadas (historial, «No me interesa» y objetivos 🎯), para que nada pierda su historial ni deje de aplicarse.
+
 ## [0.21.0] - 2026-11-21
 
 ### Cambiado
