@@ -1287,10 +1287,14 @@ function tituloProducto(items){
   // La serie («Marvel Champions»): lo que algún título ya separa con «:» y empieza todos los demás; en todos, seguida de «:»
   const serie=c.filter(t=>t.includes(':')).map(t=>t.split(':')[0].trim()).sort((a,b)=>a.length-b.length)
     .find(se=>c.every(t=>t.toLowerCase().replace(/:/g,' ').replace(/\s+/g,' ').startsWith(se.toLowerCase()+' ')));
-  if(serie)c=c.map(t=>t.includes(':')?t:t.slice(0,serie.length)+': '+t.slice(serie.length).trim());
-  const tildes=c.some(t=>/[áéíóúñü]/i.test(t));
-  const nota=t=>(t===t.toUpperCase()&&/[A-Z]/.test(t)?100:0)+(tildes&&!/[áéíóúñü]/i.test(t)?20:0)+(t.includes(':')?0:5)+t.length/100-(t.match(/(^|\s)\p{Lu}/gu)||[]).length/1000;   // a igualdad, el de nombre propio («La Próxima Evolución»)
-  return c.slice().sort((a,b)=>nota(a)-nota(b))[0];}
+  if(serie)c=c.map(t=>t.includes(':')||!t.slice(serie.length).trim()?t:t.slice(0,serie.length)+': '+t.slice(serie.length).trim());   // la serie sola se queda como está
+  const sinTildes=t=>t.normalize('NFD').replace(/\p{M}/gu,'').toLowerCase();
+  // le faltan tildes solo si otra tienda escribe ese mismo nombre con ellas («Proxima» frente a «Próxima»)
+  const faltanTildes=t=>!/[áéíóúñü]/i.test(t)&&c.some(o=>o!==t&&sinTildes(o)===sinTildes(t)&&/[áéíóúñü]/i.test(o));
+  const nota=t=>(t===t.toUpperCase()&&/[A-Z]/.test(t)?100:0)+(faltanTildes(t)?20:0)+(t.includes(':')?0:5)+t.length/100-(t.match(/(^|\s)\p{Lu}/gu)||[]).length/1000;   // a igualdad, el de nombre propio («La Próxima Evolución»)
+  // «Eternal Decks» frente a «Eternal Decks: juego de cartas cooperativo…»: lo de tras «:» es la descripción de una tienda
+  const describe=t=>c.some(o=>o!==t&&o.toLowerCase().startsWith(t.toLowerCase().replace(/[.\s]+$/,'')+':'))?-10:0;
+  return c.slice().sort((a,b)=>nota(a)+describe(a)-nota(b)-describe(b))[0];}
 let vistosAntes=null;      // el último aviso que ya habías visto al entrar: los posteriores llevan «Nuevo»
 let avVuelta=0;
 async function cargaAvisos(){const mia=++avVuelta;const [todos,vig]=await Promise.all([api('avisos').catch(()=>null),api('seguimientos').catch(()=>segs)]);   // sin red: lo que haya   // vigiladas al día: su «última búsqueda»
