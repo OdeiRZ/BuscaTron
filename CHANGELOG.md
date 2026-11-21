@@ -3,6 +3,11 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.21.0] - 2026-11-21
+
+### Cambiado
+- Una sola regla para decidir los avisos: las revisiones y lo pegado a mano usan la misma función (`_registra_avisos`), y si una oferta cuenta (agotados, preventas, idioma) lo decide `_vale`, también para los avisos de límites de Amazon. Antes eran cuatro copias que había que mantener iguales a mano. Sin cambios de comportamiento; una prueba comprueba que revisión y pegado deciden igual.
+
 ## [0.20.9] - 2026-11-21
 
 ### Corregido (revisión exhaustiva v0.18.1..v0.20.8)

@@ -196,6 +196,35 @@ def _apunta_aviso(c, seg_id, x, ts):
     return True
 
 
+def _vale(seg, opc, modo, x):
+    """¿Cuenta esta oferta para la vigilada? No si está agotada (y no quieres agotados), es una preventa (y no las
+    quieres) o no está en el idioma que pides. Una sola regla para avisos, pegados, límites de Amazon y resúmenes."""
+    if (x.get("agotado") and seg["sin_agotados"]) or (x.get("preventa") and not opc.get("preventas")):
+        return False
+    return modo == "todos" or motor.permite(x.get("idioma", "?"), x.get("idioma_seguro", False), modo)
+
+
+def _registra_avisos(c, seg, opc, modo, res, ts):
+    """Los avisos nuevos de estos resultados para la vigilada: los apunta y los devuelve (con su motivo). La usan las
+    revisiones y lo pegado a mano, para que las dos decidan exactamente igual."""
+    nuevos = []
+    for x in res:
+        x["_ts"] = ts
+        motivo = _motivo(c, seg, x)
+        if not motivo or not _vale(seg, opc, modo, x):
+            continue
+        if modo != "todos" and not (x.get("idioma") == "es" and x.get("idioma_seguro")):
+            motivo += " · idioma sin confirmar"
+        if x.get("importado"):          # no se consulta en directo: es lo que pegaste a mano
+            motivo += f" · precio pegado a mano {_edad(x['importado'])}, sin comprobar en directo"
+        if not _apunta_aviso(c, seg["id"], x, ts):
+            continue
+        c.execute("INSERT INTO avisos(ts,seg_id,titulo,tienda,url,precio,motivo) VALUES(?,?,?,?,?,?,?)",
+                  (ts, seg["id"], x["titulo"], x["tienda"], x["url"], x["precio"], motivo))
+        nuevos.append({**x, "motivo": motivo})
+    return nuevos
+
+
 def _envia_avisos(seg, nuevos, ts):
     """Manda los avisos nuevos por los canales de la vigilada. Si no llegan por ninguno, quedan pendientes y la
     siguiente revisión lo intenta otra vez (antes se daban por avisados y no se repetían en 30 días)."""
@@ -291,26 +320,8 @@ def _revisa(seg_id, enviar):
                 x["preventa"] = True
             if modo != "todos" and f["idioma"]:
                 x["idioma"], x["idioma_seguro"], x["idioma_verificado"] = f["idioma"], True, True
-        nuevos = []
         with bd.conecta() as c:
-            for x in res:
-                x["_ts"] = ts
-                motivo = _motivo(c, seg, x)
-                if not motivo:
-                    continue
-                if (x.get("agotado") and seg["sin_agotados"]) or (x.get("preventa") and not opc.get("preventas")):
-                    continue                  # su ficha dice que está agotado o en preventa
-                if modo != "todos" and not motor.permite(x.get("idioma", "?"), x.get("idioma_seguro", False), modo):
-                    continue                  # su ficha dice que no está en castellano
-                if modo != "todos" and not (x.get("idioma") == "es" and x.get("idioma_seguro")):
-                    motivo += " · idioma sin confirmar"
-                if x.get("importado"):      # no se consulta en directo: es lo que el usuario pegó a mano
-                    motivo += f" · precio pegado a mano {_edad(x['importado'])}, sin comprobar en directo"
-                if not _apunta_aviso(c, seg_id, x, ts):
-                    continue
-                c.execute("INSERT INTO avisos(ts,seg_id,titulo,tienda,url,precio,motivo) VALUES(?,?,?,?,?,?,?)",
-                          (ts, seg_id, x["titulo"], x["tienda"], x["url"], x["precio"], motivo))
-                nuevos.append({**x, "motivo": motivo})
+            nuevos = _registra_avisos(c, seg, opc, modo, res, ts)
             caidas = tiendas_caidas(informe)
             n = len(nuevos)
             estado = (f"{productos(res)}, {n} aviso{'' if n == 1 else 's'} nuevo{'' if n == 1 else 's'}"
@@ -319,9 +330,7 @@ def _revisa(seg_id, enviar):
         envio = _envia_avisos(seg, nuevos, ts) if enviar else {}
         if enviar:
             # límites de Amazon con lo que de verdad vale: sin agotados, preventas (si no las quieres) ni otros idiomas
-            validos = [x for x in res if not (x.get("agotado") and seg["sin_agotados"]) and not (x.get("preventa") and not opc.get("preventas"))
-                       and (modo == "todos" or motor.permite(x.get("idioma", "?"), x.get("idioma_seguro", False), modo))]
-            envio = {**envio, **_avisa_limites(seg, validos)}
+            envio = {**envio, **_avisa_limites(seg, [x for x in res if _vale(seg, opc, modo, x)])}
         return {"resultados": len(res), "avisos": nuevos, "envio": envio}, seg
     except Exception as e:
         # Se anota la revisión aunque falle: si no, el programador la repetiría cada minuto contra todas las tiendas
@@ -377,24 +386,9 @@ def _avisa_pegados_en(seg, host, enviar):
                           seg["pmin"], seg["pmax"], seg["id"], castellano=bool(seg["castellano"]), **busqueda)
     res = [x for x in res if tipo_vale(opc, x["titulo"])]
     modo = motor.modo_idioma(bool(seg["castellano"]), opc.get("idioma"))
-    ts, nuevos = time.time(), []
+    ts = time.time()
     with bd.conecta() as c:
-        for x in res:
-            x["_ts"] = ts
-            motivo = _motivo(c, seg, x)
-            if not motivo or (x.get("agotado") and seg["sin_agotados"]) or (x.get("preventa") and not opc.get("preventas")):
-                continue
-            if modo != "todos" and not motor.permite(x.get("idioma", "?"), x.get("idioma_seguro", False), modo):
-                continue
-            if modo != "todos" and not (x.get("idioma") == "es" and x.get("idioma_seguro")):
-                motivo += " · idioma sin confirmar"
-            if x.get("importado"):
-                motivo += f" · precio pegado a mano {_edad(x['importado'])}, sin comprobar en directo"
-            if not _apunta_aviso(c, seg["id"], x, ts):
-                continue
-            c.execute("INSERT INTO avisos(ts,seg_id,titulo,tienda,url,precio,motivo) VALUES(?,?,?,?,?,?,?)",
-                      (ts, seg["id"], x["titulo"], x["tienda"], x["url"], x["precio"], motivo))
-            nuevos.append({**x, "motivo": motivo})
+        nuevos = _registra_avisos(c, seg, opc, modo, res, ts)
     if enviar:
         _envia_avisos(seg, nuevos, ts)
     return len(nuevos)
@@ -466,9 +460,7 @@ MAX_RESUMEN = 30           # productos por resumen; Telegram lo trocea si no cab
 def resumen(seg, opc, modo, res, informe, ofertas=3):
     """Mensaje de una revisión sin avisos nuevos: cada producto que cumple la búsqueda (del más barato al más caro) con
     sus `ofertas` ofertas más baratas."""
-    validos = [x for x in res if not (x.get("agotado") and seg["sin_agotados"]) and not (x.get("preventa") and not opc.get("preventas"))
-               and (modo == "todos" or motor.permite(x.get("idioma", "?"), x.get("idioma_seguro", False), modo))]
-    grupos = agrupa(validos)
+    grupos = agrupa([x for x in res if _vale(seg, opc, modo, x)])
     caidas = tiendas_caidas(informe)
     lineas = [f"Sin avisos nuevos. Revisados {productos(res)}" + (f" ({caidas} tiendas sin respuesta)" if caidas else "") + "."]
     if grupos:
