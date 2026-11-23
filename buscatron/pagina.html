@@ -1449,9 +1449,9 @@ async function cargaEstado(){let l=await api('estado_tiendas',{});if(!Array.isAr
       :' · <span class="err">no ha respondido en sus últimas consultas: conviene desactivarla</span>'):''}${e.ultimo_error&&!e.con_resultados&&!e.manual?`<br>Último problema: ${esc(e.ultimo_error)}`:''}${e.salta_en&&e.salta_en.length?`<br>Las revisiones se la saltan en: ${esc(e.salta_en.join(', '))} (no ha tenido ese juego; se vuelve a mirar cada semana)`:''}${envio(e)}</span>
     ${e.manual?'':`<button type="button" class="${e.activa?'peli':'sec'} mini" data-act="${esc(e.host)}">${e.activa?'Desactivar':'Activar'}</button>`}</div>`;
   const atencion=l.filter(e=>!bien(e)),ok=l.filter(bien),abierto=$('estado-ok')&&$('estado-ok').open;
-  const bloq=tiendas.filter(t=>t.bloqueo);      // desactivadas porque bloquearon tu conexión: BuscaTron mira solo si vuelven
+  const bloq=tiendas.filter(t=>t.bloqueo);      // desactivadas porque bloquearon tu conexión: ninguna petición hasta que las reactives
   $('estado-t').innerHTML=bloq.map(t=>`<div class="est"><b>${esc(nombreT(t.host))} <span class="tag ko">te ha bloqueado</span></b>
-      <span class="mut">Desactivada desde el ${fecha(t.bloqueo.desde)}: cortó tu conexión por exceso de consultas. BuscaTron prueba su portada (una sola petición) cada 6 h${t.bloqueo.probado?` (última: ${fecha(t.bloqueo.probado)})`:''} y, en cuanto vuelva a responder, la reactiva y te avisa por Telegram.</span></div>`).join('')
+      <span class="mut">Desactivada desde el ${fecha(t.bloqueo.desde)}: cortó tu conexión. BuscaTron ya no le hace ninguna petición (ni para ver si vuelve): cuando la tienda te desbloquee y entres a su web desde casa, reactívala con su chip en «Tus tiendas».</span></div>`).join('')
     +(atencion.length?atencion.filter(e=>!bloq.some(t=>t.host===e.host)).map(fila).join(''):'<p class="ok">Todas tus tiendas responden bien.</p>')
     +(ok.length?`<details id="estado-ok" ${abierto?'open':''}><summary>${ok.length} tienda${ok.length===1?'':'s'} sin problemas</summary>${ok.map(fila).join('')}</details>`:'');
   document.querySelectorAll('#estado-t [data-act]').forEach(b=>b.onclick=async()=>{const t=tiendas.find(x=>x.host===b.dataset.act);if(!t)return;

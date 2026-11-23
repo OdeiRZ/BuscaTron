@@ -57,7 +57,7 @@ def es_rechazo(err):
 
 
 def bloquea(h):
-    """Desactiva una tienda que sigue rechazando tus consultas: desde ahí solo se prueba su portada cada pocas horas
+    """Desactiva una tienda que sigue rechazando tus consultas: desde ahí, y si la marcas «solo enlace», ninguna petición; si no, solo se prueba su portada cada pocas horas
     (programador.bloqueadas) y se reactiva sola cuando vuelve a responder."""
     with cfg.cerrojo:
         lista = cfg.carga()
@@ -65,6 +65,7 @@ def bloquea(h):
         if not t or t.get("bloqueo"):
             return
         t["activa"] = False
+        t["manual"] = True             # ninguna petición más (ni para ver si vuelve): la reactivas tú cuando te desbloquee
         t["bloqueo"] = {"desde": time.time(), "probado": time.time()}
         cfg.guarda(lista)
     with bd.conecta() as c:

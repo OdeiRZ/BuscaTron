@@ -561,6 +561,7 @@ class Handler(BaseHTTPRequestHandler):
             for t in lista:
                 t["activa"] = t["host"] in c["activas"]
                 if t["activa"] and t.pop("bloqueo", None):     # la reactivas tú: deja de vigilarse como «te ha bloqueado»
+                    t["manual"] = False                          # y vuelve a consultarse sola
                     t["suave_hasta"] = time.time() + programador.SUAVE_DIAS * 86400      # y vuelve con calma, como si volviera sola
         cfg.guarda(lista)
         return lista
