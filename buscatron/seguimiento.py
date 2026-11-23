@@ -31,8 +31,9 @@ def _num(v):
 
 def opciones_de(seg):
     """Opciones de búsqueda de un seguimiento (JSON en la base de datos), completadas con los valores por defecto."""
+    o = seg.get("opciones") or "{}"
     try:
-        d = json.loads(seg.get("opciones") or "{}")
+        d = o if isinstance(o, dict) else json.loads(o)        # ya leídas (lista()) o tal cual en la base de datos
     except ValueError:
         d = {}
     return {k: d.get(k, v) for k, v in OPCIONES.items()}
@@ -105,10 +106,12 @@ def avisos(limite=500):
     with bd.conecta() as c:
         filas = [dict(r) for r in c.execute("SELECT * FROM avisos WHERE oculto=0 ORDER BY ts DESC LIMIT ?", (limite,))]
         segs = {r["id"]: dict(r) for r in c.execute("SELECT id, consulta, opciones FROM seguimientos")}
+    tiendas_ = {t["host"]: t for t in motor.cfg.carga()}
     for a in filas:
         s = segs.get(a["seg_id"]) or {}
         g = motor.grupos([a["titulo"]], s.get("consulta") or "", opciones_de(s).get("alguna", "") if s else "")[0]["grupo"]
         a["grupo"] = f"{a['seg_id']}|{g}"
+        a["envio"] = motor.envio_de(tiendas_.get(a["tienda"], {}), a["precio"])      # None: no se sabe
     return filas
 
 
@@ -163,11 +166,15 @@ def limpia_avisos(seg_id, res, informe):
 def _motivo(c, seg, x):
     """Devuelve el motivo del aviso o None. Si el producto tiene su propio objetivo (🎯), manda sobre el de la búsqueda."""
     propio = x.get("objetivo_producto")
+    # «con envío incluido»: se compara lo que pagas (precio + envío) si se sabe el envío de la tienda
+    con_envio = opciones_de(seg).get("con_envio") and x.get("envio") is not None
+    p = round(x["precio"] + x["envio"], 2) if con_envio else x["precio"]
+    cuesta = (f"cuesta {p:.2f} € con envío" if con_envio else f"cuesta {p:.2f} €").replace(".", ",")
     if propio is not None:
-        if x["precio"] <= propio:
-            return f"cuesta {x['precio']:.2f} €, por debajo de tu objetivo para este producto de {propio:.2f} €".replace(".", ",")
-    elif seg["objetivo"] is not None and x["precio"] <= seg["objetivo"]:
-        return f"cuesta {x['precio']:.2f} €, por debajo de tu objetivo de {seg['objetivo']:.2f} €".replace(".", ",")
+        if p <= propio:
+            return cuesta + f", por debajo de tu objetivo para este producto de {propio:.2f} €".replace(".", ",")
+    elif seg["objetivo"] is not None and p <= seg["objetivo"]:
+        return cuesta + f", por debajo de tu objetivo de {seg['objetivo']:.2f} €".replace(".", ",")
     if seg["bajo_historico"]:
         previos = [r[0] for r in c.execute(
             "SELECT precio FROM precios WHERE url=? AND ts < ? AND agotado=0 AND preventa=0",

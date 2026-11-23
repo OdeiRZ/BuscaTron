@@ -122,6 +122,8 @@ def _intenta(t, consulta, get, paginas=1, con_estado=False):
             err = ("no encuentra la página de búsqueda" if st == 404 else "su web no responde bien") + f" (error {st})"
             continue
         items, sig = extract.analiza(html, url, consulta, con_estado=con_estado)
+        if items and t.get("envio") is None and t.get("envio_gratis") is None:
+            _apunta_envio(t["host"], html)
         if not items:
             err = SIN_COINCIDENCIAS
             continue
@@ -493,9 +495,43 @@ def en_otro_idioma(titulo):
     return cod in ("en", "otro") and seguro
 
 
+_envio_visto = {}          # host → lo que anuncia su página de resultados (se guarda en la tienda al acabar la búsqueda)
+
+
+def _apunta_envio(host, html):
+    try:
+        d = extract.detecta_envio(html)
+    except Exception:          # noqa: BLE001  (es solo una pista)
+        return
+    if d.get("coste") is not None or d.get("gratis_desde") is not None:
+        _envio_visto[host] = d
+
+
+def guarda_envios_vistos():
+    """Guarda en cada tienda el envío que anuncia su web (campo «envio_auto»), sin tocar lo que hayas puesto tú."""
+    if not _envio_visto:
+        return
+    vistos = dict(_envio_visto)
+    _envio_visto.clear()
+    with cfg.cerrojo:
+        lista = cfg.carga()
+        cambia = False
+        for t in lista:
+            d = vistos.get(t["host"])
+            if d and t.get("envio_auto") != {"coste": d.get("coste"), "gratis_desde": d.get("gratis_desde")}:
+                t["envio_auto"] = {"coste": d.get("coste"), "gratis_desde": d.get("gratis_desde")}
+                cambia = True
+        if cambia:
+            cfg.guarda(lista)
+
+
 def envio_de(t, precio):
-    """Gastos de envío configurados para la tienda (0 si supera el mínimo gratuito; None si no se conocen)."""
-    gratis, coste = t.get("envio_gratis"), t.get("envio")
+    """Gastos de envío de la tienda (0 si supera el mínimo gratuito; None si no se conocen). Lo que pongas tú manda;
+    si no hay nada, lo que anuncia su propia web («envio_auto»)."""
+    auto = t.get("envio_auto") or {}
+    manual = t.get("envio") is not None or t.get("envio_gratis") is not None
+    gratis = t.get("envio_gratis") if manual else auto.get("gratis_desde")
+    coste = t.get("envio") if manual else auto.get("coste")
     if gratis is not None and precio >= gratis:
         return 0.0
     return coste
@@ -834,6 +870,7 @@ def buscar(consulta, incluir="", excluir="", ocultar_agotados=True, hosts=None, 
     cfg.aplica_descubiertas({t["host"]: (t.get("plantilla"), bool(t.get("js"))) for t in lista       # plantillas descubiertas
                              if (t.get("plantilla"), bool(t.get("js"))) != aprendido[t["host"]]})
     registra_estado({h: {"brutos": i.get("brutos", 0), "error": i.get("error_tienda")} for h, i in informe.items() if "brutos" in i}, consulta)
+    guarda_envios_vistos()
 
     # producto (grupo) y PVP aproximado, con todas las tiendas; después, el filtro de precio
     # Una frase que no añade nada a la búsqueda («Vantage» buscando «Vantage») no distingue productos: juntaría en una sola
