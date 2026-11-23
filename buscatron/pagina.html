@@ -438,6 +438,9 @@ svg.graf-svg{width:100%;height:auto;display:block}
         <label class="sw"><input type="checkbox" value="complemento" checked> Complementos (add-on, personaje, promo)</label>
         <label class="sw"><input type="checkbox" value="accesorio" checked> Accesorios (fundas, tapetes, organizadores)</label></div>
         <p class="ayuda" style="margin-top:4px">Se deduce del título. Lo que no dice qué es cuenta como juego base: nunca se descarta un juego por no llamarse «juego».</p></div>
+      <details class="full" id="s-sin-det"><summary>Tiendas que no quieres en esta vigilada <span class="n" id="s-sin-n"></span></summary>
+        <p class="ayuda" style="margin-top:4px">No se consultan en sus revisiones ni te avisan de ellas (por sus gastos de envío, por ejemplo). Siguen en tus búsquedas y en las demás vigiladas.</p>
+        <div id="s-sin" class="chips"></div></details>
       <details>
         <summary>Más opciones: preventas, envío, segunda mano, otras webs</summary>
         <label class="sw"><input type="checkbox" id="s-preventas"> Contar también las preventas</label>
@@ -661,6 +664,12 @@ $('add').onclick=async()=>{const u=$('t-url').value.trim();if(!u){$('t-url').foc
 
 /* buscar */
 let ultimos=[],ultimoBody={},ultimoId=null,recientes=[];
+// tiendas excluidas de una vigilada: chips marcados = fuera
+let sinTiendas=new Set();
+function pintaSin(){const l=porNombre(tiendas.filter(t=>t.activa||sinTiendas.has(t.host)),t=>nombreT(t.host));
+  $('s-sin').innerHTML=l.map(t=>`<button type="button" class="chip ${sinTiendas.has(t.host)?'on':''}" data-sin="${esc(t.host)}">${sinTiendas.has(t.host)?'🚫 ':''}${esc(nombreT(t.host))}</button>`).join('');
+  $('s-sin-n').textContent=sinTiendas.size||'';
+  $('s-sin').querySelectorAll('[data-sin]').forEach(b=>b.onclick=()=>{const h=b.dataset.sin;sinTiendas.has(h)?sinTiendas.delete(h):sinTiendas.add(h);pintaSin();});}
 function tiposMarcados(){const c=[...document.querySelectorAll('#s-tipos input')];const m=c.filter(x=>x.checked).map(x=>x.value);return m.length===c.length?[]:m;}
 function marcaTipos(t){document.querySelectorAll('#s-tipos input').forEach(x=>x.checked=!(t&&t.length)||t.includes(x.value));}
 const NOMBRE_TIPO={juego:'juego base',expansion:'expansiones',complemento:'complementos',accesorio:'accesorios'};
@@ -848,7 +857,7 @@ async function borraRec(id){await api('busquedas',{accion:'borrar',id});if(ultim
 $('rec-vaciar').onclick=async()=>{if(confirm('¿Borrar todas tus búsquedas recientes? Sus precios seguirán en el historial.')){await api('busquedas',{accion:'vaciar'});limpiaPantalla();cargaRec();aviso('Búsquedas recientes borradas');}};
 
 function vigilar(){limpiaSeg();$('s-consulta').value=$('q').value;$('s-nombre').value=$('q').value;$('s-incluir').value=$('incluir').value;
-  $('s-excluir').value=$('excluir').value;$('s-alguna').value=$('alguna').value;marcaTipos([]);$('s-pmin').value=$('pmin').value;$('s-pmax').value=$('pmax').value;
+  $('s-excluir').value=$('excluir').value;$('s-alguna').value=$('alguna').value;marcaTipos([]);sinTiendas=new Set();pintaSin();$('s-pmin').value=$('pmin').value;$('s-pmax').value=$('pmax').value;
   $('s-sinag').checked=$('sinag').checked;$('s-idioma').value=$('idioma').value;
   $('s-preventas').checked=$('preventas').checked;$('s-conenvio').checked=$('conenvio').checked;$('s-segmano').checked=$('segmano').checked;
   $('s-abierta').checked=$('abierta').checked;$('s-region').value=$('region').value;$('s-paginas').value=$('paginas').value;
@@ -1166,7 +1175,7 @@ async function abreHist(url,titulo,tienda,grupo,todas=true){
   if($('hist-cambia'))$('hist-cambia').onclick=()=>abreHist(url,titulo,tienda,grupo,!porProducto);}
 
 /* seguimiento */
-function limpiaSeg(){$('sf').reset();$('s-id').value='';$('sf-tit').textContent='＋ Vigilar una búsqueda nueva';ayudaIdioma();}
+function limpiaSeg(){$('sf').reset();$('s-id').value='';$('sf-tit').textContent='＋ Vigilar una búsqueda nueva';ayudaIdioma();sinTiendas=new Set();pintaSin();}
 $('s-cancel').onclick=limpiaSeg;
 $('sf').onsubmit=async e=>{e.preventDefault();
   const canales=['app',$('c-telegram').checked&&'telegram',$('c-correo').checked&&'correo'].filter(Boolean).join(',');
@@ -1174,7 +1183,7 @@ $('sf').onsubmit=async e=>{e.preventDefault();
   const r=await api('seguimientos',{accion:'guardar',id:$('s-id').value||undefined,activo:previa?!!previa.activo:true,nombre:$('s-nombre').value,consulta:$('s-consulta').value,
     incluir:$('s-incluir').value,excluir:$('s-excluir').value,pmin:$('s-pmin').value,pmax:$('s-pmax').value,objetivo:$('s-objetivo').value,
     bajo_historico:$('s-hist').value,cada_horas:$('s-horas').value,sin_agotados:$('s-sinag').checked,castellano:$('s-idioma').value!=='todos',canales,
-    opciones:{preventas:$('s-preventas').checked,con_envio:$('s-conenvio').checked,segunda_mano:$('s-segmano').checked,abierta:$('s-abierta').checked,region:$('s-region').value,paginas:$('s-paginas').value,idioma:$('s-idioma').value,alguna:$('s-alguna').value,tipos:tiposMarcados()}});
+    opciones:{preventas:$('s-preventas').checked,con_envio:$('s-conenvio').checked,segunda_mano:$('s-segmano').checked,abierta:$('s-abierta').checked,region:$('s-region').value,paginas:$('s-paginas').value,idioma:$('s-idioma').value,alguna:$('s-alguna').value,tipos:tiposMarcados(),sin_tiendas:[...sinTiendas]}});
   if(r.error){aviso(r.error);return;}const id=+$('s-id').value,s=Array.isArray(r)&&r.find(x=>x.id===id);
   limpiaSeg();$('sf-det').open=false;pintaSeg(r);
   aviso(s&&s.revisando?'Guardada. Se está revisando: si has cambiado la búsqueda o sus filtros, al terminar se revisa otra vez con los cambios':'Búsqueda vigilada guardada');};
@@ -1196,7 +1205,7 @@ async function cargaMiLista(){let l;try{l=await api('milista');}catch(e){return;
   $('ml').querySelectorAll('[data-mlh]').forEach(b=>b.onclick=()=>{const p=miLista[+b.dataset.mlh];abreHist(p.mejor.url,tituloProducto(p.titulos.map(t=>({titulo:t}))),p.mejor.tienda,p.grupo);});
   $('ml').querySelectorAll('[data-mlo]').forEach(b=>b.onclick=async()=>{const p=miLista[+b.dataset.mlo];
     await pideObjetivo([{grupo:p.grupo,titulo:tituloProducto(p.titulos.map(t=>({titulo:t}))),precio:p.mejor.precio,objetivo_producto:p.objetivo_propio?p.objetivo:null}]);cargaMiLista();});}
-async function cargaSeg(){cargaMiLista();const [l,h]=await Promise.all([api('seguimientos'),api('historico_vigiladas').catch(()=>({}))]);
+async function cargaSeg(){cargaMiLista();if(!$('s-id').value)pintaSin();const [l,h]=await Promise.all([api('seguimientos'),api('historico_vigiladas').catch(()=>({}))]);
   histAmz=h&&!h.error?h:{};pintaSeg(l);}
 const fechaCorta=f=>f?f.split('-').reverse().join('/'):'';
 function histAmzResumen(s){const it=histAmz[s.id]||[];if(!it.length)return '';
@@ -1271,7 +1280,7 @@ function extrasSeg(s){const o=s.opciones||{};
   return e.length?`<div class="l">➕ ${esc(e.join(' · '))}</div>`:'';}
 /* el formulario de vigilar: al abrirlo para editar, que se vea (en el móvil queda arriba del todo) */
 function muestraFormSeg(){$('sf-det').open=true;$('sf-det').scrollIntoView({block:'start',behavior:'smooth'});setTimeout(()=>$('s-nombre').focus({preventScroll:true}),350);}
-function editaSeg(id){const s=segs.find(x=>x.id===id);$('sf-tit').textContent='✏️ Editar la búsqueda vigilada';$('s-id').value=s.id;
+function editaSeg(id){const s=segs.find(x=>x.id===id);sinTiendas=new Set((s.opciones&&s.opciones.sin_tiendas)||[]);pintaSin();$('sf-tit').textContent='✏️ Editar la búsqueda vigilada';$('s-id').value=s.id;
   $('s-nombre').value=s.nombre;$('s-consulta').value=s.consulta;$('s-incluir').value=s.incluir;$('s-excluir').value=s.excluir;
   $('s-pmin').value=s.pmin??'';$('s-pmax').value=s.pmax??'';$('s-objetivo').value=s.objetivo??'';$('s-hist').value=s.bajo_historico||'';
   $('s-horas').value=s.cada_horas;$('s-sinag').checked=!!s.sin_agotados;$('s-idioma').value=(s.opciones&&s.opciones.idioma)||(s.castellano?'castellano':'todos');

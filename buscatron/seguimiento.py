@@ -8,8 +8,8 @@ from . import bd, motor, notifica, progreso
 
 CAMPOS = ("nombre", "consulta", "incluir", "excluir", "pmin", "pmax", "objetivo", "bajo_historico",
           "sin_agotados", "castellano", "opciones", "canales", "cada_horas", "activo")
-OPCIONES = {"preventas": False, "con_envio": False, "segunda_mano": False, "abierta": False, "region": "es", "paginas": None, "idioma": None, "resumen": False, "alguna": "", "tipos": []}
-NO_SON_DE_BUSQUEDA = ("resumen", "tipos")
+OPCIONES = {"preventas": False, "con_envio": False, "segunda_mano": False, "abierta": False, "region": "es", "paginas": None, "idioma": None, "resumen": False, "alguna": "", "tipos": [], "sin_tiendas": []}
+NO_SON_DE_BUSQUEDA = ("resumen", "tipos", "sin_tiendas")
 # Lo que cambia el resultado de una revisión: si lo editas mientras se revisa, se repite con lo nuevo al acabar
 # (el nombre, la frecuencia, los canales o pausarla no hacen falta).
 DE_LA_BUSQUEDA = ("consulta", "incluir", "excluir", "pmin", "pmax", "objetivo", "bajo_historico", "sin_agotados", "castellano", "opciones")      # opciones del seguimiento que el motor no recibe
@@ -59,7 +59,8 @@ def _opciones(o):
             "abierta": bool(o.get("abierta")), "region": region, "paginas": int(min(max(paginas, 1), 6)) if paginas else None,
             "idioma": o.get("idioma") if o.get("idioma") in ("castellano", "estricto", "todos") else None,
             "resumen": bool(o.get("resumen")), "alguna": str(o.get("alguna") or "").strip()[:500],
-            "tipos": [t for t in motor.TIPOS if t in (o.get("tipos") or [])]}
+            "tipos": [t for t in motor.TIPOS if t in (o.get("tipos") or [])],
+            "sin_tiendas": [h for h in (o.get("sin_tiendas") or []) if isinstance(h, str)][:300]}
 
 
 def guarda(d):
@@ -301,8 +302,10 @@ def _revisa(seg_id, enviar):
             raise ValueError("seguimiento inexistente")
         seg = dict(seg)
         ts = time.time()
+        sin = set(opciones_de(seg).get("sin_tiendas") or [])
+        hosts = [t["host"] for t in motor.cfg.carga() if t.get("activa", True) and t["host"] not in sin] if sin else None
         res, informe = motor.buscar(seg["consulta"], seg["incluir"], seg["excluir"], bool(seg["sin_agotados"]),
-                                    None, seg["pmin"], seg["pmax"], seg_id,
+                                    hosts, seg["pmin"], seg["pmax"], seg_id,
                                     castellano=bool(seg["castellano"]),
                                     **{k: v for k, v in opciones_de(seg).items() if k not in NO_SON_DE_BUSQUEDA})
         opc = opciones_de(seg)
@@ -387,6 +390,8 @@ def avisa_pegados(host, enviar=True):
 def _avisa_pegados_en(seg, host, enviar):
     """avisa_pegados para una vigilada. Devuelve el número de avisos nuevos."""
     opc = opciones_de(seg)
+    if host in (opc.get("sin_tiendas") or []):       # esa tienda no la quieres en esta vigilada
+        return 0
     busqueda = {k: v for k, v in opc.items() if k not in NO_SON_DE_BUSQUEDA}
     busqueda["abierta"] = False
     res, _ = motor.buscar(seg["consulta"], seg["incluir"], seg["excluir"], bool(seg["sin_agotados"]), [host],
@@ -545,6 +550,8 @@ def cumple(seg, titulo, precio=None, tienda=None):
     palabras = ex.normaliza(f"{seg.get('consulta') or ''} {seg.get('incluir') or ''}").split()
     frases = [f for f in (ex.normaliza(x).strip() for x in (opciones.get("alguna") or "").split(",")) if f]
     if not all(ex.encaja(n, w) for w in palabras):
+        return False
+    if tienda and tienda in (opciones.get("sin_tiendas") or []):     # tienda que no quieres en esta vigilada
         return False
     if tienda and not motor.solo_juego(tienda, titulo, seg.get("consulta") or ""):
         return False
