@@ -18,7 +18,9 @@ def bloqueadas():
     """Tiendas desactivadas porque bloquearon tu conexión (campo «bloqueo»): cada BLOQUEO_HORAS una sola petición a su
     portada; cuando vuelve a responder, se reactiva y te avisa por Telegram. Sin búsquedas: tan poco no renueva el
     bloqueo (Dungeon Marvels, 9/11/2026)."""
-    for t in [t for t in cfg.carga() if t.get("bloqueo")]:
+    # Las que marques «No consultar automáticamente» no se prueban: con Dungeon Marvels, una petición cada 6 h desde la IP
+    # bloqueada podía estar renovando el bloqueo (55 pruebas en dos semanas sin que se levantara).
+    for t in [t for t in cfg.carga() if t.get("bloqueo") and not t.get("manual")]:
         if time.time() - t["bloqueo"].get("probado", 0) < BLOQUEO_HORAS * 3600:
             continue
         try:
