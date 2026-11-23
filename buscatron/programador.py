@@ -82,9 +82,35 @@ def limpieza():
     a = ajustes.carga()
     if time.time() - float(a.get("ultima_limpieza") or 0) < LIMPIEZA_HORAS * 3600:
         return
+    copia_de_seguridad()
     borradas = bd.limpia()
     ajustes.guarda({"ultima_limpieza": time.time()})
     print("Limpieza del historial:", borradas)
+
+
+COPIAS = 7
+
+
+def copia_de_seguridad():
+    """Una copia de la base de datos al día en la carpeta «copias» (se guardan las COPIAS últimas). Se hace con la copia
+    en caliente de SQLite: vale aunque BuscaTron esté escribiendo."""
+    import os
+    import sqlite3
+    carpeta = os.path.join(cfg.RAIZ, "copias")
+    os.makedirs(carpeta, exist_ok=True)
+    destino = os.path.join(carpeta, time.strftime("buscatron-%Y%m%d.db"))
+    origen = sqlite3.connect(bd.RUTA)
+    try:
+        copia = sqlite3.connect(destino)
+        with copia:
+            origen.backup(copia)
+        copia.close()
+    finally:
+        origen.close()
+    viejas = sorted(f for f in os.listdir(carpeta) if f.startswith("buscatron-") and f.endswith(".db"))[:-COPIAS]
+    for f in viejas:
+        os.remove(os.path.join(carpeta, f))
+    return destino
 
 
 def _bucle(pausa):

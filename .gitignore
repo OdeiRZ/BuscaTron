@@ -232,3 +232,4 @@ buscatron.log.*
 
 # imágenes de gráficas que no se pudieron leer (solo en tu equipo)
 capturas_fallidas/
+copias/

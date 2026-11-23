@@ -15,6 +15,7 @@ NO_SON_DE_BUSQUEDA = ("resumen", "tipos", "sin_tiendas")
 DE_LA_BUSQUEDA = ("consulta", "incluir", "excluir", "pmin", "pmax", "objetivo", "bajo_historico", "sin_agotados", "castellano", "opciones")      # opciones del seguimiento que el motor no recibe
 MIN_OBSERVACIONES = 4      # mínimo de precios previos de un artículo para fiarse de su media
 REAVISO_DIAS = 30
+RARO = 0.4                 # un 40 % por debajo de la mediana de las demás tiendas: «precio raro»
 FICHAS_POR_AVISO = 4       # fichas que se leen por tienda antes de avisar (las más baratas; el resto, con lo ya sabido)
 _cerrojo = threading.Lock()
 _en_curso = {}         # id → cuándo empezó su revisión
@@ -222,11 +223,21 @@ def _registra_avisos(c, seg, opc, modo, res, ts):
     """Los avisos nuevos de estos resultados para la vigilada: los apunta y los devuelve (con su motivo). La usan las
     revisiones y lo pegado a mano, para que las dos decidan exactamente igual."""
     nuevos = []
+    # el precio habitual de cada producto entre tus tiendas (con 3 o más): para avisar de un precio sospechosamente bajo
+    por_grupo = {}
+    for x in res:
+        if not x.get("agotado"):
+            por_grupo.setdefault(x.get("grupo"), {}).setdefault(x["tienda"], x["precio"])
+    medianas = {g: statistics.median(p.values()) for g, p in por_grupo.items() if g and len(p) >= 3}
     for x in res:
         x["_ts"] = ts
         motivo = _motivo(c, seg, x)
         if not motivo or not _vale(seg, opc, modo, x):
             continue
+        med = medianas.get(x.get("grupo"))
+        if med and x["precio"] < med * (1 - RARO):
+            motivo += (f" · ⚠️ {(1 - x['precio'] / med) * 100:.0f} % más barato que en tus demás tiendas ({med:.2f} €):"
+                       " puede ser un chollo o un error, compruébalo").replace(".", ",", 1)
         if modo != "todos" and not (x.get("idioma") == "es" and x.get("idioma_seguro")):
             motivo += " · idioma sin confirmar"
         if x.get("importado"):          # no se consulta en directo: es lo que pegaste a mano

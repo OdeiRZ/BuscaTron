@@ -163,7 +163,9 @@ JUEGO = re.compile(r"\b(juegos?|games?|cartas|expansion|tablero|boardgame|lcg|co
 NO_JUEGO = re.compile(r"\b(zapatillas?|deportivas|camisetas?|sudaderas?|calcetines|gorras?|pantalon(?:es)?|chaquetas?|talla\s+\d+|rociador|protector(?:es)? de pantalla|correas?|pulseras?|coche de juguete|"
                       r"pulverizador|manguera|taladro|cortacesped|desbrozadora|guantes|"
                       r"figuras?\s+(?:de\s+)?\d+\s*cm|marvel\s+legends|funko)\b")      # figuras de colección («Marvel Legends figura 15cm … Civil Warrior»)
-TIPOS = ("juego", "expansion", "complemento", "accesorio")
+TIPOS = ("juego", "expansion", "complemento", "accesorio", "lote")
+# Varios productos juntos («Pack 3 expansiones», «Lote Marvel Champions + Civil War», «Bundle»): no es el juego suelto
+LOTE = re.compile(r"\b(lote|bundle|combo|megapack)\b|\bpack\s+(?:de\s+)?\d+\b|\b\d+\s+(?:expansiones|juegos)\b|\bpack\s+(?:de\s+)?expansiones\b")
 ACCESORIO = re.compile(r"\b(fundas?|sleeves?|tapete|playmat|neopreno|organizador|inserto|insert|deck ?box|portacartas|protectores)\b")
 COMPLEMENTO = re.compile(r"\b(add ?on|addon|character|promos?|mini ?expansion)\b")
 # Los packs de héroe, villano, escenario o campaña son expansiones oficiales (Marvel Champions…), digan o no «expansión».
@@ -180,7 +182,7 @@ def tipo_de(titulo):
     decir que es un juego)."""
     # «Dune Imperium: Linajes (+ Promo)» es la expansión que trae una promo de regalo, no la promo
     n = extract.normaliza(re.sub(r"(?i)[+]\s*promos?|con promos?", " ", titulo))
-    for tipo, rx in (("accesorio", ACCESORIO), ("complemento", COMPLEMENTO), ("expansion", EXPANSION)):
+    for tipo, rx in (("lote", LOTE), ("accesorio", ACCESORIO), ("complemento", COMPLEMENTO), ("expansion", EXPANSION)):
         if rx.search(n):
             return tipo
     return "juego"
@@ -584,6 +586,8 @@ def clave_producto(titulo):
             continue
         w = w[:-1] if len(w) > 4 and w.endswith("s") else w                                      # «apocalipsis» = «apocalipsi», plurales
         palabras.add(SINONIMOS.get(w, w))
+    if LOTE.search(extract.normaliza(titulo)):
+        palabras.add("[lote]")          # un lote nunca se agrupa con el juego suelto
     return " ".join(sorted(palabras))
 
 
@@ -665,7 +669,7 @@ def objetivo_para(x, objs):
     return None
 
 
-VERSION_CLAVES = 3      # súbela al cambiar clave_producto (RUIDO, DESCRIPCION, COLETILLAS): se recalcula todo lo guardado
+VERSION_CLAVES = 4      # súbela al cambiar clave_producto (RUIDO, DESCRIPCION, COLETILLAS): se recalcula todo lo guardado
 
 
 def rellena_claves():

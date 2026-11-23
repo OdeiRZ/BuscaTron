@@ -436,7 +436,8 @@ svg.graf-svg{width:100%;height:auto;display:block}
         <div id="s-tipos"><label class="sw"><input type="checkbox" value="juego" checked> Juego base</label>
         <label class="sw"><input type="checkbox" value="expansion" checked> Expansiones (también packs de héroe, escenario o campaña)</label>
         <label class="sw"><input type="checkbox" value="complemento" checked> Complementos (add-on, personaje, promo)</label>
-        <label class="sw"><input type="checkbox" value="accesorio" checked> Accesorios (fundas, tapetes, organizadores)</label></div>
+        <label class="sw"><input type="checkbox" value="accesorio" checked> Accesorios (fundas, tapetes, organizadores)</label>
+        <label class="sw"><input type="checkbox" value="lote" checked> Lotes y packs de varios productos</label></div>
         <p class="ayuda" style="margin-top:4px">Se deduce del título. Lo que no dice qué es cuenta como juego base: nunca se descarta un juego por no llamarse «juego».</p></div>
       <details class="full" id="s-sin-det"><summary>Tiendas que no quieres en esta vigilada <span class="n" id="s-sin-n"></span></summary>
         <p class="ayuda" style="margin-top:4px">No se consultan en sus revisiones ni te avisan de ellas (por sus gastos de envío, por ejemplo). Siguen en tus búsquedas y en las demás vigiladas.</p>
@@ -672,7 +673,7 @@ function pintaSin(){const l=porNombre(tiendas.filter(t=>t.activa||sinTiendas.has
   $('s-sin').querySelectorAll('[data-sin]').forEach(b=>b.onclick=()=>{const h=b.dataset.sin;sinTiendas.has(h)?sinTiendas.delete(h):sinTiendas.add(h);pintaSin();});}
 function tiposMarcados(){const c=[...document.querySelectorAll('#s-tipos input')];const m=c.filter(x=>x.checked).map(x=>x.value);return m.length===c.length?[]:m;}
 function marcaTipos(t){document.querySelectorAll('#s-tipos input').forEach(x=>x.checked=!(t&&t.length)||t.includes(x.value));}
-const NOMBRE_TIPO={juego:'juego base',expansion:'expansiones',complemento:'complementos',accesorio:'accesorios'};
+const NOMBRE_TIPO={juego:'juego base',expansion:'expansiones',complemento:'complementos',accesorio:'accesorios',lote:'lotes'};
 function filtrosN(){const n=['incluir','alguna','excluir','pmin','pmax'].filter(i=>$(i).value.trim()).length;$('n-filtros').textContent=n?`${n} en uso`:'';}
 ['incluir','alguna','excluir','pmin','pmax'].forEach(i=>$(i).oninput=filtrosN);
 const OPC=['preventas','conenvio','segmano','abierta'];
