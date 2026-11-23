@@ -401,6 +401,53 @@ def _avisa_pegados_en(seg, host, enviar):
     return len(nuevos)
 
 
+def mi_lista():
+    """Una línea por juego de cada vigilada: su mejor oferta ahora (con envío si se sabe), en cuántas tiendas está, lo más
+    barato que se le ha visto y tu objetivo. Sale de la última revisión de cada vigilada y de lo pegado vigente: no
+    consulta ninguna tienda."""
+    from . import importar
+    objs = motor.objetivos()
+    tiendas_ = {t["host"]: t for t in motor.cfg.carga()}
+    manuales = [h for h, t in tiendas_.items() if t.get("manual") or motor.cfg.nunca(h)]
+    with bd.conecta() as c:
+        segs = [dict(r) for r in c.execute("SELECT * FROM seguimientos WHERE activo=1 ORDER BY nombre")]
+        # historial de cada vigilada (lo que ella ha visto, con sus filtros): para el «mínimo visto»
+        hist_de = {s["id"]: [dict(r) for r in c.execute(
+            "SELECT titulo, precio, tienda FROM precios WHERE seg_id=? AND agotado=0 AND preventa=0", (s["id"],))] for s in segs}
+        filas_de = {s["id"]: [dict(r) for r in c.execute(
+            "SELECT tienda, titulo, url, precio, agotado, preventa, ts FROM precios WHERE seg_id=? AND ts>=?",
+            (s["id"], (s["ultima"] or 0) - 60))] for s in segs if s["ultima"]}
+    out = []
+    for seg in segs:
+        if seg["id"] not in filas_de:
+            continue
+        opc = opciones_de(seg)
+        filas = filas_de[seg["id"]] + [{**x, "tienda": h} for h in manuales for x in importar.vigentes(h, seg["consulta"])]
+        filas = [x for x in filas if cumple(seg, x["titulo"], x["precio"], x["tienda"])
+                 and not (x.get("agotado") and seg["sin_agotados"]) and not (x.get("preventa") and not opc.get("preventas"))]
+        if not filas:
+            continue
+        grupos = motor.grupos([x["titulo"] for x in filas], seg["consulta"], opc.get("alguna", ""))
+        h = [x for x in hist_de[seg["id"]] if cumple(seg, x["titulo"], x["precio"], x["tienda"])]
+        minimos = {}
+        for x, g in zip(h, motor.grupos([x["titulo"] for x in h], seg["consulta"], opc.get("alguna", ""))):
+            minimos[g["grupo"]] = min(minimos.get(g["grupo"], x["precio"]), x["precio"])
+        por = {}
+        for x, g in zip(filas, grupos):
+            envio = motor.envio_de(tiendas_.get(x["tienda"], {}), x["precio"])
+            x = {**x, "envio": envio, "total": round(x["precio"] + (envio or 0), 2), "grupo": g["grupo"]}
+            por.setdefault(g["grupo"], {}).setdefault(x["url"], x)       # una oferta por enlace
+        for grupo, ofertas in por.items():
+            o = sorted(ofertas.values(), key=lambda x: x["total"])
+            obj = (objs.get(grupo) or {}).get("precio")
+            out.append({"seg_id": seg["id"], "vigilada": seg["nombre"], "activa": bool(seg["activo"]), "grupo": grupo,
+                        "titulos": [x["titulo"] for x in o], "mejor": o[0], "ofertas": len(o),
+                        "tiendas": len({x["tienda"] for x in o}), "minimo": min(minimos.get(grupo, o[0]["precio"]), o[0]["precio"]),
+                        "objetivo": obj if obj is not None else seg["objetivo"], "objetivo_propio": obj is not None,
+                        "con_envio": bool(opc.get("con_envio")), "revisada": seg["ultima"]})
+    return out
+
+
 def tiendas_caidas(informe):
     """Tiendas que no respondieron (la búsqueda abierta no es una tienda)."""
     return sum(1 for h, i in informe.items() if i.get("caida") and h != "Búsqueda abierta")

@@ -275,7 +275,7 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json({"error": "pin"}, 401)
             return self._enviar(LOGIN.encode(), "text/html; charset=utf-8")
         url = urlparse(self.path)
-        rutas = {"/api/tiendas": cfg.carga, "/api/progreso": progreso.lista, "/api/seguimientos": seguimiento.lista, "/api/avisos": seguimiento.avisos,
+        rutas = {"/api/tiendas": cfg.carga, "/api/progreso": progreso.lista, "/api/milista": seguimiento.mi_lista, "/api/seguimientos": seguimiento.lista, "/api/avisos": seguimiento.avisos,
                  "/api/ajustes": ajustes.publico, "/api/red": self._red,
                  "/api/arranque": lambda: {"disponible": arranque.disponible(), "activo": arranque.activo()},
                  "/api/historial": lambda: (motor.historial_producto(parse_qs(url.query)["grupo"][0]) if parse_qs(url.query).get("grupo")

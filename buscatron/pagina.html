@@ -273,6 +273,12 @@ summary:has(.n:not(:empty))::after{margin-left:8px}
 .motivo{margin-top:7px;font-size:13px;font-weight:700;color:var(--ok);line-height:1.4}
 .av .t{font-weight:700}
 .av-envio{display:block;font-size:11.5px;font-weight:600;color:var(--mut);text-align:right;margin-top:2px}
+.ml-fila{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--bd)}
+.ml-fila:first-child{border-top:0}
+.ml-info{flex:1;min-width:0}.ml-info b{display:block;font-size:14.5px}.ml-info small{display:block;color:var(--mut);font-size:12.5px;margin-top:2px}
+.ml-pr{text-align:right;font-family:var(--f-tit);font-weight:800;white-space:nowrap}.ml-pr small{display:block;font-family:inherit;font-weight:600;font-size:11.5px;color:var(--mut)}
+.ml-ok{color:var(--ok)}.ml-acc{display:flex;gap:4px}.ml-acc button{min-height:34px;padding:0 8px}
+.ml-vig{font-size:12px;font-weight:800;color:var(--mut);text-transform:uppercase;letter-spacing:.04em;margin:12px 0 2px}
 .av-otros{font-size:12.5px;color:var(--mut);margin-left:2px}
 .av.es-nuevo .res{box-shadow:0 0 0 2px var(--ac);background:var(--ac2)}
 .av-banner{display:flex;flex-wrap:wrap;align-items:baseline;column-gap:8px;row-gap:2px;background:var(--ac);color:var(--ac-tx);border-radius:14px;padding:10px 14px;margin:0 0 12px;font-weight:700}
@@ -405,6 +411,7 @@ svg.graf-svg{width:100%;height:auto;display:block}
 </section>
 
 <section id="t-seguir" class="oculto">
+  <details class="card" id="ml-det" open style="margin-top:0"><summary>📋 Mi lista <span class="n" id="ml-n"></span></summary><div id="ml"></div></details>
   <details class="card" id="sf-det" style="margin-top:0">
     <summary id="sf-tit">＋ Vigilar una búsqueda nueva</summary>
     <form id="sf">
@@ -1172,7 +1179,24 @@ $('sf').onsubmit=async e=>{e.preventDefault();
   limpiaSeg();$('sf-det').open=false;pintaSeg(r);
   aviso(s&&s.revisando?'Guardada. Se está revisando: si has cambiado la búsqueda o sus filtros, al terminar se revisa otra vez con los cambios':'Búsqueda vigilada guardada');};
 let histAmz={};     // {id de vigilada: productos con su histórico de Amazon (camelcamelcamel) ya leído}
-async function cargaSeg(){const [l,h]=await Promise.all([api('seguimientos'),api('historico_vigiladas').catch(()=>({}))]);
+// «Mi lista»: una línea por juego, con su mejor oferta de la última revisión, el mínimo visto y tu objetivo
+let miLista=[];
+async function cargaMiLista(){let l;try{l=await api('milista');}catch(e){return;}if(!Array.isArray(l))return;miLista=l;
+  $('ml-n').textContent=l.length||'';
+  if(!l.length){$('ml').innerHTML='<p class="mut">Cuando tus vigiladas se revisen, aquí verás cada juego con su mejor precio.</p>';return;}
+  let vig=null;
+  $('ml').innerHTML=l.map((p,i)=>{const nombre=tituloProducto(p.titulos.map(t=>({titulo:t}))),m=p.mejor,tot=p.con_envio&&m.envio!=null?m.total:m.precio;
+    const falta=p.objetivo!=null?tot-p.objetivo:null;
+    const cab=p.vigilada!==vig?`<div class="ml-vig">${esc(p.vigilada)}${p.activa?'':' · en pausa'}</div>`:'';vig=p.vigilada;
+    return cab+`<div class="ml-fila"><div class="ml-info"><b>${esc(nombre)}</b>
+      <small><a href="${esc(m.url)}" target="_blank" rel="noopener">${esc(nombreT(m.tienda))} ↗</a>${p.tiendas>1?` · ${p.tiendas} tiendas`:''}${p.minimo!=null?` · mínimo visto ${euro(p.minimo)}`:''}</small>
+      <small>${p.objetivo!=null?(falta<=0?`<span class="ml-ok">✅ por debajo de tu objetivo de ${euro(p.objetivo)}</span>`:`🎯 ${euro(p.objetivo)}${p.objetivo_propio?' (de este juego)':''} · faltan ${euro(falta)}`):'sin objetivo'}</small></div>
+      <div class="ml-pr">${euro(tot)}${p.con_envio&&m.envio!=null?'<small>con envío</small>':m.envio!=null?`<small>${m.envio>0?'+'+euro(m.envio)+' envío':'envío gratis'}</small>`:''}</div>
+      <div class="ml-acc"><button type="button" class="sec mini" data-mlh="${i}" title="Historial: el mejor precio en todas tus tiendas">📈</button><button type="button" class="sec mini" data-mlo="${i}" title="Tu precio objetivo para este juego">🎯</button></div></div>`;}).join('');
+  $('ml').querySelectorAll('[data-mlh]').forEach(b=>b.onclick=()=>{const p=miLista[+b.dataset.mlh];abreHist(p.mejor.url,tituloProducto(p.titulos.map(t=>({titulo:t}))),p.mejor.tienda,p.grupo);});
+  $('ml').querySelectorAll('[data-mlo]').forEach(b=>b.onclick=async()=>{const p=miLista[+b.dataset.mlo];
+    await pideObjetivo([{grupo:p.grupo,titulo:tituloProducto(p.titulos.map(t=>({titulo:t}))),precio:p.mejor.precio,objetivo_producto:p.objetivo_propio?p.objetivo:null}]);cargaMiLista();});}
+async function cargaSeg(){cargaMiLista();const [l,h]=await Promise.all([api('seguimientos'),api('historico_vigiladas').catch(()=>({}))]);
   histAmz=h&&!h.error?h:{};pintaSeg(l);}
 const fechaCorta=f=>f?f.split('-').reverse().join('/'):'';
 function histAmzResumen(s){const it=histAmz[s.id]||[];if(!it.length)return '';
@@ -1328,12 +1352,14 @@ async function cargaAvisos(){const mia=++avVuelta;const [todos,vig]=await Promis
     <div class="info"><div class="t" title="${esc(a.tituloTienda)}">${esc(a.nombre)}</div><div class="meta">${a.propioNuevo?'<span class="tag nuevo">Nuevo</span>':a.nuevo?'<span class="tag nuevo">Novedad en otra oferta</span>':''}<span class="tag">${esc(nombreT(a.tienda))}</span>${a.items.length>1?`<span class="av-otros">y ${a.items.length-1} oferta${a.items.length>2?'s':''} más${a.tiendas>1?` en ${a.tiendas} tiendas`:''}</span>`:''}</div>
     <div class="motivo">${esc(a.motivo)}</div>
     <div class="mut" style="margin-top:4px">Aviso del ${fecha(a.tsOferta)}${deSeg(a.seg_id)?` · ${esc(deSeg(a.seg_id))}`:''}${seg(a.seg_id).ultima?` · última búsqueda ${fecha(seg(a.seg_id).ultima)}`:''}</div></div></a></div>
-    <div class="accs"><button type="button" class="graf" data-i="${i}" title="Historial de precios">📈 Historial de precio</button><button type="button" class="quita no" data-ids="${a.ids.join(',')}" title="Quitar los avisos de este producto, en todas sus tiendas (no se repetirán salvo que bajen más)">✕ Quitar ${a.items.length>1?'todos':'aviso'}</button></div>
+    <div class="accs"><button type="button" class="graf" data-i="${i}" title="El mejor precio de este juego en todas tus tiendas">📈 Historial</button><button type="button" class="obj-av" data-i="${i}" title="Tu precio objetivo para este juego">🎯 Objetivo</button><button type="button" class="quita no" data-ids="${a.ids.join(',')}" title="Quitar los avisos de este producto, en todas sus tiendas (no se repetirán salvo que bajen más)">✕ Quitar ${a.items.length>1?'todos':'aviso'}</button></div>
     ${a.items.length>1?`<details class="otras"><summary>${a.items.length-1} oferta${a.items.length>2?'s':''} más, hasta ${euro(a.items[a.items.length-1].precio)}</summary>${a.items.slice(1).map(o=>`<div class="av-fila"><a href="${esc(o.url)}" target="_blank" rel="noopener"><b>${euro(o.precio)}${envioTxt(o)}</b><span>${esc(nombreT(o.tienda))}${o.id>vistosAntes?' · <b style="color:var(--ac);min-width:0">nuevo</b>':''} · ${esc(o.titulo)} · ${fecha(o.ts)}<small>${esc(o.motivo)}</small></span></a>
       <button type="button" class="sec mini graf-o" data-u="${esc(o.url)}" data-t="${esc(o.titulo)}" data-h="${esc(o.tienda)}" title="Historial de precio de esta oferta">📈</button><button type="button" class="sec mini quita" data-ids="${o.id}" title="Quitar solo esta oferta">✕</button></div>`).join('')}</details>`:''}</div>`).join('')
     :'<div class="card vacio-msg"><span class="em">🔔</span>No tienes avisos.<br>Cuando un producto de una búsqueda vigilada llegue a tu precio, aparecerá aquí.</div>';
   document.querySelectorAll('#av-lista .av').forEach(c=>{const d=c.querySelector('details');if(d&&abiertos.has(c.dataset.g))d.open=true;});
-  document.querySelectorAll('#av-lista .graf').forEach(g=>g.onclick=()=>{const a=l[+g.dataset.i];abreHist(a.url,a.tituloTienda,a.tienda);});
+  document.querySelectorAll('#av-lista .graf').forEach(g=>g.onclick=()=>{const a=l[+g.dataset.i];abreHist(a.url,a.nombre,a.tienda,(a.grupo||'').split('|')[1]);});
+  document.querySelectorAll('#av-lista .obj-av').forEach(g=>g.onclick=async()=>{const a=l[+g.dataset.i];
+    await pideObjetivo([{grupo:(a.grupo||'').split('|')[1],titulo:a.nombre,precio:a.precio}]);});
   document.querySelectorAll('#av-lista .graf-o').forEach(g=>g.onclick=()=>abreHist(g.dataset.u,g.dataset.t,g.dataset.h));
   document.querySelectorAll('#av-lista .quita').forEach(g=>g.onclick=async()=>{const ids=g.dataset.ids.split(',').map(Number);g.disabled=true;
     let r;try{r=[await api('avisos',{accion:'borrar',ids})];}catch(e){r=null;}     // todas en una sola petición
