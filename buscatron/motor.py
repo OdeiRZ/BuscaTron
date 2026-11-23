@@ -921,6 +921,7 @@ def buscar(consulta, incluir="", excluir="", ocultar_agotados=True, hosts=None, 
     res = [x for x in res if not (pmin is not None and x["precio"] < pmin) and not (pmax is not None and x["precio"] > pmax)]
     progreso.fase(prog, "Comprobando el stock en las fichas")
     corrige_stock(res, lista)
+    agotados = [x for x in res if x["agotado"] and ocultar_agotados]       # no se enseñan, pero se apuntan: así se sabe cuándo vuelven
     res = [x for x in res if not (ocultar_agotados and x["agotado"]) and not (x.get("preventa") and not preventas)]
     for h, i in informe.items():
         if "brutos" in i:
@@ -947,5 +948,5 @@ def buscar(consulta, incluir="", excluir="", ocultar_agotados=True, hosts=None, 
     with bd.conecta() as c:
         c.executemany("INSERT INTO precios(ts,consulta,tienda,titulo,url,precio,agotado,seg_id,preventa,clave) VALUES(?,?,?,?,?,?,?,?,?,?)",
                       [(ts, consulta, x["tienda"], x["titulo"], x["url"], x["precio"], int(x["agotado"]), seg_id, int(x.get("preventa", False)), x["clave"])
-                       for x in res if not x.get("importado")])    # lo pegado se apunta una vez, al pegarlo (importar.guarda)
+                       for x in res + agotados if not x.get("importado")])    # lo pegado se apunta una vez, al pegarlo (importar.guarda)
     return res, informe

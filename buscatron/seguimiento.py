@@ -184,6 +184,12 @@ def _motivo(c, seg, x):
             med = statistics.median(previos)
             if x["precio"] <= med * (1 - seg["bajo_historico"] / 100):
                 return f"un {(1 - x['precio'] / med) * 100:.0f} % más barato que su precio habitual ({med:.2f} €)".replace(".", ",")
+    # vuelve a haber stock: la última vez que se vio estaba agotado (si tiene objetivo, solo cerca de él: hasta un 15 % más)
+    if not x.get("agotado") and not x.get("importado"):
+        ult = c.execute("SELECT agotado FROM precios WHERE url=? AND ts < ? ORDER BY ts DESC LIMIT 1", (x["url"], x["_ts"])).fetchone()
+        tope = x.get("objetivo_producto") or seg["objetivo"]
+        if ult and ult[0] and (tope is None or x["precio"] <= tope * 1.15):
+            return f"vuelve a estar disponible a {x['precio']:.2f} €".replace(".", ",")
     return None
 
 
