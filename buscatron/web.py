@@ -61,7 +61,11 @@ MANIFIESTO = {"name": "BuscaTron", "short_name": "BuscaTron", "description": "Co
               "start_url": "/", "scope": "/", "display": "standalone", "background_color": "#1f2a30", "theme_color": "#1f2a30", "lang": "es",
               "icons": [{"src": "/icono-192.png", "sizes": "192x192", "type": "image/png"},
                         {"src": "/icono-512.png", "sizes": "512x512", "type": "image/png"},
-                        {"src": "/icono-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}]}
+                        {"src": "/icono-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}],
+              # «Compartir» → BuscaTron en el móvil (con la app instalada): el texto seleccionado de una tienda llega a «Pegar resultados»
+              "share_target": {"action": "/compartir", "method": "POST", "enctype": "application/x-www-form-urlencoded",
+                               "params": {"title": "title", "text": "text", "url": "url"}}}
+COMPARTIDO = {}           # lo último que se compartió con BuscaTron, hasta que la página lo recoge
 SW = b"self.addEventListener('install',e=>self.skipWaiting());self.addEventListener('activate',e=>self.clients.claim());" \
      b"self.addEventListener('fetch',()=>{});"   # sin caché: los precios tienen que venir siempre en directo
 ESTATICOS = {"/manifest.webmanifest": lambda: (json.dumps(MANIFIESTO, ensure_ascii=False).encode(), "application/manifest+json; charset=utf-8"),
@@ -118,6 +122,13 @@ def _busca(c):
     if c.get("guardar", True) and c.get("q", "").strip():        # se recuerda para no tener que repetirla
         resp["id"], resp["ts"] = busquedas.guarda(c, resp)
     return resp
+
+
+def recoge_compartido():
+    """Lo compartido desde el móvil (una sola vez y si es reciente)."""
+    d = dict(COMPARTIDO)
+    COMPARTIDO.clear()
+    return d if d and time.time() - d.get("ts", 0) < 600 else {}
 
 
 def lanza_busqueda(c):
@@ -275,7 +286,7 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json({"error": "pin"}, 401)
             return self._enviar(LOGIN.encode(), "text/html; charset=utf-8")
         url = urlparse(self.path)
-        rutas = {"/api/tiendas": cfg.carga, "/api/progreso": progreso.lista, "/api/milista": seguimiento.mi_lista, "/api/seguimientos": seguimiento.lista, "/api/avisos": seguimiento.avisos,
+        rutas = {"/api/tiendas": cfg.carga, "/api/progreso": progreso.lista, "/api/compartido": recoge_compartido, "/api/milista": seguimiento.mi_lista, "/api/seguimientos": seguimiento.lista, "/api/avisos": seguimiento.avisos,
                  "/api/ajustes": ajustes.publico, "/api/red": self._red,
                  "/api/arranque": lambda: {"disponible": arranque.disponible(), "activo": arranque.activo()},
                  "/api/historial": lambda: (motor.historial_producto(parse_qs(url.query)["grupo"][0]) if parse_qs(url.query).get("grupo")
@@ -316,8 +327,22 @@ class Handler(BaseHTTPRequestHandler):
         except ValueError:
             return True
 
+    def _compartir(self):
+        """Lo que llega del menú «Compartir» del móvil: se guarda y se abre la página, que lo pone en «Pegar resultados».
+        No ejecuta nada (lo revisas y pulsas Guardar), así que no pasa por la comprobación de origen."""
+        largo = min(int(self.headers.get("Content-Length", 0) or 0), MAX_CUERPO)
+        datos = parse_qs(self.rfile.read(largo).decode("utf-8", "replace"))
+        COMPARTIDO.clear()
+        COMPARTIDO.update({k: (datos.get(k) or [""])[0][:MAX_CUERPO] for k in ("title", "text", "url")}, ts=time.time())
+        self.send_response(303)
+        self.send_header("Location", "/#compartido")
+        self.send_header("Content-Length", "0")
+        self.end_headers()
+
     def do_POST(self):
         est = self._estado()
+        if self.path == "/compartir" and est != "denegado":
+            return self._compartir()
         if est == "denegado" or self._origen_ajeno():
             return self._json({"error": "acceso no permitido"}, 403)
         try:

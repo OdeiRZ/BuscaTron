@@ -1088,7 +1088,14 @@ $('pegar').onclick=e=>{if(e.target===$('pegar'))cierraPegar();};
 function manualesT(){return porNombre(tiendas.filter(t=>t.manual),t=>nombreT(t.host));}
 function enlaceT(t,q){const p=(t.plantilla||'').split('{q-}').join(q.trim().split(/\s+/).join('-'));
   return p.includes('{q}')?p.split('{q}').join(encodeURIComponent(q)):(p.startsWith('http')?p:'https://'+t.host+'/');}
-function abrePegar(host){
+// Llegó algo del menú «Compartir» del móvil: se abre «Pegar resultados» con ese texto y la tienda de su enlace
+const LLEGA_COMPARTIDO=location.hash==='#compartido';      // se mira al cargar: luego la dirección pasa a la pestaña
+async function recogeCompartido(){if(!LLEGA_COMPARTIDO)return;
+  let d;try{d=await api('compartido');}catch(e){return;}if(!d||!d.text&&!d.url){aviso('No ha llegado nada de lo compartido: vuelve a compartirlo');return;}
+  const todo=`${d.url||''} ${d.text||''}`.toLowerCase();
+  const t=manualesT().find(t=>todo.includes(t.host.replace(/^www\./,'')));
+  abrePegar(t?t.host:undefined,(d.text||'').trim());}
+function abrePegar(host,texto){
   const ms=manualesT();
   if(!ms.length){aviso('No tienes tiendas marcadas como «No consultar automáticamente»');return;}
   if(!host)try{host=localStorage.getItem('bt-pegar-t')}catch(e){}       // la última que usaste
@@ -1109,6 +1116,7 @@ function abrePegar(host){
     <p class="ayuda">Se guardan los productos cuyo nombre contiene lo que buscas y llevan precio. Salen en tus búsquedas y cuentan para las vigiladas durante 3 días; después hay que volver a pegarlos.</p>
     <div class="acciones"><button type="button" id="pegar-ok">Guardar</button></div><div id="pegar-msg" class="mut" style="margin-top:8px"></div>`;
   abreHoja('pegar');$('hoja2').querySelector('.cierra').onclick=cierraPegar;
+  if(texto)$('pegar-txt').value=texto;
   const enlace=()=>{const t=tiendas.find(x=>x.host===$('pegar-t').value),q=$('pegar-q').value.trim(),a=$('pegar-ir');
     a.href=enlaceT(t,q);a.textContent=`Abre ${nombreT(t.host)} ↗`+(q?` con «${q}»`:'');};
   $('pegar-t').onchange=()=>{try{localStorage.setItem('bt-pegar-t',$('pegar-t').value)}catch(e){}enlace();};$('pegar-q').oninput=enlace;enlace();
@@ -1457,7 +1465,7 @@ async function prueba(canal){const g=await api('ajustes',ajustesForm());if(g.err
   const e=r.error||r[canal];msg(e?e:'Mensaje de prueba enviado: debería llegarte en unos segundos.',!e);}
 $('a-prueba-tg').onclick=()=>prueba('telegram');$('a-prueba-co').onclick=()=>prueba('correo');
 
-cargaT().then(()=>{if(!retomaBusqueda())cargaRec(true);});cargaNavAv();cargaServicio();sigueProgreso();
+cargaT().then(()=>{if(!retomaBusqueda())cargaRec(true);recogeCompartido();});cargaNavAv();cargaServicio();sigueProgreso();
 if('serviceWorker' in navigator&&window.isSecureContext)navigator.serviceWorker.register('/sw.js').catch(()=>{});
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&!buscando)retomaBusqueda();});
 {const h=location.hash.slice(1);let t=TABS.includes(h)?h:null;     // la de la dirección (#avisos) o la última que usaste
