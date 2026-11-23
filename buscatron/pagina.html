@@ -716,7 +716,18 @@ function pintaLista(){const c=$('lista-res');if(!c)return;const N=Number($('top'
     const r=await api('ignorar',{titulo:t});if(r.error){aviso(r.error);return;}
     ultimos=ultimos.filter(y=>y.clave!==r.clave);guardaUltimos();
     pintaLista();aviso('Producto oculto. Lo puedes recuperar en Ajustes');});
-  c.querySelectorAll('[data-obj]').forEach(g=>g.onclick=()=>pideObjetivo(pintados[+g.dataset.obj]));}
+  c.querySelectorAll('[data-obj]').forEach(g=>g.onclick=()=>pideObjetivo(pintados[+g.dataset.obj]));
+  c.querySelectorAll('[data-vig]').forEach(g=>g.onclick=()=>vigilaJuego(pintados[+g.dataset.vig]));}
+// «👁️ Vigilar»: una vigilada de ese juego (su nombre limpio como búsqueda), con un objetivo sugerido un 10 % por debajo
+// del más barato de ahora; en castellano, con envío incluido y en todas tus tiendas.
+async function vigilaJuego(g){const nombre=tituloProducto(g),barato=Math.min(...g.map(x=>x.precio));
+  const sug=Math.floor(barato*0.9);
+  const v=prompt(`Vigilar «${nombre}».\n\nAhora está desde ${euro(barato)}. ¿A qué precio quieres que te avise?`,String(sug));
+  if(v===null)return;const n=Number(v.replace(',','.').replace(/[^\d.]/g,''));if(!(n>0)){aviso('Escribe un precio, por ejemplo 30');return;}
+  const consulta=nombre.replace(/[:\-–]/g,' ').replace(/\s+/g,' ').trim();
+  const r=await api('seguimientos',{nombre,consulta,objetivo:n,bajo_historico:15,sin_agotados:true,castellano:true,canales:'app,telegram',cada_horas:12,
+    opciones:{idioma:'castellano',con_envio:true}});
+  if(r&&r.error){aviso(r.error);return;}aviso(`Vigilando «${nombre}»: te avisará a ${euro(n)} o menos`);}
 function guardaUltimos(){if(ultimoId)api('busquedas',{accion:'actualizar',id:ultimoId,resultados:ultimos});}
 
 /* 🎯 precio objetivo de un producto */
@@ -748,6 +759,7 @@ function tarjeta(x,i,conEnvio,otros=[]){
     <div class="meta"><span class="tag">${esc(nombreT(x.tienda))}</span>${idiomaTag(x)}${i===idxBarato?'<span class="tag ok">Más barato</span>':''}${x.descuento?`<span class="tag ok">−${x.descuento} % sobre su precio de mercado (${euro(x.pvp)})</span>`:''}${x.minimo?'<span class="tag ok">Mínimo histórico</span>':''}${sm?'<span class="tag">Segunda mano</span>':''}${x.estado?`<span class="tag">${esc(x.estado)}</span>`:''}${x.importado?`<span class="tag pre">Pegado a mano ${relativo(x.importado)}</span>`:''}${x.preventa?'<span class="tag pre">Preventa</span>':''}${x.agotado?'<span class="tag ko">Agotado</span>':''}${web?'<span class="tag pre">Web fuera de tu lista</span>':''}${x.objetivo_producto!=null?`<span class="tag ${x.precio<=x.objetivo_producto?'ok':''}">🎯 Tu objetivo: ${euro(x.objetivo_producto)}</span>`:''}</div></div></a>
     <button type="button" class="graf" data-g="${i}" title="Historial de precios" aria-label="Ver historial de precios">📈<small>Precio</small></button></div>
     <div class="accs"><button type="button" data-obj="${i}" class="${x.objetivo_producto!=null?'on':''}" title="Avisarme cuando baje a un precio">🎯 ${x.objetivo_producto!=null?euro(x.objetivo_producto):'Avisarme a…'}</button>
+    <button type="button" data-vig="${i}" title="Crear una búsqueda vigilada de este juego">👁️ Vigilar</button>
     <button type="button" data-ign="${i}" class="no" title="Ya lo tengo / no me interesa: ocultarlo siempre">🚫 No me interesa</button></div>`;
   const nt=new Set(otros.map(o=>o.tienda)).size,    // tiendas distintas: Amazon con 40 ofertas es una sola tienda
     cuantas=nt===otros.length?`${nt} tienda${nt===1?'':'s'} más`:`${otros.length} ofertas más en ${nt} tienda${nt===1?'':'s'}`;
@@ -1199,6 +1211,11 @@ $('sf').onsubmit=async e=>{e.preventDefault();
 let histAmz={};     // {id de vigilada: productos con su histórico de Amazon (camelcamelcamel) ya leído}
 // «Mi lista»: una línea por juego, con su mejor oferta de la última revisión, el mínimo visto y tu objetivo
 let miLista=[];
+// ¿Buen momento? El mejor precio de ahora frente a lo que se le ha visto (su precio habitual y su mínimo)
+function momento(p){const ahora=p.mejor.precio;
+  if(p.minimo!=null&&ahora<=p.minimo+0.01)return '🟢 el precio más bajo que se le ha visto';
+  if(p.mediana==null)return '';
+  return ahora<=p.mediana*0.95?'🟢 por debajo de su precio habitual ('+euro(p.mediana)+')':ahora<=p.mediana*1.05?'🟡 su precio habitual':'🔴 más caro que de costumbre ('+euro(p.mediana)+')';}
 async function cargaMiLista(){let l;try{l=await api('milista');}catch(e){return;}if(!Array.isArray(l))return;miLista=l;
   $('ml-n').textContent=l.length||'';
   if(!l.length){$('ml').innerHTML='<p class="mut">Cuando tus vigiladas se revisen, aquí verás cada juego con su mejor precio.</p>';return;}
@@ -1208,6 +1225,7 @@ async function cargaMiLista(){let l;try{l=await api('milista');}catch(e){return;
     const cab=p.vigilada!==vig?`<div class="ml-vig">${esc(p.vigilada)}${p.activa?'':' · en pausa'}</div>`:'';vig=p.vigilada;
     return cab+`<div class="ml-fila"><div class="ml-info"><b>${esc(nombre)}</b>
       <small><a href="${esc(m.url)}" target="_blank" rel="noopener">${esc(nombreT(m.tienda))} ↗</a>${p.tiendas>1?` · ${p.tiendas} tiendas`:''}${p.minimo!=null?` · mínimo visto ${euro(p.minimo)}`:''}</small>
+      <small>${momento(p)}</small>
       <small>${p.objetivo!=null?(falta<=0?`<span class="ml-ok">✅ por debajo de tu objetivo de ${euro(p.objetivo)}</span>`:`🎯 ${euro(p.objetivo)}${p.objetivo_propio?' (de este juego)':''} · faltan ${euro(falta)}`):'sin objetivo'}</small></div>
       <div class="ml-pr">${euro(tot)}${p.con_envio&&m.envio!=null?'<small>con envío</small>':m.envio!=null?`<small>${m.envio>0?'+'+euro(m.envio)+' envío':'envío gratis'}</small>`:''}</div>
       <div class="ml-acc"><button type="button" class="sec mini" data-mlh="${i}" title="Historial: el mejor precio en todas tus tiendas">📈</button><button type="button" class="sec mini" data-mlo="${i}" title="Tu precio objetivo para este juego">🎯</button></div></div>`;}).join('');
@@ -1424,10 +1442,11 @@ async function cargaAjustes(){cargaServicio();const a=await api('ajustes');$('a-
 async function cargaEstado(){let l=await api('estado_tiendas',{});if(!Array.isArray(l))return;l=porNombre(l,e=>e.nombre||e.host);
   // arriba solo las que piden atención; las que van bien (o las miras tú), plegadas
   const bien=e=>e.manual||(e.activa&&e.consultas&&e.con_resultados&&!e.sugerir_desactivar);
-  const fila=e=>`<div class="est"><b>${esc(e.nombre)}${e.activa?'':' <span class="tag">desactivada</span>'}</b>
+  const envio=e=>!e.envio?'':`<br>Envío${e.envio.suyo?' (según su web)':''}: ${e.envio.coste!=null?euro(e.envio.coste):'?'}${e.envio.gratis_desde!=null?' · gratis desde '+euro(e.envio.gratis_desde):''}`;
+  const fila=e=>`<div class="est"><b>${esc(e.nombre)}${e.bloqueada?' <span class="tag ko">🔒 te bloqueó: sin peticiones</span>':e.activa?'':' <span class="tag">desactivada</span>'}</b>
     <span class="mut">${e.manual?'La miras tú: no se consulta sola':e.consultas?`${e.con_resultados} de ${e.consultas} consultas con resultados${e.ultimo_ok?' · último resultado '+relativo(e.ultimo_ok):''}`:'Todavía sin consultas'}${e.sugerir_desactivar?(/^(no tiene nada|tiene productos)/.test(e.ultimo_error||'')
       ?' · <span class="mut">responde bien, pero no ha tenido nada de lo que buscas; desactívala solo si no suele tener tus juegos (acelera las búsquedas)</span>'
-      :' · <span class="err">no ha respondido en sus últimas consultas: conviene desactivarla</span>'):''}${e.ultimo_error&&!e.con_resultados&&!e.manual?`<br>Último problema: ${esc(e.ultimo_error)}`:''}</span>
+      :' · <span class="err">no ha respondido en sus últimas consultas: conviene desactivarla</span>'):''}${e.ultimo_error&&!e.con_resultados&&!e.manual?`<br>Último problema: ${esc(e.ultimo_error)}`:''}${e.salta_en&&e.salta_en.length?`<br>Las revisiones se la saltan en: ${esc(e.salta_en.join(', '))} (no ha tenido ese juego; se vuelve a mirar cada semana)`:''}${envio(e)}</span>
     ${e.manual?'':`<button type="button" class="${e.activa?'peli':'sec'} mini" data-act="${esc(e.host)}">${e.activa?'Desactivar':'Activar'}</button>`}</div>`;
   const atencion=l.filter(e=>!bien(e)),ok=l.filter(bien),abierto=$('estado-ok')&&$('estado-ok').open;
   const bloq=tiendas.filter(t=>t.bloqueo);      // desactivadas porque bloquearon tu conexión: BuscaTron mira solo si vuelven

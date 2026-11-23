@@ -3,6 +3,16 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.23.0] - 2026-11-23
+
+### Añadido
+- **Precio raro:** un aviso que está un 40 % o más por debajo de tus demás tiendas lo dice («⚠️ … puede ser un chollo o un error, compruébalo»).
+- **¿Buen momento?** En Mi lista, cada juego dice si está en el precio más bajo que se le ha visto, por debajo de lo habitual, en lo habitual o más caro.
+- **Copia de seguridad diaria** de la base de datos en la carpeta «copias» (las 7 últimas).
+- **Panel de tiendas** (Ajustes): las bloqueadas («🔒 sin peticiones»), en qué vigiladas se las saltan las revisiones y su envío (tuyo o según su web).
+- **👁️ Vigilar** en cada resultado: crea la vigilada de ese juego con un objetivo sugerido (un 10 % por debajo del más barato), en castellano y con envío.
+- **Lotes y packs de varios productos** («Pack 3 expansiones», «Lote …», «Bundle») como tipo propio: nunca se agrupan con el juego suelto.
+
 ## [0.22.0] - 2026-11-23
 
 ### Añadido

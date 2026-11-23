@@ -745,12 +745,22 @@ def estado_tiendas(ultimas=10):
     lista = {t["host"]: t for t in cfg.carga()}
     out = []
     with bd.conecta() as c:
+        vigiladas = [(r["nombre"], r["consulta"]) for r in c.execute("SELECT nombre, consulta FROM seguimientos WHERE activo=1")]
+    salta = {}                      # tienda → vigiladas en las que se la salta (no tiene ese juego)
+    for nombre, consulta in vigiladas:
+        for h in tiendas_sin(consulta):
+            salta.setdefault(h, []).append(nombre)
+    with bd.conecta() as c:
         for h, t in lista.items():
             filas = [dict(r) for r in c.execute("SELECT ts, encontrados, error FROM estado_tiendas WHERE host=? ORDER BY ts DESC LIMIT ?", (h, ultimas))]
             con = sum(1 for f in filas if f["encontrados"])
             ult_ok = next((f["ts"] for f in filas if f["encontrados"]), None)
             ult_err = next((f["error"] for f in filas if f["error"]), "")
+            manual_envio = t.get("envio") is not None or t.get("envio_gratis") is not None
+            envio = {"coste": t.get("envio"), "gratis_desde": t.get("envio_gratis"), "suyo": False} if manual_envio else \
+                {**(t.get("envio_auto") or {}), "suyo": True} if t.get("envio_auto") else None
             out.append({"host": h, "nombre": t.get("nombre") or h, "activa": t.get("activa", True), "manual": bool(t.get("manual")),
+                        "bloqueada": bool(t.get("bloqueo")), "salta_en": salta.get(h, []), "envio": envio,
                         "consultas": len(filas), "con_resultados": con, "ultimo_ok": ult_ok, "ultimo_error": ult_err,
                         "sugerir_desactivar": bool(t.get("activa", True) and not t.get("manual") and len(filas) >= 6 and con == 0)})
     return sorted(out, key=lambda x: (not x["sugerir_desactivar"], x["manual"], -x["con_resultados"], x["nombre"]))

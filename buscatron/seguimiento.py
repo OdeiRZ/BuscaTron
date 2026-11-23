@@ -451,9 +451,10 @@ def mi_lista():
             continue
         grupos = motor.grupos([x["titulo"] for x in filas], seg["consulta"], opc.get("alguna", ""))
         h = [x for x in hist_de[seg["id"]] if cumple(seg, x["titulo"], x["precio"], x["tienda"])]
-        minimos = {}
+        minimos, vistos = {}, {}
         for x, g in zip(h, motor.grupos([x["titulo"] for x in h], seg["consulta"], opc.get("alguna", ""))):
             minimos[g["grupo"]] = min(minimos.get(g["grupo"], x["precio"]), x["precio"])
+            vistos.setdefault(g["grupo"], []).append(x["precio"])
         por = {}
         for x, g in zip(filas, grupos):
             envio = motor.envio_de(tiendas_.get(x["tienda"], {}), x["precio"])
@@ -465,6 +466,7 @@ def mi_lista():
             out.append({"seg_id": seg["id"], "vigilada": seg["nombre"], "activa": bool(seg["activo"]), "grupo": grupo,
                         "titulos": [x["titulo"] for x in o], "mejor": o[0], "ofertas": len(o),
                         "tiendas": len({x["tienda"] for x in o}), "minimo": min(minimos.get(grupo, o[0]["precio"]), o[0]["precio"]),
+                        "mediana": statistics.median(vistos[grupo]) if len(vistos.get(grupo, [])) >= 5 else None,
                         "objetivo": obj if obj is not None else seg["objetivo"], "objetivo_propio": obj is not None,
                         "con_envio": bool(opc.get("con_envio")), "revisada": seg["ultima"]})
     return out
