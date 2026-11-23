@@ -423,6 +423,66 @@ def _avisa_pegados_en(seg, host, enviar):
     return len(nuevos)
 
 
+ENVIO_ESTIMADO, GRATIS_ESTIMADO = 4.95, 50.0      # envío de una tienda de la que aún no se sabe
+
+
+def _mejor_por_tienda(ofertas):
+    """{tienda: {precio, url, titulo}}: la oferta más barata de este juego en cada tienda (para la compra conjunta)."""
+    out = {}
+    for x in ofertas:
+        if x["tienda"] not in out or x["precio"] < out[x["tienda"]]["precio"]:
+            out[x["tienda"]] = {"precio": x["precio"], "url": x["url"], "titulo": x["titulo"]}
+    return out
+
+
+def compra_conjunta(grupos):
+    """La forma más barata de comprar varios juegos de Mi lista a la vez, contando el envío de cada tienda con su «gratis
+    desde» aplicado a lo que compras en ella. Prueba: cada juego donde sale más barato suelto, cada tienda que los tiene
+    todos y cada pareja de tiendas (con 10 juegos y 30 tiendas son unos cientos de cuentas). Devuelve los planes, del
+    más barato al más caro: [{total, envio, desconocido, pedidos: [{tienda, juegos: [...], subtotal, envio}]}]."""
+    import itertools
+    lista = [p for p in mi_lista() if p["grupo"] in set(grupos)]
+    if not lista:
+        return []
+    tiendas_ = {t["host"]: t for t in motor.cfg.carga()}
+
+    def coste(reparto):                    # reparto: {grupo: tienda}
+        pedidos = {}
+        for p in lista:
+            h = reparto[p["grupo"]]
+            pedidos.setdefault(h, []).append(p)
+        total, envio_t, desconocido, out = 0.0, 0.0, [], []
+        for h, ps in pedidos.items():
+            sub = round(sum(p["por_tienda"][h]["precio"] for p in ps), 2)
+            env = motor.envio_de(tiendas_.get(h, {}), sub)
+            if env is None:                # sin dato: lo habitual (4,95 €, gratis desde 50 €), marcado como estimado
+                desconocido.append(h)
+                env = ENVIO_ESTIMADO if sub < GRATIS_ESTIMADO else 0.0
+            total += sub + env
+            envio_t += env
+            out.append({"tienda": h, "subtotal": sub, "envio": env, "juegos": [
+                {"grupo": p["grupo"], "titulo": p["por_tienda"][h]["titulo"], "precio": p["por_tienda"][h]["precio"],
+                 "url": p["por_tienda"][h]["url"]} for p in ps]})
+        return {"total": round(total, 2), "envio": round(envio_t, 2), "desconocido": desconocido,
+                "pedidos": sorted(out, key=lambda o: -len(o["juegos"]))}
+
+    planes = {}
+    def prueba(reparto):
+        if reparto and len(reparto) == len(lista):
+            c = coste(reparto)
+            planes[tuple(sorted((g, h) for g, h in reparto.items()))] = c
+    prueba({p["grupo"]: min(p["por_tienda"], key=lambda h: p["por_tienda"][h]["precio"]) for p in lista})   # cada uno, el más barato
+    todas = sorted({h for p in lista for h in p["por_tienda"]})
+    for h in todas:                                                                                         # todo en una tienda
+        if all(h in p["por_tienda"] for p in lista):
+            prueba({p["grupo"]: h for p in lista})
+    for a, b in itertools.combinations(todas, 2):                                                          # repartido entre dos
+        if all(a in p["por_tienda"] or b in p["por_tienda"] for p in lista):
+            prueba({p["grupo"]: min((h for h in (a, b) if h in p["por_tienda"]), key=lambda h: p["por_tienda"][h]["precio"])
+                    for p in lista})
+    return sorted(planes.values(), key=lambda c: c["total"])[:5]
+
+
 def mi_lista():
     """Una línea por juego de cada vigilada: su mejor oferta ahora (con envío si se sabe), en cuántas tiendas está, lo más
     barato que se le ha visto y tu objetivo. Sale de la última revisión de cada vigilada y de lo pegado vigente: no
@@ -468,7 +528,8 @@ def mi_lista():
                         "tiendas": len({x["tienda"] for x in o}), "minimo": min(minimos.get(grupo, o[0]["precio"]), o[0]["precio"]),
                         "mediana": statistics.median(vistos[grupo]) if len(vistos.get(grupo, [])) >= 5 else None,
                         "objetivo": obj if obj is not None else seg["objetivo"], "objetivo_propio": obj is not None,
-                        "con_envio": bool(opc.get("con_envio")), "revisada": seg["ultima"]})
+                        "con_envio": bool(opc.get("con_envio")), "revisada": seg["ultima"],
+                        "por_tienda": _mejor_por_tienda(o)})
     return out
 
 

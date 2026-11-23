@@ -3,6 +3,13 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.24.0] - 2026-11-23
+
+### Añadido
+- **Mejor compra conjunta** (Mi lista): marca varios juegos y «🧺 Mejor compra de los marcados» te dice dónde comprarlos para pagar menos en total, contando el envío de cada tienda y su «gratis desde» sobre lo que compras en ella (cada juego donde sale más barato, todo en una tienda o repartido entre dos). Si de una tienda no se sabe el envío, se estima (4,95 €, gratis desde 50 €) y lo dice.
+- **Rebajas a la vista:** unos días antes de Black Friday, las rebajas de enero, el Prime Day… un aviso por Telegram (una vez por campaña) y una nota en Mi lista.
+- **Revisión de salud semanal:** si una tienda que solía darte resultados lleva una semana sin dar ninguno, te avisa por Telegram. Solo mira lo ya guardado: ninguna petición.
+
 ## [0.23.0] - 2026-11-23
 
 ### Añadido

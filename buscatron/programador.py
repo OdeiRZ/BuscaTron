@@ -113,9 +113,60 @@ def copia_de_seguridad():
     return destino
 
 
+def _telegram(asunto, texto):
+    from . import notifica
+    a = ajustes.carga()
+    if a.get("telegram_token") and a.get("telegram_chat"):
+        notifica.envia(["telegram"], asunto, texto)
+
+
+def rebajas(hoy=None):
+    """Unos días antes de una campaña de rebajas (Black Friday, rebajas de enero, Prime Day…), un aviso por Telegram,
+    una sola vez por campaña: quizá te convenga esperar para comprar."""
+    from . import historico
+    c = historico.proxima_campana(hoy)
+    if not c or c["ya"]:
+        return None
+    clave = f"{c['nombre']} {c['desde'][:4]}"
+    if ajustes.carga().get("rebaja_avisada") == clave:
+        return None
+    _telegram("BuscaTron · rebajas a la vista", f"Dentro de {c['dias']} día{'' if c['dias'] == 1 else 's'} empieza {c['nombre']}: "
+              "si no corre prisa, quizá te convenga esperar para comprar. Tus vigiladas seguirán revisándose.")
+    ajustes.guarda({"rebaja_avisada": clave})
+    return clave
+
+
+SALUD_DIAS = 7
+
+
+def salud(ahora=None):
+    """Una vez por semana: tiendas que solían dar resultados y en los últimos 7 días no han dado ninguno (o fallan). Un
+    aviso por Telegram para que no te pierdas ofertas sin enterarte. Solo mira lo ya guardado: ninguna petición."""
+    ahora = ahora or time.time()
+    if ahora - float(ajustes.carga().get("ultima_salud") or 0) < SALUD_DIAS * 86400:
+        return None
+    lista = {t["host"]: t for t in cfg.carga() if t.get("activa", True) and not t.get("manual") and not t.get("bloqueo")}
+    malas = []
+    with bd.conecta() as c:
+        for h, t in lista.items():
+            antes = c.execute("SELECT COUNT(*) FROM estado_tiendas WHERE host=? AND encontrados>0 AND ts BETWEEN ? AND ?",
+                              (h, ahora - 37 * 86400, ahora - SALUD_DIAS * 86400)).fetchone()[0]
+            ahora_f = c.execute("SELECT encontrados, error FROM estado_tiendas WHERE host=? AND ts>? ORDER BY ts DESC",
+                                (h, ahora - SALUD_DIAS * 86400)).fetchall()
+            if antes and len(ahora_f) >= 3 and not any(f[0] for f in ahora_f):
+                err = next((f[1] for f in ahora_f if f[1]), "")
+                malas.append(f"• {t.get('nombre') or h}" + (f": {err}" if err else ""))
+    ajustes.guarda({"ultima_salud": ahora})
+    if malas:
+        _telegram("BuscaTron · tiendas que han dejado de funcionar",
+                  "Solían darte resultados y esta semana no han dado ninguno:\n" + "\n".join(malas)
+                  + "\n\nMíralo en Ajustes → Estado de las tiendas.")
+    return malas
+
+
 def _bucle(pausa):
     while True:
-        for tarea in (lambda: vigiladas(hilo=True), recordatorios, bloqueadas, limpieza):
+        for tarea in (lambda: vigiladas(hilo=True), recordatorios, bloqueadas, limpieza, rebajas, salud):
             try:
                 tarea()
             except Exception:

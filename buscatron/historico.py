@@ -294,6 +294,18 @@ def _campanas(anio):
             ("las ofertas de otoño de Amazon", datetime.date(anio, 10, 5), datetime.date(anio, 10, 20), datetime.date(anio, 10, 10))]
 
 
+def proxima_campana(hoy=None, dias=7):
+    """La campaña de rebajas en marcha o la que empieza en los próximos `dias`: {nombre, desde, dias, ya}; None si no hay."""
+    hoy = hoy or datetime.date.today()
+    for anio in (hoy.year, hoy.year + 1):
+        for nombre, desde, hasta, _ in sorted(_campanas(anio), key=lambda c: c[1]):
+            if desde <= hoy <= hasta:
+                return {"nombre": nombre, "desde": desde.isoformat(), "dias": 0, "ya": True}
+            if hoy < desde <= hoy + datetime.timedelta(days=dias):
+                return {"nombre": nombre, "desde": desde.isoformat(), "dias": (desde - hoy).days, "ya": False}
+    return None
+
+
 def campana_de(fecha):
     for nombre, desde, hasta, _ in _campanas(fecha.year):
         if desde <= fecha <= hasta:

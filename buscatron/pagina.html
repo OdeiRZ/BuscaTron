@@ -278,6 +278,10 @@ summary:has(.n:not(:empty))::after{margin-left:8px}
 .ml-info{flex:1;min-width:0}.ml-info b{display:block;font-size:14.5px}.ml-info small{display:block;color:var(--mut);font-size:12.5px;margin-top:2px}
 .ml-pr{text-align:right;font-family:var(--f-tit);font-weight:800;white-space:nowrap}.ml-pr small{display:block;font-family:inherit;font-weight:600;font-size:11.5px;color:var(--mut)}
 .ml-ok{color:var(--ok)}.ml-acc{display:flex;gap:4px}.ml-acc button{min-height:34px;padding:0 8px}
+.ml-fila input[type=checkbox]{width:22px;height:22px;flex:0 0 auto;accent-color:var(--ac)}
+.ml-reb{background:var(--ac2);border-radius:12px;padding:8px 12px;font-size:13.5px;margin:4px 0 8px}
+.plan{border:1px solid var(--bd);border-radius:12px;padding:10px 12px;margin-top:10px}.plan.mejor{border-color:var(--ok);box-shadow:0 0 0 1px var(--ok)}
+.plan h4{margin:0 0 6px;font-size:15px}.plan .ped{margin-top:6px;font-size:13.5px}.plan .ped a{display:block;color:var(--tx)}
 .ml-vig{font-size:12px;font-weight:800;color:var(--mut);text-transform:uppercase;letter-spacing:.04em;margin:12px 0 2px}
 .av-otros{font-size:12.5px;color:var(--mut);margin-left:2px}
 .av.es-nuevo .res{box-shadow:0 0 0 2px var(--ac);background:var(--ac2)}
@@ -411,7 +415,10 @@ svg.graf-svg{width:100%;height:auto;display:block}
 </section>
 
 <section id="t-seguir" class="oculto">
-  <details class="card" id="ml-det" open style="margin-top:0"><summary>📋 Mi lista <span class="n" id="ml-n"></span></summary><div id="ml"></div></details>
+  <details class="card" id="ml-det" open style="margin-top:0"><summary>📋 Mi lista <span class="n" id="ml-n"></span></summary>
+    <div id="ml-rebajas"></div><div id="ml"></div>
+    <div class="acciones" id="ml-compra-b" style="display:none"><button type="button" id="ml-compra-ir">🧺 Mejor compra de los marcados</button></div>
+    <div id="ml-compra"></div></details>
   <details class="card" id="sf-det" style="margin-top:0">
     <summary id="sf-tit">＋ Vigilar una búsqueda nueva</summary>
     <form id="sf">
@@ -1210,7 +1217,16 @@ $('sf').onsubmit=async e=>{e.preventDefault();
   aviso(s&&s.revisando?'Guardada. Se está revisando: si has cambiado la búsqueda o sus filtros, al terminar se revisa otra vez con los cambios':'Búsqueda vigilada guardada');};
 let histAmz={};     // {id de vigilada: productos con su histórico de Amazon (camelcamelcamel) ya leído}
 // «Mi lista»: una línea por juego, con su mejor oferta de la última revisión, el mínimo visto y tu objetivo
-let miLista=[];
+let miLista=[],marcados=new Set();
+// Compra conjunta: la forma más barata de comprar los juegos marcados, con el envío de cada tienda
+async function mejorCompra(){const r=await api('compra',{grupos:[...marcados]});
+  if(!Array.isArray(r)||!r.length){$('ml-compra').innerHTML='<p class="mut">No hay ofertas para esos juegos.</p>';return;}
+  const nom=g=>{const p=miLista.find(x=>x.grupo===g);return p?tituloProducto(p.titulos.map(t=>({titulo:t}))):g;};
+  $('ml-compra').innerHTML=r.slice(0,3).map((pl,i)=>`<div class="plan ${i?'':'mejor'}"><h4>${i?'Alternativa':'✅ Lo más barato'}: ${euro(pl.total)} <span class="mut" style="font-weight:600">(envío ${pl.envio>0?euro(pl.envio):'gratis'}${pl.desconocido.length?', en parte estimado':''})</span></h4>
+    ${pl.pedidos.map(o=>`<div class="ped"><b>${esc(nombreT(o.tienda))}</b> · ${o.juegos.length} juego${o.juegos.length>1?'s':''} · ${euro(o.subtotal)} + ${o.envio>0?euro(o.envio)+' envío':'envío gratis'}${pl.desconocido.includes(o.tienda)?' <span class="mut">(envío estimado: pon el suyo en Ajustes)</span>':''}
+      ${o.juegos.map(j=>`<a href="${esc(j.url)}" target="_blank" rel="noopener">· ${esc(nom(j.grupo))} — ${euro(j.precio)} ↗</a>`).join('')}</div>`).join('')}</div>`).join('');}
+async function cargaRebajas(){let c;try{c=await api('rebajas');}catch(e){return;}
+  $('ml-rebajas').innerHTML=c&&c.nombre?`<div class="ml-reb">🏷️ ${c.ya?`Estás en <b>${esc(c.nombre)}</b>: buen momento para revisar precios.`:`Dentro de ${c.dias} día${c.dias===1?'':'s'} empieza <b>${esc(c.nombre)}</b>: si no corre prisa, quizá convenga esperar.`}</div>`:'';}
 // ¿Buen momento? El mejor precio de ahora frente a lo que se le ha visto (su precio habitual y su mínimo)
 function momento(p){const ahora=p.mejor.precio;
   if(p.minimo!=null&&ahora<=p.minimo+0.01)return '🟢 el precio más bajo que se le ha visto';
@@ -1223,16 +1239,19 @@ async function cargaMiLista(){let l;try{l=await api('milista');}catch(e){return;
   $('ml').innerHTML=l.map((p,i)=>{const nombre=tituloProducto(p.titulos.map(t=>({titulo:t}))),m=p.mejor,tot=p.con_envio&&m.envio!=null?m.total:m.precio;
     const falta=p.objetivo!=null?tot-p.objetivo:null;
     const cab=p.vigilada!==vig?`<div class="ml-vig">${esc(p.vigilada)}${p.activa?'':' · en pausa'}</div>`:'';vig=p.vigilada;
-    return cab+`<div class="ml-fila"><div class="ml-info"><b>${esc(nombre)}</b>
+    return cab+`<div class="ml-fila"><input type="checkbox" data-mlc="${esc(p.grupo)}" ${marcados.has(p.grupo)?'checked':''} aria-label="Marcar para la compra conjunta"><div class="ml-info"><b>${esc(nombre)}</b>
       <small><a href="${esc(m.url)}" target="_blank" rel="noopener">${esc(nombreT(m.tienda))} ↗</a>${p.tiendas>1?` · ${p.tiendas} tiendas`:''}${p.minimo!=null?` · mínimo visto ${euro(p.minimo)}`:''}</small>
       <small>${momento(p)}</small>
       <small>${p.objetivo!=null?(falta<=0?`<span class="ml-ok">✅ por debajo de tu objetivo de ${euro(p.objetivo)}</span>`:`🎯 ${euro(p.objetivo)}${p.objetivo_propio?' (de este juego)':''} · faltan ${euro(falta)}`):'sin objetivo'}</small></div>
       <div class="ml-pr">${euro(tot)}${p.con_envio&&m.envio!=null?'<small>con envío</small>':m.envio!=null?`<small>${m.envio>0?'+'+euro(m.envio)+' envío':'envío gratis'}</small>`:''}</div>
       <div class="ml-acc"><button type="button" class="sec mini" data-mlh="${i}" title="Historial: el mejor precio en todas tus tiendas">📈</button><button type="button" class="sec mini" data-mlo="${i}" title="Tu precio objetivo para este juego">🎯</button></div></div>`;}).join('');
+  $('ml').querySelectorAll('[data-mlc]').forEach(b=>b.onchange=()=>{b.checked?marcados.add(b.dataset.mlc):marcados.delete(b.dataset.mlc);
+    $('ml-compra-b').style.display=marcados.size>1?'':'none';$('ml-compra').innerHTML='';});
+  $('ml-compra-b').style.display=marcados.size>1?'':'none';$('ml-compra-ir').onclick=mejorCompra;
   $('ml').querySelectorAll('[data-mlh]').forEach(b=>b.onclick=()=>{const p=miLista[+b.dataset.mlh];abreHist(p.mejor.url,tituloProducto(p.titulos.map(t=>({titulo:t}))),p.mejor.tienda,p.grupo);});
   $('ml').querySelectorAll('[data-mlo]').forEach(b=>b.onclick=async()=>{const p=miLista[+b.dataset.mlo];
     await pideObjetivo([{grupo:p.grupo,titulo:tituloProducto(p.titulos.map(t=>({titulo:t}))),precio:p.mejor.precio,objetivo_producto:p.objetivo_propio?p.objetivo:null}]);cargaMiLista();});}
-async function cargaSeg(){cargaMiLista();if(!$('s-id').value)pintaSin();const [l,h]=await Promise.all([api('seguimientos'),api('historico_vigiladas').catch(()=>({}))]);
+async function cargaSeg(){cargaMiLista();cargaRebajas();if(!$('s-id').value)pintaSin();const [l,h]=await Promise.all([api('seguimientos'),api('historico_vigiladas').catch(()=>({}))]);
   histAmz=h&&!h.error?h:{};pintaSeg(l);}
 const fechaCorta=f=>f?f.split('-').reverse().join('/'):'';
 function histAmzResumen(s){const it=histAmz[s.id]||[];if(!it.length)return '';
