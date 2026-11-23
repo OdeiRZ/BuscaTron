@@ -3,6 +3,19 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.22.0] - 2026-11-23
+
+### Añadido
+- **Precio final con envío:** BuscaTron apunta el envío que anuncia cada tienda en su página de resultados («envío gratis a partir de 49 €»), sin peticiones extra; lo que pongas tú en Ajustes manda. Las vigiladas con «con envío incluido» (activado en las tuyas) avisan por precio + envío, y Avisos muestra el envío de cada oferta.
+- **Mi lista** (arriba de Vigiladas): una línea por juego con su mejor oferta, en cuántas tiendas está, el mínimo visto y cuánto falta para tu objetivo; 📈 historial del juego en todas tus tiendas y 🎯 objetivo propio. En Avisos, 📈 y 🎯 también por juego.
+- **Tiendas que no quieres en una vigilada:** no se consultan en sus revisiones ni avisan (siguen en lo demás).
+- **Aviso cuando vuelve el stock** de algo que estaba agotado (cerca de tu objetivo). Los agotados se apuntan en el historial para saberlo.
+- **Compartir desde el móvil:** con la app instalada, selecciona el texto de la tienda y «Compartir» → BuscaTron abre «Pegar resultados» con el texto y la tienda ya puestos.
+
+### Cambiado
+- Las revisiones se saltan las tiendas que no han tenido ese juego en sus 4 últimas consultas (y vuelven a mirar una vez por semana): menos tiempo y menos peticiones. Tus búsquedas las consultan todas.
+- Kipmion y Tablerum (no responden nunca), y las tiendas bloqueadas, pasan a «solo enlace»: ninguna petición.
+
 ## [0.21.2] - 2026-11-22
 
 ### Corregido
