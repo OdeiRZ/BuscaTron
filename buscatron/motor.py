@@ -766,6 +766,32 @@ def historial_de(url):
     return {"url": url, "titulo": filas[-1]["titulo"] if filas else "", "tienda": filas[-1]["tienda"] if filas else "", "puntos": pts}
 
 
+VECES_SIN = 4          # consultas seguidas sin el juego para saltarse esa tienda en las revisiones
+VUELVE_A_MIRAR = 7     # días: entonces se vuelve a consultar una vez, por si lo han traído
+
+
+def tiendas_sin(consulta, ahora=None):
+    """Tiendas que en sus últimas VECES_SIN consultas de esta búsqueda respondieron sin el juego (y nunca lo tuvieron en
+    14 días). Las revisiones automáticas se las saltan hasta que pasen VUELVE_A_MIRAR días desde la última vez: menos
+    tiempo y menos peticiones. Las búsquedas que haces tú las consultan siempre."""
+    ahora = ahora or time.time()
+    out = set()
+    with bd.conecta() as c:
+        filas = c.execute("SELECT host, ts, encontrados, error FROM estado_tiendas WHERE consulta=? AND ts>? ORDER BY ts DESC",
+                          (consulta, ahora - 14 * 86400)).fetchall()
+    por = {}
+    for f in filas:
+        por.setdefault(f["host"], []).append(f)
+    for h, fs in por.items():
+        if any(f["encontrados"] for f in fs):
+            continue
+        ultimas = fs[:VECES_SIN]
+        if len(ultimas) == VECES_SIN and all(f["error"] == SIN_COINCIDENCIAS for f in ultimas) \
+                and ahora - ultimas[0]["ts"] < VUELVE_A_MIRAR * 86400:
+            out.add(h)
+    return out
+
+
 def buscar(consulta, incluir="", excluir="", ocultar_agotados=True, hosts=None, pmin=None, pmax=None, seg_id=None,
            castellano=True, preventas=False, con_envio=False, segunda_mano=False, abierta=False, region="es", paginas=None, idioma=None, alguna=""):
     """Devuelve (resultados ordenados por precio, informe por tienda).
@@ -786,6 +812,9 @@ def buscar(consulta, incluir="", excluir="", ocultar_agotados=True, hosts=None, 
     # «solo enlace» aunque no tenga dirección de búsqueda (su enlace es la portada): si no, se consultaba igual
     manuales = [t for t in activas if t.get("manual") or cfg.nunca(t["host"])]
     activas = [t for t in activas if t not in manuales]
+    if seg_id is not None:            # revisión de una vigilada: sin las tiendas que nunca tienen este juego
+        sin_el = tiendas_sin(consulta)
+        activas = [t for t in activas if t["host"] not in sin_el]
     por_host = {t["host"]: t for t in lista}
     inc = extract.normaliza(incluir).split()
     frases = [f for f in (extract.normaliza(x).strip() for x in (alguna or "").split(",")) if f]   # basta con una (p. ej. nombres de campañas)
