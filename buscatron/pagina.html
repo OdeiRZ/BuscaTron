@@ -1441,7 +1441,7 @@ async function cargaAjustes(){cargaServicio();const a=await api('ajustes');$('a-
   $('a-pin').value=a.pin;$('a-pag').value=a.paginas||3;cargaRed();cargaArranque();cargaEstado();cargaOcultos();cargaObjetivos();}
 async function cargaEstado(){let l=await api('estado_tiendas',{});if(!Array.isArray(l))return;l=porNombre(l,e=>e.nombre||e.host);
   // arriba solo las que piden atención; las que van bien (o las miras tú), plegadas
-  const bien=e=>e.manual||(e.activa&&e.consultas&&e.con_resultados&&!e.sugerir_desactivar);
+  const bien=e=>!e.bloqueada&&(e.manual||(e.activa&&e.consultas&&e.con_resultados&&!e.sugerir_desactivar));   // las que te bloquearon, siempre a la vista
   const envio=e=>!e.envio?'':`<br>Envío${e.envio.suyo?' (según su web)':''}: ${e.envio.coste!=null?euro(e.envio.coste):'?'}${e.envio.gratis_desde!=null?' · gratis desde '+euro(e.envio.gratis_desde):''}`;
   const fila=e=>`<div class="est"><b>${esc(e.nombre)}${e.bloqueada?' <span class="tag ko">🔒 te bloqueó: sin peticiones</span>':e.activa?'':' <span class="tag">desactivada</span>'}</b>
     <span class="mut">${e.manual?'La miras tú: no se consulta sola':e.consultas?`${e.con_resultados} de ${e.consultas} consultas con resultados${e.ultimo_ok?' · último resultado '+relativo(e.ultimo_ok):''}`:'Todavía sin consultas'}${e.sugerir_desactivar?(/^(no tiene nada|tiene productos)/.test(e.ultimo_error||'')
