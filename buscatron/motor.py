@@ -167,7 +167,7 @@ NO_JUEGO = re.compile(r"\b(zapatillas?|deportivas|camisetas?|sudaderas?|calcetin
 TIPOS = ("juego", "expansion", "complemento", "accesorio", "lote")
 # Varios productos juntos («Pack 3 expansiones», «Lote Marvel Champions + Civil War», «Bundle»): no es el juego suelto
 LOTE = re.compile(r"\b(lote|bundle|combo|megapack)\b|\bpack\s+(?:de\s+)?\d+\b|\b\d+\s+(?:expansiones|juegos)\b|\bpack\s+(?:de\s+)?expansiones\b")
-ACCESORIO = re.compile(r"\b(fundas?|sleeves?|tapetes?|playmat|game ?mat|mat|neopreno|organizador|inserto|insert|deck ?box|portacartas|protectores)\b")
+ACCESORIO = re.compile(r"\b(fundas?|sleeves?|tapetes?|playmat|game ?mat|mat|neopreno|organizador|inserto|insert|deck ?box|portacartas|protectores|dividers?|separadores|divisores)\b")
 COMPLEMENTO = re.compile(r"\b(add ?on|addon|character|promos?|mini ?expansion)\b")
 # Los packs de héroe, villano, escenario o campaña son expansiones oficiales (Marvel Champions…), digan o no «expansión».
 EXPANSION = re.compile(r"\b(expansion|expansiones|ampliacion|(?:pack|paquete)s? (?:de )?(?:heroe|villano|escenario|escenico|campana|personajes?)|(?:hero|villain|scenario|campaign) pack)\b")

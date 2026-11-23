@@ -12,7 +12,7 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y e
 - **Mi lista:** casilla, nombre y precio en la primera línea; tiendas, mínimo, momento y objetivo debajo a todo el ancho; 📈 y 🎯 junto al precio. Se lee sin tantos saltos de línea.
 
 ### Corregido
-- Los tapetes («Game Mat», «Tapetes») cuentan como accesorios.
+- Los tapetes («Game Mat», «Tapetes») y los separadores («dividers») cuentan como accesorios.
 
 ## [0.24.0] - 2026-11-23
 
