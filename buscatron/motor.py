@@ -167,7 +167,7 @@ NO_JUEGO = re.compile(r"\b(zapatillas?|deportivas|camisetas?|sudaderas?|calcetin
 TIPOS = ("juego", "expansion", "complemento", "accesorio", "lote")
 # Varios productos juntos («Pack 3 expansiones», «Lote Marvel Champions + Civil War», «Bundle»): no es el juego suelto
 LOTE = re.compile(r"\b(lote|bundle|combo|megapack)\b|\bpack\s+(?:de\s+)?\d+\b|\b\d+\s+(?:expansiones|juegos)\b|\bpack\s+(?:de\s+)?expansiones\b")
-ACCESORIO = re.compile(r"\b(fundas?|sleeves?|tapete|playmat|neopreno|organizador|inserto|insert|deck ?box|portacartas|protectores)\b")
+ACCESORIO = re.compile(r"\b(fundas?|sleeves?|tapetes?|playmat|game ?mat|mat|neopreno|organizador|inserto|insert|deck ?box|portacartas|protectores)\b")
 COMPLEMENTO = re.compile(r"\b(add ?on|addon|character|promos?|mini ?expansion)\b")
 # Los packs de héroe, villano, escenario o campaña son expansiones oficiales (Marvel Champions…), digan o no «expansión».
 EXPANSION = re.compile(r"\b(expansion|expansiones|ampliacion|(?:pack|paquete)s? (?:de )?(?:heroe|villano|escenario|escenico|campana|personajes?)|(?:hero|villain|scenario|campaign) pack)\b")
@@ -607,7 +607,7 @@ def grupos(titulos, consulta, alguna=""):
     frases = [f for f in (extract.normaliza(x).strip() for x in (alguna or "").split(",")) if f]
     palabras = set(extract.normaliza(consulta).split())
     frases = [f for f in frases if not set(f.split()) <= palabras]
-    return [{"grupo": grupo_de(t, frases), "clave": clave_producto(t)} for t in titulos]
+    return [{"grupo": grupo_de(t, frases), "clave": clave_producto(t), "tipo": tipo_de(t)} for t in titulos]
 
 
 def pvp_de(precios):

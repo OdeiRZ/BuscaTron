@@ -161,12 +161,14 @@ summary:has(.n:not(:empty))::after{margin-left:8px}
 @media(max-width:380px){.buscador button{padding:0 14px}}
 .rapidas{display:flex;flex-wrap:wrap;gap:0 18px;margin-top:6px}
 .rapidas .sw{min-height:40px;margin:0}
+.atajos-f{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}.atajos-f button{flex:1 1 140px}
 .t-resumen{display:flex;align-items:center;gap:8px;flex-wrap:nowrap;margin:12px 0 0;padding:8px 8px 8px 12px;border-radius:12px;background:var(--bg2);font-size:13.5px;color:var(--mut)}
 .t-resumen>span{flex:1;min-width:0}
 .t-resumen b{color:var(--tx);white-space:nowrap}
 .t-resumen button{margin-left:auto;flex:0 0 auto;padding:0 10px}
 .cuenta{font-size:13px;color:var(--mut);margin:2px 4px 10px;font-weight:600}
 .orden-res{margin:0 0 12px}
+.orden-res.dos{display:grid;grid-template-columns:1.5fr 1fr;gap:10px}
 .vacio-msg{text-align:center;padding:34px 16px;color:var(--mut)}
 .vacio-msg .em{font-size:44px;display:block;margin-bottom:8px}
 .carga{display:flex;align-items:center;gap:14px;color:var(--mut)}
@@ -273,7 +275,10 @@ summary:has(.n:not(:empty))::after{margin-left:8px}
 .motivo{margin-top:7px;font-size:13px;font-weight:700;color:var(--ok);line-height:1.4}
 .av .t{font-weight:700}
 .av-envio{display:block;font-size:11.5px;font-weight:600;color:var(--mut);text-align:right;margin-top:2px}
-.ml-fila{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--bd)}
+.ml-fila{display:grid;grid-template-columns:auto 1fr auto;grid-template-areas:"chk info pr" "chk info acc";align-items:start;column-gap:10px;row-gap:6px;padding:12px 0;border-top:1px solid var(--bd)}
+.ml-fila>input{grid-area:chk;margin-top:2px}.ml-fila .ml-info{grid-area:info}.ml-fila .ml-pr{grid-area:pr}.ml-fila .ml-acc{grid-area:acc;justify-content:flex-end}
+@media(max-width:600px){.ml-fila{grid-template-columns:auto 1fr auto;grid-template-areas:"chk info pr" "info2 info2 acc"}
+  .ml-fila .ml-info{display:contents}.ml-info b{grid-area:info}.ml-info .ml-sub{grid-area:info2}}
 .ml-fila:first-child{border-top:0}
 .ml-info{flex:1;min-width:0}.ml-info b{display:block;font-size:14.5px}.ml-info small{display:block;color:var(--mut);font-size:12.5px;margin-top:2px}
 .ml-pr{text-align:right;font-family:var(--f-tit);font-weight:800;white-space:nowrap}.ml-pr small{display:block;font-family:inherit;font-weight:600;font-size:11.5px;color:var(--mut)}
@@ -402,8 +407,8 @@ svg.graf-svg{width:100%;height:auto;display:block}
       </div>
     </details>
 
-    <p class="t-resumen"><span>🏪 Buscando en <b id="n-tiendas2">tus tiendas</b></span><button type="button" class="sec mini" id="ir-tiendas">Gestionar tiendas</button></p>
-    <p class="t-resumen"><span>🔗 Tiendas que no se consultan solas (Ferretería Ibermadrid…): miras tú y pegas lo que copies</span><button type="button" class="sec mini" id="ir-pegar">📋 Pegar resultados</button></p>
+    <div class="atajos-f"><button type="button" class="sec mini" id="ir-tiendas">🏪 <b id="n-tiendas2">tus tiendas</b></button>
+      <button type="button" class="sec mini" id="ir-pegar" title="Tiendas que no se consultan solas (Dynos, Ferretería…): miras tú y pegas lo que copies">📋 Pegar resultados</button></div>
   </form>
   <details class="card oculto" id="rec" style="margin-top:0">
     <summary>🕘 Búsquedas recientes <span class="n" id="n-rec"></span></summary>
@@ -710,7 +715,12 @@ function masBarato(conE){let k=-1,m=Infinity;   // la tarjeta más barata (con s
 // «Resultados que se muestran»: se recuerda en este navegador; por defecto 30 (con 10 solo cabían los packs pequeños)
 try{const v=localStorage.getItem('bt-top');if(v)$('top').value=v;}catch(e){}
 $('top').addEventListener('change',()=>{try{localStorage.setItem('bt-top',$('top').value)}catch(e){}if($('lista-res'))pintaLista();});
-function pintaLista(){const c=$('lista-res');if(!c)return;const N=Number($('top').value)||30,conE=ultimoBody.con_envio;
+const VER_TIPO={juegos:'Juegos',todo:'Todo',accesorios:'Accesorios y lotes'};   // «Juegos»: juego base, expansiones y complementos
+let verTipo='juegos';try{const v=localStorage.getItem('bt-ver-tipo');if(v in VER_TIPO)verTipo=v;}catch(e){}
+function tipoVisible(x){const t=x.tipo||'juego';
+  return verTipo==='todo'||(verTipo==='juegos'?['juego','expansion','complemento'].includes(t):['accesorio','lote'].includes(t));}
+function pintaLista(){const c=$('lista-res');if(!c)return;const todos=ultimos;ultimos=todos.filter(tipoVisible);try{pintaLista2(c);}finally{ultimos=todos;}}
+function pintaLista2(c){const N=Number($('top').value)||30,conE=ultimoBody.con_envio;
   let cuenta;const que={barato:'más barato',caro:'más caro',nombre:'por nombre',tienda:'por tienda'}[ordenRes];
   if($('agrupar').checked){pintados=ordenaGrupos(agrupa(ultimos),conE).slice(0,N);idxBarato=masBarato(conE);c.innerHTML=pintados.map((g,i)=>tarjeta(g[0],i,conE,g.slice(1))).join('');
     cuenta=`${pintados.length} producto${pintados.length===1?'':'s'}${ordenRes==='barato'||ordenRes==='caro'?' '+que+(pintados.length===1?'':'s'):', '+que}, con ${ofertas(ultimos.length)} de ${ultimoTotal} encontrada${ultimoTotal===1?'':'s'}${conE?' (precio con envío)':''}`;}
@@ -765,9 +775,9 @@ function tarjeta(x,i,conEnvio,otros=[]){
     <div class="info"><div class="t">${esc(x.titulo)}</div>
     <div class="meta"><span class="tag">${esc(nombreT(x.tienda))}</span>${idiomaTag(x)}${i===idxBarato?'<span class="tag ok">Más barato</span>':''}${x.descuento?`<span class="tag ok">−${x.descuento} % sobre su precio de mercado (${euro(x.pvp)})</span>`:''}${x.minimo?'<span class="tag ok">Mínimo histórico</span>':''}${sm?'<span class="tag">Segunda mano</span>':''}${x.estado?`<span class="tag">${esc(x.estado)}</span>`:''}${x.importado?`<span class="tag pre">Pegado a mano ${relativo(x.importado)}</span>`:''}${x.preventa?'<span class="tag pre">Preventa</span>':''}${x.agotado?'<span class="tag ko">Agotado</span>':''}${web?'<span class="tag pre">Web fuera de tu lista</span>':''}${x.objetivo_producto!=null?`<span class="tag ${x.precio<=x.objetivo_producto?'ok':''}">🎯 Tu objetivo: ${euro(x.objetivo_producto)}</span>`:''}</div></div></a>
     <button type="button" class="graf" data-g="${i}" title="Historial de precios" aria-label="Ver historial de precios">📈<small>Precio</small></button></div>
-    <div class="accs"><button type="button" data-obj="${i}" class="${x.objetivo_producto!=null?'on':''}" title="Avisarme cuando baje a un precio">🎯 ${x.objetivo_producto!=null?euro(x.objetivo_producto):'Avisarme a…'}</button>
+    <div class="accs"><button type="button" data-obj="${i}" class="${x.objetivo_producto!=null?'on':''}" title="Avisarme cuando baje a un precio">🎯 ${x.objetivo_producto!=null?euro(x.objetivo_producto):'Objetivo'}</button>
     <button type="button" data-vig="${i}" title="Crear una búsqueda vigilada de este juego">👁️ Vigilar</button>
-    <button type="button" data-ign="${i}" class="no" title="Ya lo tengo / no me interesa: ocultarlo siempre">🚫 No me interesa</button></div>`;
+    <button type="button" data-ign="${i}" class="no" title="Ya lo tengo / no me interesa: ocultarlo siempre">🚫 Ocultar</button></div>`;
   const nt=new Set(otros.map(o=>o.tienda)).size,    // tiendas distintas: Amazon con 40 ofertas es una sola tienda
     cuantas=nt===otros.length?`${nt} tienda${nt===1?'':'s'} más`:`${otros.length} ofertas más en ${nt} tienda${nt===1?'':'s'}`;
   const mas=otros.length?`<details class="otras"><summary>${cuantas}, desde ${euro(Math.min(...otros.map(o=>conEnvio&&o.envio!=null?o.total:o.precio)))}</summary>${otros.map(o=>`<a href="${esc(o.url)}" target="_blank" rel="noopener"><b>${euro(conEnvio&&o.envio!=null?o.total:o.precio)}</b><span>${esc(nombreT(o.tienda))}${o.agotado?' · agotado':''}${o.preventa?' · preventa':''}${o.importado?' · pegado a mano':''}${o.estado?' · '+esc(o.estado):''}</span></a>`).join('')}</details>`:'';
@@ -787,7 +797,8 @@ function muestra(r,body,guardada){
   const guard=guardada?`<div class="card guardada"><span>🕘 Búsqueda guardada ${relativo(guardada)}: los precios pueden haber cambiado.</span><button type="button" class="sec mini" id="actualizar">Repetir</button></div>`:'';
   // La tarjeta de las tiendas «solo enlace» va al final: con muchos resultados no se veía, así que arriba hay un atajo
   const atajo=manuales.length?`<div class="card guardada"><span>🔗 ${manuales.length} tienda${manuales.length>1?'s':''} que tienes que mirar tú (con «📋 Pegar resultados»)</span><button type="button" class="sec mini" id="ir-manuales">Ir ↓</button></div>`:'';
-  $('out').innerHTML=guard+atajo+(ultimos.length?`<div class="cuenta" id="cuenta-res"></div><div class="orden-res"><label for="orden-res">Ordenar por</label><select id="orden-res">${Object.entries(ORDEN_RES).map(([k,v])=>`<option value="${k}" ${k===ordenRes?'selected':''}>${v}</option>`).join('')}</select></div><div id="lista-res"></div>
+  $('out').innerHTML=guard+atajo+(ultimos.length?`<div class="cuenta" id="cuenta-res"></div><div class="orden-res dos"><div><label for="orden-res">Ordenar por</label><select id="orden-res">${Object.entries(ORDEN_RES).map(([k,v])=>`<option value="${k}" ${k===ordenRes?'selected':''}>${v}</option>`).join('')}</select></div>
+    <div><label for="ver-tipo">Mostrar</label><select id="ver-tipo">${Object.entries(VER_TIPO).map(([k,v])=>`<option value="${k}" ${k===verTipo?'selected':''}>${v}</option>`).join('')}</select></div></div><div id="lista-res"></div>
     <div class="acciones"><button type="button" class="sec" id="vigilar">👁️ Vigilar esta búsqueda</button></div>`
     :`<div class="card vacio-msg"><span class="em">🤷</span>Ningún resultado con esos filtros.<br>Prueba a quitar palabras de «Descartar», a ampliar el precio o a mostrar los agotados.</div>`)+
     (nuevas.length?`<div class="card"><h2>🆕 Tiendas que no tienes en tu lista</h2><p class="ayuda" style="margin-top:0">No están en tu lista de tiendas. Añádelas para que se consulten en todas tus búsquedas.</p><div class="manuales">${nuevas.map(h=>`<button type="button" class="sec mini" data-add="${esc(h)}">＋ ${esc(h)}</button>`).join('')}</div></div>`:'')+
@@ -795,6 +806,7 @@ function muestra(r,body,guardada){
     (fallos.length?`<details class="card"><summary>Tiendas sin resultados o con problemas <span class="n">${fallos.length}</span></summary>${fallos.join('')}</details>`:'');
   if($('vigilar'))$('vigilar').onclick=vigilar;
   if($('ir-manuales'))$('ir-manuales').onclick=()=>$('manuales').scrollIntoView({behavior:'smooth',block:'start'});
+  if($('ver-tipo'))$('ver-tipo').onchange=()=>{verTipo=$('ver-tipo').value;try{localStorage.setItem('bt-ver-tipo',verTipo)}catch(e){}pintaLista();};
   if($('orden-res'))$('orden-res').onchange=()=>{ordenRes=$('orden-res').value;try{localStorage.setItem('bt-orden-res',ordenRes)}catch(e){}pintaLista();};
   if($('actualizar'))$('actualizar').onclick=()=>$('f').requestSubmit();
   if(guardada&&manuales.length)refrescaPegados(manuales.map(([h])=>h));     // solo las tiendas de esa búsqueda
@@ -1161,7 +1173,7 @@ async function refrescaPegados(hosts){try{
   const lista=ultimos.filter(x=>!hosts.includes(x.tienda)).concat(r2.resultados);ultimos=lista;
   const g=await api('agrupar',{q:body.q,alguna:body.alguna||'',titulos:lista.map(x=>x.titulo)});
   if(body!==ultimoBody||ultimos!==lista)return;          // otra búsqueda u otro pegado mientras tanto: manda el último
-  if(g.grupos)lista.forEach((x,i)=>{x.grupo=g.grupos[i].grupo;x.clave=g.grupos[i].clave;});
+  if(g.grupos)lista.forEach((x,i)=>{x.grupo=g.grupos[i].grupo;x.clave=g.grupos[i].clave;x.tipo=g.grupos[i].tipo;});
   ultimos.sort((a,b)=>(a.agotado-b.agotado)||(body.con_envio?a.total-b.total:a.precio-b.precio));
   if(ultimoId)api('busquedas',{accion:'actualizar',id:ultimoId,resultados:ultimos});
   pintaLista();
@@ -1239,10 +1251,10 @@ async function cargaMiLista(){let l;try{l=await api('milista');}catch(e){return;
   $('ml').innerHTML=l.map((p,i)=>{const nombre=tituloProducto(p.titulos.map(t=>({titulo:t}))),m=p.mejor,tot=p.con_envio&&m.envio!=null?m.total:m.precio;
     const falta=p.objetivo!=null?tot-p.objetivo:null;
     const cab=p.vigilada!==vig?`<div class="ml-vig">${esc(p.vigilada)}${p.activa?'':' · en pausa'}</div>`:'';vig=p.vigilada;
-    return cab+`<div class="ml-fila"><input type="checkbox" data-mlc="${esc(p.grupo)}" ${marcados.has(p.grupo)?'checked':''} aria-label="Marcar para la compra conjunta"><div class="ml-info"><b>${esc(nombre)}</b>
+    return cab+`<div class="ml-fila"><input type="checkbox" data-mlc="${esc(p.grupo)}" ${marcados.has(p.grupo)?'checked':''} aria-label="Marcar para la compra conjunta"><div class="ml-info"><b>${esc(nombre)}</b><div class="ml-sub">
       <small><a href="${esc(m.url)}" target="_blank" rel="noopener">${esc(nombreT(m.tienda))} ↗</a>${p.tiendas>1?` · ${p.tiendas} tiendas`:''}${p.minimo!=null?` · mínimo visto ${euro(p.minimo)}`:''}</small>
       <small>${momento(p)}</small>
-      <small>${p.objetivo!=null?(falta<=0?`<span class="ml-ok">✅ por debajo de tu objetivo de ${euro(p.objetivo)}</span>`:`🎯 ${euro(p.objetivo)}${p.objetivo_propio?' (de este juego)':''} · faltan ${euro(falta)}`):'sin objetivo'}</small></div>
+      <small>${p.objetivo!=null?(falta<=0?`<span class="ml-ok">✅ por debajo de tu objetivo de ${euro(p.objetivo)}</span>`:`🎯 ${euro(p.objetivo)}${p.objetivo_propio?' (de este juego)':''} · faltan ${euro(falta)}`):'sin objetivo'}</small></div></div>
       <div class="ml-pr">${euro(tot)}${p.con_envio&&m.envio!=null?'<small>con envío</small>':m.envio!=null?`<small>${m.envio>0?'+'+euro(m.envio)+' envío':'envío gratis'}</small>`:''}</div>
       <div class="ml-acc"><button type="button" class="sec mini" data-mlh="${i}" title="Historial: el mejor precio en todas tus tiendas">📈</button><button type="button" class="sec mini" data-mlo="${i}" title="Tu precio objetivo para este juego">🎯</button></div></div>`;}).join('');
   $('ml').querySelectorAll('[data-mlc]').forEach(b=>b.onchange=()=>{b.checked?marcados.add(b.dataset.mlc):marcados.delete(b.dataset.mlc);

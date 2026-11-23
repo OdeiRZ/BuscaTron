@@ -3,6 +3,17 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.25.0] - 2026-11-24
+
+### Cambiado (interfaz en el móvil)
+- **Resultados:** nuevo desplegable «Mostrar» (Juegos / Todo / Accesorios y lotes), por defecto solo juegos, expansiones y complementos: las fundas de 2,50 € tapaban los juegos al buscar «marvel champions». Se recuerda en el navegador.
+- **Tarjetas de resultado:** botones cortos que caben en el móvil («🎯 Objetivo · 👁️ Vigilar · 🚫 Ocultar»).
+- **Buscar:** las dos cajas de texto de debajo del formulario son ahora dos botones en una fila («🏪 93 de 98 tiendas» y «📋 Pegar resultados»).
+- **Mi lista:** casilla, nombre y precio en la primera línea; tiendas, mínimo, momento y objetivo debajo a todo el ancho; 📈 y 🎯 junto al precio. Se lee sin tantos saltos de línea.
+
+### Corregido
+- Los tapetes («Game Mat», «Tapetes») cuentan como accesorios.
+
 ## [0.24.0] - 2026-11-23
 
 ### Añadido
