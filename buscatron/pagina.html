@@ -641,7 +641,7 @@ function pintaT(){
   $('n-tiendas2').textContent=`${act} de ${tiendas.length} tiendas`;
   const orden=porNombre(tiendas,t=>nombreT(t.host));
   $('chips').innerHTML=orden.map(t=>`<button type="button" class="chip ${t.activa?'on':''}" data-h="${esc(t.host)}">${esc(nombreT(t.host))}</button>`).join('');
-  document.querySelectorAll('#chips .chip').forEach(c=>c.onclick=()=>{const t=tiendas.find(x=>x.host===c.dataset.h);t.activa=!t.activa;guardaActivas();});
+  document.querySelectorAll('#chips .chip').forEach(c=>c.onclick=()=>{const t=tiendas.find(x=>x.host===c.dataset.h);t.activa=!t.activa;guardaActivas(t);});
   $('gestion').innerHTML=orden.map(t=>`<div class="trow" data-h="${esc(t.host)}">
     <input type="text" class="tn" value="${esc(t.nombre||'')}" placeholder="Nombre (${esc(t.host.replace(/^www\./,''))})" aria-label="Nombre">
     <input type="text" class="tu" value="${esc(t.plantilla||t.host)}" aria-label="Dirección o URL de búsqueda" autocapitalize="none" inputmode="url" spellcheck="false">
@@ -670,7 +670,7 @@ function filtraT(){const f=($('t-filtro').value||'').trim().toLowerCase().normal
 $('t-filtro').addEventListener('input',filtraT);
 $('ir-tiendas').onclick=()=>{ir('ajustes');setTimeout(()=>$('c-tiendas').scrollIntoView({block:'start',behavior:'smooth'}),60);};
 async function cargaT(){tiendas=await api('tiendas');pintaT();}
-async function guardaActivas(){const act=tiendas.filter(t=>t.activa).map(t=>t.host);tiendas=await api('tiendas',{activas:act});pintaT();}
+async function guardaActivas(tocada){const act=tiendas.filter(t=>t.activa).map(t=>t.host);tiendas=await api('tiendas',{activas:act,reactivar:tocada&&tocada.activa?tocada.host:''});pintaT();}
 $('add').onclick=async()=>{const u=$('t-url').value.trim();if(!u){$('t-url').focus();return;}
   const r=await api('tiendas',{anadir:u,nombre:$('t-nombre').value,manual:$('t-manual').checked,tipo:$('t-sm').checked?'segunda_mano':undefined});
   if(r.error){aviso(r.error);return;} tiendas=r;pintaT();$('t-url').value='';$('t-nombre').value='';$('t-manual').checked=false;$('t-sm').checked=false;aviso('Tienda añadida a tu lista');};
@@ -719,7 +719,8 @@ const VER_TIPO={juegos:'Juegos',todo:'Todo',accesorios:'Accesorios y lotes'};   
 let verTipo='juegos';try{const v=localStorage.getItem('bt-ver-tipo');if(v in VER_TIPO)verTipo=v;}catch(e){}
 function tipoVisible(x){const t=x.tipo||'juego';
   return verTipo==='todo'||(verTipo==='juegos'?['juego','expansion','complemento'].includes(t):['accesorio','lote'].includes(t));}
-function pintaLista(){const c=$('lista-res');if(!c)return;const todos=ultimos;ultimos=todos.filter(tipoVisible);try{pintaLista2(c);}finally{ultimos=todos;}}
+function pintaLista(){const c=$('lista-res');if(!c)return;const todos=ultimos;ultimos=todos.filter(tipoVisible);try{pintaLista2(c);}finally{ultimos=todos;}
+  if(!todos.some(tipoVisible)&&todos.length)c.innerHTML=`<div class="card vacio-msg">Hay ${todos.length} resultado${todos.length===1?'':'s'}, pero ninguno es de los que has elegido en «Mostrar». <button type="button" class="sec mini" onclick="$('ver-tipo').value='todo';$('ver-tipo').onchange()">Mostrar todo</button></div>`;}
 function pintaLista2(c){const N=Number($('top').value)||30,conE=ultimoBody.con_envio;
   let cuenta;const que={barato:'más barato',caro:'más caro',nombre:'por nombre',tienda:'por tienda'}[ordenRes];
   if($('agrupar').checked){pintados=ordenaGrupos(agrupa(ultimos),conE).slice(0,N);idxBarato=masBarato(conE);c.innerHTML=pintados.map((g,i)=>tarjeta(g[0],i,conE,g.slice(1))).join('');
@@ -783,7 +784,7 @@ function tarjeta(x,i,conEnvio,otros=[]){
   const mas=otros.length?`<details class="otras"><summary>${cuantas}, desde ${euro(Math.min(...otros.map(o=>conEnvio&&o.envio!=null?o.total:o.precio)))}</summary>${otros.map(o=>`<a href="${esc(o.url)}" target="_blank" rel="noopener"><b>${euro(conEnvio&&o.envio!=null?o.total:o.precio)}</b><span>${esc(nombreT(o.tienda))}${o.agotado?' · agotado':''}${o.preventa?' · preventa':''}${o.importado?' · pegado a mano':''}${o.estado?' · '+esc(o.estado):''}</span></a>`).join('')}</details>`:'';
   return `<div class="gr">${tarjetaHtml}${mas}</div>`;}
 function cuerpoForm(){return {q:$('q').value,incluir:$('incluir').value,alguna:$('alguna').value,excluir:$('excluir').value,pmin:$('pmin').value,pmax:$('pmax').value,
-  top:$('top').value,sin_agotados:$('sinag').checked,castellano:$('idioma').value!=='todos',idioma:$('idioma').value,tiendas:tiendas.filter(t=>t.activa).map(t=>t.host),
+  top:$('top').value,sin_agotados:$('sinag').checked,castellano:$('idioma').value!=='todos',idioma:$('idioma').value,tiendas:tiendas.filter(t=>t.activa||t.bloqueo).map(t=>t.host),
   preventas:$('preventas').checked,con_envio:$('conenvio').checked,segunda_mano:$('segmano').checked,abierta:$('abierta').checked,region:$('region').value,paginas:$('paginas').value};}
 function aplicaParams(p){$('q').value=p.q||'';$('incluir').value=p.incluir||'';$('alguna').value=p.alguna||'';$('excluir').value=p.excluir||'';$('pmin').value=p.pmin??'';$('pmax').value=p.pmax??'';
   $('sinag').checked=p.sin_agotados!==false;$('idioma').value=p.idioma||(p.castellano===false?'todos':'castellano');
@@ -1486,7 +1487,7 @@ async function cargaEstado(){let l=await api('estado_tiendas',{});if(!Array.isAr
     +(atencion.length?atencion.filter(e=>!bloq.some(t=>t.host===e.host)).map(fila).join(''):'<p class="ok">Todas tus tiendas responden bien.</p>')
     +(ok.length?`<details id="estado-ok" ${abierto?'open':''}><summary>${ok.length} tienda${ok.length===1?'':'s'} sin problemas</summary>${ok.map(fila).join('')}</details>`:'');
   document.querySelectorAll('#estado-t [data-act]').forEach(b=>b.onclick=async()=>{const t=tiendas.find(x=>x.host===b.dataset.act);if(!t)return;
-    t.activa=!t.activa;await guardaActivas();cargaEstado();aviso(t.activa?'Tienda activada: entra en tus búsquedas':'Tienda desactivada: ya no se consulta');});}
+    t.activa=!t.activa;await guardaActivas(t);cargaEstado();aviso(t.activa?'Tienda activada: entra en tus búsquedas':'Tienda desactivada: ya no se consulta');});}
 async function cargaOcultos(){const r=await api('ignorar',{});const l=r.ignorados||[];
   $('ocultos').innerHTML=l.length?l.map(o=>`<div class="ign"><span>${esc(o.titulo)}</span><button type="button" class="sec mini" data-clave="${esc(o.clave)}">Mostrar de nuevo</button></div>`).join('')
     :'<p class="mut">No has ocultado ningún producto. Usa el botón 🚫 de un resultado.</p>';

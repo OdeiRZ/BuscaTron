@@ -3,6 +3,17 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.25.2] - 2026-11-24
+
+### Corregido (segunda revisión de código de v0.21-v0.25)
+- Una página abierta desde antes de un bloqueo ya no reactiva la tienda bloqueada al tocar otra: solo se reactiva con su propio chip.
+- «Vuelve a estar disponible» no saltaba: los agotados del listado no se apuntaban. El stock se sigue por vigilada.
+- Juegos distintos que compartían identificador («Arkham Horror» de rol y de cartas, «Time's Up! Family» y «Party»); ningún título queda sin identificador. Al recalcular, si dos objetivos coinciden queda el más reciente.
+- «Mostrar: Juegos» avisa si ha escondido todos los resultados; «Pack 2 jugadores» o «Set de 100 juegos» no son lotes.
+- Mi lista: lo pegado pasa los filtros de idioma, segunda mano y «ocultar»; la mejor oferta es con stock y según «con envío». La compra conjunta no propone agotados y respeta el «gratis desde» conocido.
+- Lo pegado de una tienda bloqueada cuenta también en las vigiladas con tiendas excluidas.
+- Si falla la copia de seguridad, la limpieza diaria sigue.
+
 ## [0.25.1] - 2026-11-24
 
 ### Corregido (revisión de código de v0.21-v0.25)

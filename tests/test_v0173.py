@@ -52,7 +52,7 @@ class ReactivarlaATuMano(ConArchivos):
     def test_quita_la_marca_de_bloqueo(self):
         from buscatron import web
         cfg.guarda([{"host": "dm.es", "activa": False, "plantilla": None, "bloqueo": {"desde": 1}}])
-        web.Handler._tiendas(web.Handler.__new__(web.Handler), {"activas": ["dm.es"]})
+        web.Handler._tiendas(web.Handler.__new__(web.Handler), {"activas": ["dm.es"], "reactivar": "dm.es"})
         t = next(x for x in cfg.carga() if x["host"] == "dm.es")
         self.assertTrue(t["activa"])
         self.assertNotIn("bloqueo", t)

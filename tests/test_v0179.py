@@ -46,7 +46,7 @@ class ReactivarAMano(unittest.TestCase):
     def test_vuelve_con_calma(self):
         lista = [{"host": "b.es", "activa": False, "bloqueo": {"desde": 1}}, {"host": "a.es", "activa": True}]
         with mock.patch.object(web.cfg, "carga", lambda: lista), mock.patch.object(web.cfg, "guarda", lambda l: None):
-            r = web.Handler._cambia_tiendas(None, {"activas": ["a.es", "b.es"]})
+            r = web.Handler._cambia_tiendas(None, {"activas": ["a.es", "b.es"], "reactivar": "b.es"})
         self.assertNotIn("bloqueo", r[0])
         self.assertGreater(r[0]["suave_hasta"], time.time() + 2 * 86400)
         self.assertNotIn("suave_hasta", r[1])

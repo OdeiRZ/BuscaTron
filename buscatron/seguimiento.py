@@ -190,7 +190,8 @@ def _motivo(c, seg, x):
                 return f"un {(1 - x['precio'] / med) * 100:.0f} % más barato que su precio habitual ({med:.2f} €)".replace(".", ",")
     # vuelve a haber stock: la última vez que se vio estaba agotado (si tiene objetivo, solo cerca de él: hasta un 15 % más)
     if not x.get("agotado") and not x.get("importado"):
-        ult = c.execute("SELECT agotado FROM precios WHERE url=? AND ts < ? ORDER BY ts DESC LIMIT 1", (x["url"], x["_ts"])).fetchone()
+        ult = c.execute("SELECT agotado FROM precios WHERE url=? AND ts < ? AND seg_id=? ORDER BY ts DESC LIMIT 1",
+                        (x["url"], x["_ts"], seg.get("id"))).fetchone()
         tope = x.get("objetivo_producto") or seg["objetivo"]
         if ult and ult[0] and (tope is None or x["precio"] <= tope * 1.15):
             return f"vuelve a estar disponible a {x['precio']:.2f} €".replace(".", ",")
@@ -327,7 +328,7 @@ def _revisa(seg_id, enviar):
         seg = dict(seg)
         ts = time.time()
         sin = set(opciones_de(seg).get("sin_tiendas") or [])
-        hosts = [t["host"] for t in motor.cfg.carga() if t.get("activa", True) and t["host"] not in sin] if sin else None
+        hosts = [t["host"] for t in motor.cfg.carga() if (t.get("activa", True) or t.get("bloqueo")) and t["host"] not in sin] if sin else None
         res, informe = motor.buscar(seg["consulta"], seg["incluir"], seg["excluir"], bool(seg["sin_agotados"]),
                                     hosts, seg["pmin"], seg["pmax"], seg_id,
                                     castellano=bool(seg["castellano"]),
@@ -437,7 +438,7 @@ def _mejor_por_tienda(ofertas):
     """{tienda: {precio, url, titulo}}: la oferta más barata de este juego en cada tienda (para la compra conjunta)."""
     out = {}
     for x in ofertas:
-        if x["tienda"] not in out or x["precio"] < out[x["tienda"]]["precio"]:
+        if not x.get("agotado") and (x["tienda"] not in out or x["precio"] < out[x["tienda"]]["precio"]):
             out[x["tienda"]] = {"precio": x["precio"], "url": x["url"], "titulo": x["titulo"]}
     return out
 
@@ -450,7 +451,7 @@ def compra_conjunta(grupos):
     import itertools
     unicos = {}
     for p in mi_lista():
-        if p["grupo"] not in set(grupos):
+        if p["grupo"] not in set(grupos) or not p["por_tienda"]:
             continue
         u = unicos.setdefault(p["grupo"], {"grupo": p["grupo"], "por_tienda": {}})      # puede estar en dos vigiladas
         for h, o in p["por_tienda"].items():
@@ -472,7 +473,9 @@ def compra_conjunta(grupos):
             env = motor.envio_de(tiendas_.get(h, {}), sub)
             if env is None:                # sin dato: lo habitual (4,95 €, gratis desde 50 €), marcado como estimado
                 desconocido.append(h)
-                env = ENVIO_ESTIMADO if sub < GRATIS_ESTIMADO else 0.0
+                t = tiendas_.get(h, {})
+                gratis = t.get("envio_gratis") if t.get("envio_gratis") is not None else (t.get("envio_auto") or {}).get("gratis_desde")
+                env = ENVIO_ESTIMADO if sub < (gratis if gratis is not None else GRATIS_ESTIMADO) else 0.0
             total += sub + env
             envio_t += env
             out.append({"tienda": h, "subtotal": sub, "envio": env, "juegos": [
@@ -505,7 +508,8 @@ def mi_lista():
     from . import importar
     objs = motor.objetivos()
     tiendas_ = {t["host"]: t for t in motor.cfg.carga()}
-    manuales = [h for h, t in tiendas_.items() if t.get("manual") or motor.cfg.nunca(h)]
+    manuales = [h for h, t in tiendas_.items() if (t.get("manual") or motor.cfg.nunca(h)) and (t.get("activa", True) or t.get("bloqueo"))]
+    ocultos = set(motor.ignorados())
     with bd.conecta() as c:
         segs = [dict(r) for r in c.execute("SELECT * FROM seguimientos WHERE activo=1 ORDER BY nombre")]
         # historial de cada vigilada (lo que ella ha visto, con sus filtros): para el «mínimo visto»
@@ -519,7 +523,11 @@ def mi_lista():
         if seg["id"] not in filas_de:
             continue
         opc = opciones_de(seg)
-        filas = filas_de[seg["id"]] + [{**x, "tienda": h} for h in manuales for x in importar.vigentes(h, seg["consulta"])]
+        modo = motor.modo_idioma(bool(seg["castellano"]), opc.get("idioma"))
+        pegado = [{**x, "tienda": h} for h in manuales if opc.get("segunda_mano") or tiendas_[h].get("tipo") != "segunda_mano"
+                  for x in importar.vigentes(h, seg["consulta"])]
+        pegado = [x for x in pegado if modo == "todos" or motor.permite(*motor.idioma_de(x["titulo"]), modo)]
+        filas = [x for x in filas_de[seg["id"]] + pegado if motor.clave_producto(x["titulo"]) not in ocultos]
         filas = [x for x in filas if cumple(seg, x["titulo"], x["precio"], x["tienda"])
                  and not (x.get("agotado") and seg["sin_agotados"]) and not (x.get("preventa") and not opc.get("preventas"))]
         if not filas:
@@ -536,7 +544,7 @@ def mi_lista():
             x = {**x, "envio": envio, "total": round(x["precio"] + (envio or 0), 2), "grupo": g["grupo"]}
             por.setdefault(g["grupo"], {}).setdefault(x["url"], x)       # una oferta por enlace
         for grupo, ofertas in por.items():
-            o = sorted(ofertas.values(), key=lambda x: x["total"])
+            o = sorted(ofertas.values(), key=lambda x: (bool(x.get("agotado")), x["total"] if opc.get("con_envio") else x["precio"]))
             obj = (objs.get(grupo) or {}).get("precio")
             out.append({"seg_id": seg["id"], "vigilada": seg["nombre"], "activa": bool(seg["activo"]), "grupo": grupo,
                         "titulos": [x["titulo"] for x in o], "mejor": o[0], "ofertas": len(o),

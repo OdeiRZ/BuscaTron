@@ -82,7 +82,10 @@ def limpieza():
     a = ajustes.carga()
     if time.time() - float(a.get("ultima_limpieza") or 0) < LIMPIEZA_HORAS * 3600:
         return
-    copia_de_seguridad()
+    try:
+        copia_de_seguridad()
+    except Exception:              # noqa: BLE001  (disco lleno, archivo en uso…: la limpieza sigue y mañana se reintenta)
+        traceback.print_exc()
     borradas = bd.limpia()
     ajustes.guarda({"ultima_limpieza": time.time()})
     print("Limpieza del historial:", borradas)
@@ -102,9 +105,10 @@ def copia_de_seguridad():
     origen = sqlite3.connect(bd.RUTA)
     try:
         copia = sqlite3.connect(destino)
-        with copia:
+        try:
             origen.backup(copia)
-        copia.close()
+        finally:
+            copia.close()
     finally:
         origen.close()
     viejas = sorted(f for f in os.listdir(carpeta) if f.startswith("buscatron-") and f.endswith(".db"))[:-COPIAS]

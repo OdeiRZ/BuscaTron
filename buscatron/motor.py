@@ -166,7 +166,7 @@ NO_JUEGO = re.compile(r"\b(zapatillas?|deportivas|camisetas?|sudaderas?|calcetin
                       r"figuras?\s+(?:de\s+)?\d+\s*cm|marvel\s+legends|funko)\b")      # figuras de colección («Marvel Legends figura 15cm … Civil Warrior»)
 TIPOS = ("juego", "expansion", "complemento", "accesorio", "lote")
 # Varios productos juntos («Pack 3 expansiones», «Lote Marvel Champions + Civil War», «Bundle»): no es el juego suelto
-LOTE = re.compile(r"\b(lote|bundle|combo|megapack)\b|\bpack\s+(?:de\s+)?\d+\b|\b\d+\s+(?:expansiones|juegos)\b|\bpack\s+(?:de\s+)?expansiones\b")
+LOTE = re.compile(r"\b(lote|bundle|megapack)\b|\bpack\s+(?:de\s+)?\d+\b(?!\s*(?:jugador|player))|\b(?:[2-9]|1\d)\s+(?:expansiones|juegos)\b|\bpack\s+(?:de\s+)?expansiones\b")
 ACCESORIO = re.compile(r"\b(fundas?|sleeves?|tapetes?|playmat|game ?mat|mat|neopreno|organizador|inserto|insert|deck ?box|portacartas|protectores|dividers?|separadores|divisores)\b")
 COMPLEMENTO = re.compile(r"\b(add ?on|addon|character|promos?|mini ?expansion)\b")
 # Los packs de héroe, villano, escenario o campaña son expansiones oficiales (Marvel Champions…), digan o no «expansión».
@@ -559,14 +559,14 @@ RUIDO = {"asmodee", "fantasy", "flight", "games", "ffg", "lcg", "el", "la", "los
 # Palabras que describen el juego en general, no cuál es («Eternal Decks: juego de cartas cooperativo y estratégico»):
 # con ellas, el mismo juego salía como otro producto en las tiendas que añaden una descripción al título.
 DESCRIPCION = {"cooperativo", "cooperativa", "cooperativos", "competitivo", "competitiva", "estrategico", "estrategica",
-               "estrategia", "familiar", "familia", "tablero", "mesa", "rol", "party", "fiesta", "adulto", "adultos", "nino",
+               "estrategia", "mesa", "adulto", "adultos", "nino",
                "ninos", "jugador", "jugadores", "version", "oficial", "original", "divertido", "divertida", "ideal", "regalo",
-               "oferta", "novedad", "para", "con", "por", "un", "una", "o", "u", "e", "and", "for", "board", "cooperative",
-               "strategy", "strategic", "family", "solitario", "solo", "edad", "anos", "partir", "desde", "recomendada"}
+               "oferta", "novedad", "para", "con", "por", "un", "una", "o", "u", "e", "and", "for", "cooperative",
+               "strategy", "strategic", "edad", "anos", "partir", "desde", "recomendada"}
 RUIDO |= DESCRIPCION
 # Tiendas y editoriales que se cuelan en el título («Eternal Decks - Gigamesh», «… Salt and Pepper Games», «ugi games
 # toys …», «Oferta Online …») y abreviaturas de idioma («SPA»).
-RUIDO |= {"salt", "pepper", "gigamesh", "devir", "edge", "entertainment", "ludonova", "tranjis", "maldito", "zacatrus",
+RUIDO |= {"gigamesh", "devir", "ludonova", "tranjis", "maldito", "zacatrus",
           "ugi", "toys", "online", "spa", "envio", "gratis", "stock", "disponible"}
 # Mismo producto con su nombre en inglés o en castellano según la tienda: se cuenta como la misma palabra
 SINONIMOS = {"avispa": "wasp", "tormenta": "storm", "mercurio": "quicksilver", "tapete": "mat", "playmat": "mat",
@@ -575,7 +575,7 @@ SINONIMOS = {"avispa": "wasp", "tormenta": "storm", "mercurio": "quicksilver", "
 
 # Coletillas de ficha que algunas tiendas añaden al título (Dynos: «Juego De Mesa … 60 Cartas Pegi 14»): con ellas, la misma
 # expansión no se agrupaba con las demás tiendas y quedaba fuera de los más baratos.
-COLETILLAS = re.compile(r"\bjuegos?\s+de\s+mesa\b|\bpegi\s+\d+|\bedad\s+recomendada\s+\d+(\s+anos?)?|\b\d+\s+cartas\b|\b\d+\s+anos?\b")
+COLETILLAS = re.compile(r"\bsalt\s+(?:and\s+|y\s+)?pepper\s+games\b|\bedge\s+entertainment\b|\bjuegos?\s+de\s+mesa\b|\bpegi\s+\d+|\bedad\s+recomendada\s+\d+(\s+anos?)?|\b\d+\s+cartas\b|\b\d+\s+anos?\b")
 
 
 def clave_producto(titulo):
@@ -589,6 +589,8 @@ def clave_producto(titulo):
         palabras.add(SINONIMOS.get(w, w))
     if LOTE.search(extract.normaliza(titulo)):
         palabras.add("[lote]")          # un lote nunca se agrupa con el juego suelto
+    if not palabras:                    # un título hecho solo de palabras comunes: mejor su título entero que una clave vacía
+        palabras = set(extract.normaliza(titulo).split())
     return " ".join(sorted(palabras))
 
 
@@ -670,7 +672,7 @@ def objetivo_para(x, objs):
     return None
 
 
-VERSION_CLAVES = 5      # súbela al cambiar clave_producto (RUIDO, DESCRIPCION, COLETILLAS): se recalcula todo lo guardado
+VERSION_CLAVES = 6      # súbela al cambiar clave_producto (RUIDO, DESCRIPCION, COLETILLAS): se recalcula todo lo guardado
 
 
 def rellena_claves():
@@ -687,12 +689,12 @@ def rellena_claves():
     with bd.conecta() as c:
         if hecha < VERSION_CLAVES:
             for tabla in ("ignorados", "objetivos", "vinculos_amazon"):
-                for clave, titulo in c.execute(f"SELECT clave, titulo FROM {tabla}").fetchall():
-                    if not titulo or clave.startswith("f:"):
-                        continue
-                    nueva = ("c:" if clave.startswith("c:") else "") + clave_producto(titulo)
-                    if nueva != clave:
-                        c.execute(f"UPDATE OR IGNORE {tabla} SET clave=? WHERE clave=?", (nueva, clave))
+                filas = [dict(r) for r in c.execute(f"SELECT * FROM {tabla} ORDER BY ts")]
+                c.execute(f"DELETE FROM {tabla}")
+                for f in filas:                  # de la más antigua a la más nueva: con la misma clave, queda la última
+                    if f["titulo"] and not f["clave"].startswith("f:"):
+                        f["clave"] = ("c:" if f["clave"].startswith("c:") else "") + clave_producto(f["titulo"])
+                    c.execute(f"INSERT OR REPLACE INTO {tabla}({','.join(f)}) VALUES({','.join('?' * len(f))})", list(f.values()))
     if hecha < VERSION_CLAVES:
         ajustes.guarda({"version_claves": VERSION_CLAVES})
     return len(titulos)
@@ -843,6 +845,8 @@ def buscar(consulta, incluir="", excluir="", ocultar_agotados=True, hosts=None, 
 
     idioma_ficha = {}           # lo que ya se leyó en la ficha de cada producto manda sobre lo que sugiere su título
 
+    sin_stock = []              # lo que solo se descarta por agotado: no se enseña, pero se apunta para saber cuándo vuelve
+
     def pasa(x, prior=None):
         x["idioma"], x["idioma_seguro"] = idioma_con_tienda(x["titulo"], prior)
         if x.get("url") in idioma_ficha:      # Amazon: «Versión ES» en el título y la ficha dice francés
@@ -850,11 +854,14 @@ def buscar(consulta, incluir="", excluir="", ocultar_agotados=True, hosts=None, 
         n = extract.normaliza(x["titulo"])
         if frases and not any(extract.encaja(n, f) for f in frases):
             return False
-        return (all(extract.encaja(n, w) for w in inc) and not any(extract.encaja(n, w) for w in exc)
-                and not (ocultar_agotados and x["agotado"])
+        vale = (all(extract.encaja(n, w) for w in inc) and not any(extract.encaja(n, w) for w in exc)
                 and not (x.get("preventa") and not preventas)
                 and permite(x["idioma"], x["idioma_seguro"], modo)
                 and clave_producto(x["titulo"]) not in ocultos)
+        if vale and ocultar_agotados and x["agotado"]:
+            sin_stock.append(x)
+            return False
+        return vale
 
     res, informe = [], {}
     ahora = time.time()
@@ -886,6 +893,7 @@ def buscar(consulta, incluir="", excluir="", ocultar_agotados=True, hosts=None, 
         kept = 0
         prior = prior_tienda(items)
         for x in items:
+            x["tienda"] = host
             if pasa(x, prior) and solo_juego(host, x["titulo"], consulta) and not es_no_juego(x["titulo"]):
                 x["tienda"], x["origen"], x["tipo"] = host, por_host[host].get("tipo", "tienda"), tipo_de(x["titulo"])
                 res.append(x)
@@ -940,7 +948,11 @@ def buscar(consulta, incluir="", excluir="", ocultar_agotados=True, hosts=None, 
     res = [x for x in res if not (pmin is not None and x["precio"] < pmin) and not (pmax is not None and x["precio"] > pmax)]
     progreso.fase(prog, "Comprobando el stock en las fichas")
     corrige_stock(res, lista)
-    agotados = [x for x in res if x["agotado"] and ocultar_agotados]       # no se enseñan, pero se apuntan: así se sabe cuándo vuelven
+    agotados = [x for x in res if x["agotado"] and ocultar_agotados]       # los que su ficha dice que están agotados…
+    agotados += [x for x in sin_stock if x.get("tienda") and solo_juego(x["tienda"], x["titulo"], consulta)       # …y los del listado
+                 and not es_no_juego(x["titulo"]) and (pmin is None or x["precio"] >= pmin) and (pmax is None or x["precio"] <= pmax)]
+    for x in agotados:
+        x["clave"] = clave_producto(x["titulo"])
     res = [x for x in res if not (ocultar_agotados and x["agotado"]) and not (x.get("preventa") and not preventas)]
     for h, i in informe.items():
         if "brutos" in i:

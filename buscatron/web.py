@@ -553,7 +553,7 @@ class Handler(BaseHTTPRequestHandler):
                 if plantilla:
                     t["plantilla"] = plantilla
             if "manual" in c:
-                t["manual"] = bool(c["manual"])
+                t["manual"] = bool(c["manual"]) or bool(t.get("bloqueo"))      # bloqueada: ninguna petición hasta reactivarla
             for campo in ("envio", "envio_gratis"):      # gastos de envío de la tienda (vacío = no se sabe)
                 if campo in c:
                     t[campo] = _num(c[campo]) if str(c[campo]).strip() else None
@@ -562,6 +562,8 @@ class Handler(BaseHTTPRequestHandler):
         if "activas" in c:
             for t in lista:
                 t["activa"] = t["host"] in c["activas"]
+                if t.get("bloqueo") and c.get("reactivar") != t["host"]:
+                    t["activa"], t["manual"] = False, True      # página abierta de antes del bloqueo: sigue sin recibir peticiones
                 if t["activa"] and t.pop("bloqueo", None):     # la reactivas tú: deja de vigilarse como «te ha bloqueado»
                     t["manual"] = False                          # y vuelve a consultarse sola
                     t["suave_hasta"] = time.time() + programador.SUAVE_DIAS * 86400      # y vuelve con calma, como si volviera sola
