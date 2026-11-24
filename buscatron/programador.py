@@ -1,5 +1,4 @@
-"""Hilo de tareas periódicas: lanza las búsquedas vigiladas cuando les toca, compacta el historial
-los precios pegados a mano y, una vez al día, compacta el historial."""
+"""Hilo de tareas periódicas: lanza las búsquedas vigiladas cuando les toca y, una vez al día, compacta el historial."""
 import threading
 import time
 import traceback
