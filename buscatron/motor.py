@@ -57,16 +57,17 @@ def es_rechazo(err):
 
 
 def bloquea(h):
-    """Desactiva una tienda que sigue rechazando tus consultas: desde ahí, y si la marcas «solo enlace», ninguna petición; si no, solo se prueba su portada cada pocas horas
-    (programador.bloqueadas) y se reactiva sola cuando vuelve a responder."""
+    """Desactiva una tienda que sigue rechazando tus consultas: desde ahí no recibe ninguna petición (ritmo.py) hasta que
+    la reactives tú con su chip. Lo que pegues de ella sigue contando."""
     with cfg.cerrojo:
         lista = cfg.carga()
         t = next((t for t in lista if t["host"] == h), None)
         if not t or t.get("bloqueo"):
             return
         t["activa"] = False
+        antes = bool(t.get("manual"))
         t["manual"] = True             # ninguna petición más (ni para ver si vuelve): la reactivas tú cuando te desbloquee
-        t["bloqueo"] = {"desde": time.time(), "probado": time.time()}
+        t["bloqueo"] = {"desde": time.time(), "manual": antes}      # cómo la tenías, para devolvérsela al reactivarla
         cfg.guarda(lista)
     with bd.conecta() as c:
         c.execute("DELETE FROM caidas WHERE host=?", (h,))
@@ -123,7 +124,7 @@ def _intenta(t, consulta, get, paginas=1, con_estado=False):
             err = ("no encuentra la página de búsqueda" if st == 404 else "su web no responde bien") + f" (error {st})"
             continue
         items, sig = extract.analiza(html, url, consulta, con_estado=con_estado)
-        if items and t.get("envio") is None and t.get("envio_gratis") is None:
+        if items and (t.get("envio") is None or t.get("envio_gratis") is None):
             _apunta_envio(t["host"], html)
         if not items:
             err = SIN_COINCIDENCIAS
@@ -166,7 +167,7 @@ NO_JUEGO = re.compile(r"\b(zapatillas?|deportivas|camisetas?|sudaderas?|calcetin
                       r"figuras?\s+(?:de\s+)?\d+\s*cm|marvel\s+legends|funko)\b")      # figuras de colección («Marvel Legends figura 15cm … Civil Warrior»)
 TIPOS = ("juego", "expansion", "complemento", "accesorio", "lote")
 # Varios productos juntos («Pack 3 expansiones», «Lote Marvel Champions + Civil War», «Bundle»): no es el juego suelto
-LOTE = re.compile(r"\b(lote|bundle|megapack)\b|\bpack\s+(?:de\s+)?\d+\b(?!\s*(?:jugador|player))|\b(?:[2-9]|1\d)\s+(?:expansiones|juegos)\b|\bpack\s+(?:de\s+)?expansiones\b")
+LOTE = re.compile(r"\b(lote|bundle|megapack)\b|\b(?:[2-9]|1\d)\s+expansiones\b|\bpack\s+(?:de\s+)?(?:[2-9]|1\d)\s+(?:juegos|cajas|productos)\b|\bpack\s+(?:de\s+)?expansiones\b")
 ACCESORIO = re.compile(r"\b(fundas?|sleeves?|tapetes?|playmat|game ?mat|mat|neopreno|organizador|inserto|insert|deck ?box|portacartas|protectores|dividers?|separadores|divisores)\b")
 COMPLEMENTO = re.compile(r"\b(add ?on|addon|character|promos?|mini ?expansion)\b")
 # Los packs de héroe, villano, escenario o campaña son expansiones oficiales (Marvel Champions…), digan o no «expansión».
@@ -521,9 +522,10 @@ def guarda_envios_vistos():
         cambia = False
         for t in lista:
             d = vistos.get(t["host"])
-            if d and t.get("envio_auto") != {"coste": d.get("coste"), "gratis_desde": d.get("gratis_desde")}:
-                t["envio_auto"] = {"coste": d.get("coste"), "gratis_desde": d.get("gratis_desde")}
-                cambia = True
+            if d:            # lo que no diga esta página se conserva
+                nuevo = {**(t.get("envio_auto") or {}), **{k: d[k] for k in ("coste", "gratis_desde") if d.get(k) is not None}}
+                if nuevo != t.get("envio_auto"):
+                    t["envio_auto"], cambia = nuevo, True
         if cambia:
             cfg.guarda(lista)
 
@@ -532,9 +534,8 @@ def envio_de(t, precio):
     """Gastos de envío de la tienda (0 si supera el mínimo gratuito; None si no se conocen). Lo que pongas tú manda;
     si no hay nada, lo que anuncia su propia web («envio_auto»)."""
     auto = t.get("envio_auto") or {}
-    manual = t.get("envio") is not None or t.get("envio_gratis") is not None
-    gratis = t.get("envio_gratis") if manual else auto.get("gratis_desde")
-    coste = t.get("envio") if manual else auto.get("coste")
+    gratis = t["envio_gratis"] if t.get("envio_gratis") is not None else auto.get("gratis_desde")      # cada dato por separado
+    coste = t["envio"] if t.get("envio") is not None else auto.get("coste")
     if gratis is not None and precio >= gratis:
         return 0.0
     return coste
@@ -570,7 +571,7 @@ RUIDO |= {"gigamesh", "devir", "ludonova", "tranjis", "maldito", "zacatrus",
           "ugi", "toys", "online", "spa", "envio", "gratis", "stock", "disponible"}
 # Mismo producto con su nombre en inglés o en castellano según la tienda: se cuenta como la misma palabra
 SINONIMOS = {"avispa": "wasp", "tormenta": "storm", "mercurio": "quicksilver", "tapete": "mat", "playmat": "mat",
-             "funda": "sleeve", "protector": "sleeve"}
+             "funda": "sleeve", "protector": "sleeve", "protectore": "sleeve"}
 
 
 # Coletillas de ficha que algunas tiendas añaden al título (Dynos: «Juego De Mesa … 60 Cartas Pegi 14»): con ellas, la misma
@@ -598,7 +599,7 @@ def grupo_de(titulo, frases=()):
     """Con el filtro «al menos una de estas», el producto es la frase que encaja (más fiable); si no, su clave."""
     n = extract.normaliza(titulo)
     for f in frases:
-        if extract.encaja(n, f):
+        if extract.encaja(n, f) and tipo_de(titulo) not in ("accesorio", "lote"):     # sus fundas o un lote no son el juego
             return "f:" + f
     return "c:" + clave_producto(titulo)
 
@@ -657,22 +658,28 @@ def quita_objetivo(grupo):
         c.execute("DELETE FROM objetivos WHERE clave=?", (grupo,))
 
 
+def clave_objetivo(x, objs):
+    """La clave del objetivo que se aplica a este producto (su grupo, su clave o la frase de una campaña); None si no hay."""
+    if x.get("grupo") in objs:
+        return x["grupo"]
+    c = "c:" + (x.get("clave") or clave_producto(x["titulo"]))
+    if c in objs:
+        return c
+    if tipo_de(x["titulo"]) in ("accesorio", "lote"):
+        return None
+    n = extract.normaliza(x["titulo"])
+    return next((k for k in objs if k.startswith("f:") and extract.encaja(n, k[2:])), None)
+
+
 def objetivo_para(x, objs):
     """El objetivo que el usuario puso a este producto (por su grupo, su clave o, si se puso desde una campaña, por la frase)."""
     if not objs:
         return None
-    o = objs.get(x.get("grupo")) or objs.get("c:" + (x.get("clave") or clave_producto(x["titulo"])))
-    if o:
-        return o["precio"]
-    n = extract.normaliza(x["titulo"])
-    for g, o in objs.items():
-        f = g[2:] if g.startswith("f:") else None
-        if f and extract.encaja(n, f):
-            return o["precio"]
-    return None
+    k = clave_objetivo(x, objs)
+    return objs[k]["precio"] if k else None
 
 
-VERSION_CLAVES = 6      # súbela al cambiar clave_producto (RUIDO, DESCRIPCION, COLETILLAS): se recalcula todo lo guardado
+VERSION_CLAVES = 7      # súbela al cambiar clave_producto (RUIDO, DESCRIPCION, COLETILLAS): se recalcula todo lo guardado
 
 
 def rellena_claves():
@@ -792,13 +799,13 @@ VUELVE_A_MIRAR = 7     # días: entonces se vuelve a consultar una vez, por si l
 
 def tiendas_sin(consulta, ahora=None):
     """Tiendas que en sus últimas VECES_SIN consultas de esta búsqueda respondieron sin el juego (y nunca lo tuvieron en
-    14 días). Las revisiones automáticas se las saltan hasta que pasen VUELVE_A_MIRAR días desde la última vez: menos
+    40 días). Las revisiones automáticas se las saltan hasta que pasen VUELVE_A_MIRAR días desde la última vez: menos
     tiempo y menos peticiones. Las búsquedas que haces tú las consultan siempre."""
     ahora = ahora or time.time()
     out = set()
     with bd.conecta() as c:
         filas = c.execute("SELECT host, ts, encontrados, error FROM estado_tiendas WHERE consulta=? AND ts>? ORDER BY ts DESC",
-                          (consulta, ahora - 14 * 86400)).fetchall()
+                          (consulta, ahora - 40 * 86400)).fetchall()
     por = {}
     for f in filas:
         por.setdefault(f["host"], []).append(f)
@@ -806,7 +813,7 @@ def tiendas_sin(consulta, ahora=None):
         if any(f["encontrados"] for f in fs):
             continue
         ultimas = fs[:VECES_SIN]
-        if len(ultimas) == VECES_SIN and all(f["error"] == SIN_COINCIDENCIAS for f in ultimas) \
+        if len(ultimas) == VECES_SIN and all((f["error"] or "").startswith(SIN_COINCIDENCIAS) for f in ultimas) \
                 and ahora - ultimas[0]["ts"] < VUELVE_A_MIRAR * 86400:
             out.add(h)
     return out
@@ -918,7 +925,7 @@ def buscar(consulta, incluir="", excluir="", ocultar_agotados=True, hosts=None, 
         kept = 0
         for x in items:
             if pasa(x):
-                x["origen"] = "web"
+                x["origen"], x["tipo"] = "web", tipo_de(x["titulo"])
                 res.append(x)
                 kept += 1
         informe["Búsqueda abierta"] = {"encontrados": kept, "error": info if not kept else None,

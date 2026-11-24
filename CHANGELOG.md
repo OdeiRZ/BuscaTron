@@ -3,6 +3,18 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.25.3] - 2026-11-24
+
+### Corregido (tercera revisión de código de v0.21-v0.25)
+- Tiendas bloqueadas: la regla de «ninguna petición» está ahora en el único punto por el que pasan todas (`ritmo.py`), también para «Detectar envío», las búsquedas ya en marcha y las tiendas añadidas de nuevo. Se elimina el sondeo. Al reactivarla vuelve a como la tenías.
+- «Gastos de envío gratis desde 39 €» se leía como un coste de 39 €; cada dato del envío se conserva y se aplica por separado.
+- Mi lista y Avisos: el objetivo 🎯 es el mismo que usa el motor; respeta la ficha (agotado, idioma), no se vacía si falla una revisión y se actualiza al acabar una. La compra conjunta dice qué juegos no cuenta.
+- Fundas y lotes no se agrupan con su juego en las búsquedas por campañas; «Scenario Pack 2» o «10 juegos reunidos» no son lotes.
+- «Precio raro» no mezcla segunda mano; «vuelve a estar disponible» cuenta el envío; «precio más bajo» exige que el precio haya variado.
+- Saltar tiendas sin el juego funciona con Chrome desactivado y la comprobación semanal se mantiene; el aviso de salud ignora a las que responden bien.
+- Compartir: pide elegir tienda si no se reconoce y exige el mismo acceso que la página. Las copias solo se guardan si están enteras.
+- Las pruebas no tocan los archivos reales.
+
 ## [0.25.2] - 2026-11-24
 
 ### Corregido (segunda revisión de código de v0.21-v0.25)

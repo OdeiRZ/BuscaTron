@@ -12,7 +12,8 @@ class Envio(unittest.TestCase):
         auto = {"envio_auto": {"coste": 4.95, "gratis_desde": 50.0}}
         self.assertEqual(motor.envio_de(auto, 30), 4.95)
         self.assertEqual(motor.envio_de(auto, 60), 0.0)
-        self.assertEqual(motor.envio_de({**auto, "envio": 2.5}, 60), 2.5)       # pusiste tú el envío (sin «gratis desde»)
+        self.assertEqual(motor.envio_de({**auto, "envio": 2.5}, 30), 2.5)       # lo tuyo manda…
+        self.assertEqual(motor.envio_de({**auto, "envio": 2.5}, 60), 0.0)       # …y el «gratis desde» de su web sigue valiendo
         self.assertIsNone(motor.envio_de({}, 30))
 
     def test_la_pagina_de_resultados_dice_el_envio(self):

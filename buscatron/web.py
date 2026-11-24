@@ -330,7 +330,8 @@ class Handler(BaseHTTPRequestHandler):
     def _compartir(self):
         """Lo que llega del menú «Compartir» del móvil: se guarda y se abre la página, que lo pone en «Pegar resultados».
         No ejecuta nada (lo revisas y pulsas Guardar), así que no pasa por la comprobación de origen."""
-        largo = min(int(self.headers.get("Content-Length", 0) or 0), MAX_CUERPO)
+        n = self.headers.get("Content-Length") or "0"
+        largo = min(int(n), MAX_CUERPO) if n.isdigit() else 0
         datos = parse_qs(self.rfile.read(largo).decode("utf-8", "replace"))
         COMPARTIDO.clear()
         COMPARTIDO.update({k: (datos.get(k) or [""])[0][:MAX_CUERPO] for k in ("title", "text", "url")}, ts=time.time())
@@ -341,7 +342,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         est = self._estado()
-        if self.path == "/compartir" and est != "denegado":
+        if self.path == "/compartir" and est == "ok":
             return self._compartir()
         if est == "denegado" or self._origen_ajeno():
             return self._json({"error": "acceso no permitido"}, 403)
@@ -534,7 +535,7 @@ class Handler(BaseHTTPRequestHandler):
                 t["nombre"] = c["nombre"].strip()
             if plantilla:
                 t["plantilla"] = plantilla
-                t["manual"] = bool(c.get("manual"))
+                t["manual"] = bool(c.get("manual")) or bool(t.get("bloqueo"))
             if c.get("tipo") == "segunda_mano":
                 t["tipo"] = "segunda_mano"
         if c.get("editar"):  # nombre, dirección y modo «solo enlace» de una tienda existente
@@ -550,6 +551,7 @@ class Handler(BaseHTTPRequestHandler):
                         raise ValueError("ya existe una tienda con esa dirección")
                     t["host"], t["plantilla"] = host, None   # otra web: se vuelve a descubrir su buscador
                     t.pop("js", None)
+                    t.pop("envio_auto", None)
                 if plantilla:
                     t["plantilla"] = plantilla
             if "manual" in c:
@@ -564,8 +566,8 @@ class Handler(BaseHTTPRequestHandler):
                 t["activa"] = t["host"] in c["activas"]
                 if t.get("bloqueo") and c.get("reactivar") != t["host"]:
                     t["activa"], t["manual"] = False, True      # página abierta de antes del bloqueo: sigue sin recibir peticiones
-                if t["activa"] and t.pop("bloqueo", None):     # la reactivas tú: deja de vigilarse como «te ha bloqueado»
-                    t["manual"] = False                          # y vuelve a consultarse sola
+                if t["activa"] and (bloqueo := t.pop("bloqueo", None)):     # la reactivas tú: deja de vigilarse como «te ha bloqueado»
+                    t["manual"] = bool(bloqueo.get("manual"))    # como la tenías antes del bloqueo
                     t["suave_hasta"] = time.time() + programador.SUAVE_DIAS * 86400      # y vuelve con calma, como si volviera sola
         cfg.guarda(lista)
         return lista

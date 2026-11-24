@@ -115,7 +115,8 @@ def avisos(limite=500):
         s = segs.get(a["seg_id"]) or {}
         g = motor.grupos([a["titulo"]], s.get("consulta") or "", opciones_de(s).get("alguna", "") if s else "")[0]["grupo"]
         a["grupo"] = f"{a['seg_id']}|{g}"
-        a["objetivo_producto"] = (objs.get(g) or {}).get("precio")
+        k = motor.clave_objetivo({"grupo": g, "titulo": a["titulo"]}, objs)
+        a["objetivo_producto"], a["objetivo_clave"] = (objs[k]["precio"], k) if k else (None, g)
         a["envio"] = motor.envio_de(tiendas_.get(a["tienda"], {}), a["precio"])      # None: no se sabe
     return filas
 
@@ -193,7 +194,7 @@ def _motivo(c, seg, x):
         ult = c.execute("SELECT agotado FROM precios WHERE url=? AND ts < ? AND seg_id=? ORDER BY ts DESC LIMIT 1",
                         (x["url"], x["_ts"], seg.get("id"))).fetchone()
         tope = x.get("objetivo_producto") or seg["objetivo"]
-        if ult and ult[0] and (tope is None or x["precio"] <= tope * 1.15):
+        if ult and ult[0] and (tope is None or p <= tope * 1.15):
             return f"vuelve a estar disponible a {x['precio']:.2f} €".replace(".", ",")
     return None
 
@@ -230,7 +231,7 @@ def _registra_avisos(c, seg, opc, modo, res, ts):
     # el precio habitual de cada producto entre tus tiendas (con 3 o más): para avisar de un precio sospechosamente bajo
     por_grupo = {}
     for x in res:
-        if not x.get("agotado"):
+        if not x.get("agotado") and x.get("origen") != "segunda_mano":
             por_grupo.setdefault(x.get("grupo"), {}).setdefault(x["tienda"], x["precio"])
     vistos = [dict(r) for r in c.execute("SELECT tienda, titulo, precio FROM precios WHERE seg_id=? AND ts>=? AND agotado=0 AND preventa=0",
                                          (seg["id"], (seg.get("ultima") or ts) - 60))]      # lo pegado trae una sola tienda
@@ -243,7 +244,7 @@ def _registra_avisos(c, seg, opc, modo, res, ts):
         if not motivo or not _vale(seg, opc, modo, x):
             continue
         med = medianas.get(x.get("grupo"))
-        if med and x["precio"] < med * (1 - RARO):
+        if med and x.get("origen") != "segunda_mano" and x["precio"] < med * (1 - RARO):
             motivo += (f" · ⚠️ {(1 - x['precio'] / med) * 100:.0f} % más barato que en tus demás tiendas ({med:.2f} €):"
                        " puede ser un chollo o un error, compruébalo").replace(".", ",", 1)
         if modo != "todos" and not (x.get("idioma") == "es" and x.get("idioma_seguro")):
@@ -501,6 +502,13 @@ def compra_conjunta(grupos):
     return sorted(planes.values(), key=lambda c: c["total"])[:5]
 
 
+def _desde(c, seg):
+    """Desde cuándo cuentan los precios de una vigilada: su última revisión, o la última buena si la última falló."""
+    if "falló" in (seg["estado"] or ""):
+        return c.execute("SELECT COALESCE(MAX(ts), 0) FROM precios WHERE seg_id=?", (seg["id"],)).fetchone()[0]
+    return (seg["ultima"] or 0) - 60
+
+
 def mi_lista():
     """Una línea por juego de cada vigilada: su mejor oferta ahora (con envío si se sabe), en cuántas tiendas está, lo más
     barato que se le ha visto y tu objetivo. Sale de la última revisión de cada vigilada y de lo pegado vigente: no
@@ -517,7 +525,7 @@ def mi_lista():
             "SELECT titulo, precio, tienda FROM precios WHERE seg_id=? AND agotado=0 AND preventa=0", (s["id"],))] for s in segs}
         filas_de = {s["id"]: [dict(r) for r in c.execute(
             "SELECT tienda, titulo, url, precio, agotado, preventa, ts FROM precios WHERE seg_id=? AND ts>=?",
-            (s["id"], (s["ultima"] or 0) - 60))] for s in segs if s["ultima"]}
+            (s["id"], _desde(c, s)))] for s in segs if s["ultima"]}
     out = []
     for seg in segs:
         if seg["id"] not in filas_de:
@@ -527,7 +535,13 @@ def mi_lista():
         pegado = [{**x, "tienda": h} for h in manuales if opc.get("segunda_mano") or tiendas_[h].get("tipo") != "segunda_mano"
                   for x in importar.vigentes(h, seg["consulta"])]
         pegado = [x for x in pegado if modo == "todos" or motor.permite(*motor.idioma_de(x["titulo"]), modo)]
-        filas = [x for x in filas_de[seg["id"]] + pegado if motor.clave_producto(x["titulo"]) not in ocultos]
+        vivas = filas_de[seg["id"]]
+        stock, idi = motor.stock_de_fichas([x["url"] for x in vivas]), motor.idiomas_de_fichas([x["url"] for x in vivas])
+        for x in vivas:                  # lo que dijo su ficha manda sobre el listado
+            ago, pre = stock.get(x["url"], (None, None))
+            x["agotado"], x["preventa"] = x["agotado"] or bool(ago), x["preventa"] or bool(pre)
+        vivas = [x for x in vivas if modo == "todos" or x["url"] not in idi or motor.permite(idi[x["url"]], True, modo)]
+        filas = [x for x in vivas + pegado if motor.clave_producto(x["titulo"]) not in ocultos]
         filas = [x for x in filas if cumple(seg, x["titulo"], x["precio"], x["tienda"])
                  and not (x.get("agotado") and seg["sin_agotados"]) and not (x.get("preventa") and not opc.get("preventas"))]
         if not filas:
@@ -545,12 +559,13 @@ def mi_lista():
             por.setdefault(g["grupo"], {}).setdefault(x["url"], x)       # una oferta por enlace
         for grupo, ofertas in por.items():
             o = sorted(ofertas.values(), key=lambda x: (bool(x.get("agotado")), x["total"] if opc.get("con_envio") else x["precio"]))
-            obj = (objs.get(grupo) or {}).get("precio")
+            k = motor.clave_objetivo({"grupo": grupo, "titulo": o[0]["titulo"]}, objs)
+            obj = objs[k]["precio"] if k else None
             out.append({"seg_id": seg["id"], "vigilada": seg["nombre"], "activa": bool(seg["activo"]), "grupo": grupo,
                         "titulos": [x["titulo"] for x in o], "mejor": o[0], "ofertas": len(o),
                         "tiendas": len({x["tienda"] for x in o}), "minimo": min(minimos.get(grupo, o[0]["precio"]), o[0]["precio"]),
                         "mediana": statistics.median(vistos[grupo]) if len(vistos.get(grupo, [])) >= 5 else None,
-                        "objetivo": obj if obj is not None else seg["objetivo"], "objetivo_propio": obj is not None,
+                        "objetivo": obj if obj is not None else seg["objetivo"], "objetivo_propio": obj is not None, "objetivo_clave": k or grupo,
                         "con_envio": bool(opc.get("con_envio")), "revisada": seg["ultima"],
                         "por_tienda": _mejor_por_tienda(o)})
     return out

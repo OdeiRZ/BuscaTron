@@ -160,7 +160,7 @@ class PalabrasCompletas(unittest.TestCase):
             res, _ = motor.buscar("Vantage", alguna="Vantage", castellano=False)
             self.assertEqual(len({x["grupo"] for x in res}), 2)                             # el juego y las fundas, por separado
             res, _ = motor.buscar("juegos", alguna="vantage", castellano=False)             # frase que añade algo (campañas): agrupa
-            self.assertEqual({x["grupo"] for x in res}, {"f:vantage"})
+            self.assertEqual({x["grupo"] for x in res if x["tipo"] == "juego"}, {"f:vantage"})      # las fundas no
 
 
 class AmazonEnJuguetes(ConArchivos):

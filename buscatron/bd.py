@@ -97,5 +97,6 @@ def _prepara(c):
         except sqlite3.OperationalError:
             pass
     c.execute("CREATE INDEX IF NOT EXISTS ix_precios_clave ON precios(clave, ts)")
+    c.execute("CREATE INDEX IF NOT EXISTS ix_estado_consulta ON estado_tiendas(consulta, ts)")
     c.execute("CREATE INDEX IF NOT EXISTS ix_precios_titulo ON precios(titulo)")
     c.commit()

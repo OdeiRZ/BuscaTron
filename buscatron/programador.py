@@ -1,46 +1,16 @@
 """Hilo de tareas periódicas: lanza las búsquedas vigiladas cuando les toca, recuerda por Telegram cuando van a caducar
-los precios pegados a mano, mira si vuelve una tienda que te bloqueó y, una vez al día, compacta el historial."""
+los precios pegados a mano y, una vez al día, compacta el historial."""
 import threading
 import time
 import traceback
 
-from . import ajustes, bd, fetch, seguimiento, tiendas as cfg
+from . import ajustes, bd, motor, seguimiento, tiendas as cfg
 
 LIMPIEZA_HORAS = 24
-BLOQUEO_HORAS = 6          # una tienda que bloqueó tu conexión se prueba con UNA petición a su portada cada tanto
 SUAVE_DIAS = 3             # al volver, unos días con una sola página por búsqueda
 ESPACIO_VIGILADAS = 10 * 60    # entre dos revisiones automáticas: así cada tienda ve unas pocas peticiones repartidas
 _ultima_revision = [0.0]
 _hilo = [None]             # la revisión automática en marcha (en su hilo, para no frenar el resto de tareas)
-
-
-def bloqueadas():
-    """Tiendas desactivadas porque bloquearon tu conexión (campo «bloqueo»): cada BLOQUEO_HORAS una sola petición a su
-    portada; cuando vuelve a responder, se reactiva y te avisa por Telegram. Sin búsquedas: tan poco no renueva el
-    bloqueo (Dungeon Marvels, 9/11/2026)."""
-    # Las que marques «No consultar automáticamente» no se prueban: con Dungeon Marvels, una petición cada 6 h desde la IP
-    # bloqueada podía estar renovando el bloqueo (55 pruebas en dos semanas sin que se levantara).
-    for t in [t for t in cfg.carga() if t.get("bloqueo") and not t.get("manual")]:
-        if time.time() - t["bloqueo"].get("probado", 0) < BLOQUEO_HORAS * 3600:
-            continue
-        try:
-            st, _ = fetch.get(f"https://{t['host']}/", timeout=20)
-            vuelve = st == 200
-        except Exception:   # noqa: BLE001  (sigue sin responder)
-            vuelve = False
-        with cfg.cerrojo:                       # sobre la lista actual, por si la cambiaste mientras tanto
-            lista = cfg.carga()
-            for x in lista:
-                if x["host"] == t["host"] and x.get("bloqueo"):
-                    if vuelve:
-                        x["activa"] = True
-                        x.pop("bloqueo")
-                        x["suave_hasta"] = time.time() + SUAVE_DIAS * 86400
-                    else:
-                        x["bloqueo"]["probado"] = time.time()
-            cfg.guarda(lista)
-        nombre = t.get("nombre") or t["host"]
-        print(f"{nombre}:", "vuelve a responder; reactivada" if vuelve else "sigue sin responder")   # sin Telegram: solo límites y objetivos
 
 
 def vigiladas(ahora=None, hilo=False):
@@ -104,11 +74,12 @@ def copia_de_seguridad():
     destino = os.path.join(carpeta, time.strftime("buscatron-%Y%m%d.db"))
     origen = sqlite3.connect(bd.RUTA)
     try:
-        copia = sqlite3.connect(destino)
+        copia = sqlite3.connect(destino + ".tmp")
         try:
             origen.backup(copia)
         finally:
             copia.close()
+        os.replace(destino + ".tmp", destino)      # solo si se copió entera
     finally:
         origen.close()
     viejas = sorted(f for f in os.listdir(carpeta) if f.startswith("buscatron-") and f.endswith(".db"))[:-COPIAS]
@@ -121,7 +92,8 @@ def _telegram(asunto, texto):
     from . import notifica
     a = ajustes.carga()
     if a.get("telegram_token") and a.get("telegram_chat"):
-        notifica.envia(["telegram"], asunto, texto)
+        return not any(notifica.envia(["telegram"], asunto, texto).values())
+    return True                      # sin Telegram configurado no hay nada que reintentar
 
 
 def rebajas(hoy=None):
@@ -134,8 +106,9 @@ def rebajas(hoy=None):
     clave = f"{c['nombre']} {c['desde'][:4]}"
     if ajustes.carga().get("rebaja_avisada") == clave:
         return None
-    _telegram("BuscaTron · rebajas a la vista", f"Dentro de {c['dias']} día{'' if c['dias'] == 1 else 's'} empieza {c['nombre']}: "
-              "si no corre prisa, quizá te convenga esperar para comprar. Tus vigiladas seguirán revisándose.")
+    if not _telegram("BuscaTron · rebajas a la vista", f"Dentro de {c['dias']} día{'' if c['dias'] == 1 else 's'} empieza {c['nombre']}: "
+              "si no corre prisa, quizá te convenga esperar para comprar. Tus vigiladas seguirán revisándose."):
+        return None                  # no llegó: se reintenta
     ajustes.guarda({"rebaja_avisada": clave})
     return clave
 
@@ -157,7 +130,7 @@ def salud(ahora=None):
                               (h, ahora - 37 * 86400, ahora - SALUD_DIAS * 86400)).fetchone()[0]
             ahora_f = c.execute("SELECT encontrados, error FROM estado_tiendas WHERE host=? AND ts>? ORDER BY ts DESC",
                                 (h, ahora - SALUD_DIAS * 86400)).fetchall()
-            if antes and len(ahora_f) >= 3 and not any(f[0] for f in ahora_f):
+            if antes and len(ahora_f) >= 3 and not any(f[0] for f in ahora_f) and any(motor.es_caida(f[1]) for f in ahora_f):
                 err = next((f[1] for f in ahora_f if f[1]), "")
                 malas.append(f"• {t.get('nombre') or h}" + (f": {err}" if err else ""))
     ajustes.guarda({"ultima_salud": ahora})
@@ -170,7 +143,7 @@ def salud(ahora=None):
 
 def _bucle(pausa):
     while True:
-        for tarea in (lambda: vigiladas(hilo=True), recordatorios, bloqueadas, limpieza, rebajas, salud):
+        for tarea in (lambda: vigiladas(hilo=True), recordatorios, limpieza, rebajas, salud):
             try:
                 tarea()
             except Exception:

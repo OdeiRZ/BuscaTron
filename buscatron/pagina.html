@@ -757,6 +757,7 @@ async function pideObjetivo(g){const x=g[0],k=x.grupo||('c:'+(x.clave||''));
   if(v.trim()&&!(n>0)){aviso('Escribe un precio, por ejemplo 25 o 24,50');return;}
   const r=await api('objetivos',v.trim()?{grupo:k,titulo:x.titulo,precio:n}:{quitar:k});if(r.error){aviso(r.error);return;}
   ultimos.forEach(y=>{if((y.grupo||('c:'+y.clave))===k)y.objetivo_producto=v.trim()?n:null;});guardaUltimos();pintaLista();
+  if(x.deVigilada){aviso(v.trim()?`Te avisará a ${euro(n)} o menos`:'Objetivo quitado: se usa el de la vigilada');return;}
   if(!v.trim()){aviso('Objetivo quitado: se usa el de cada búsqueda vigilada');return;}
   const vig=await api('vigilan?titulo='+encodeURIComponent(x.titulo)+'&precio='+n).catch(()=>null);
   if(!Array.isArray(vig)){aviso(`Te avisaré cuando una búsqueda vigilada lo encuentre a ${euro(n)} o menos`);return;}
@@ -1127,7 +1128,8 @@ async function recogeCompartido(){if(!LLEGA_COMPARTIDO)return;
   let d;try{d=await api('compartido');}catch(e){return;}if(!d||!d.text&&!d.url){aviso('No ha llegado nada de lo compartido: vuelve a compartirlo');return;}
   const todo=`${d.url||''} ${d.text||''}`.toLowerCase();
   const t=manualesT().find(t=>todo.includes(t.host.replace(/^www\./,'')));
-  abrePegar(t?t.host:undefined,(d.text||'').trim());}
+  abrePegar(t?t.host:undefined,(d.text||'').trim());
+  if(!t&&$('pegar-t')){$('pegar-t').insertAdjacentHTML('afterbegin','<option value="">Elige la tienda…</option>');$('pegar-t').value='';}}
 function abrePegar(host,texto){const pedida=host;
   const ms=manualesT();
   if(!ms.length){aviso('No tienes tiendas marcadas como «No consultar automáticamente»');return;}
@@ -1149,11 +1151,12 @@ function abrePegar(host,texto){const pedida=host;
     <div class="acciones"><button type="button" id="pegar-ok">Guardar</button></div><div id="pegar-msg" class="mut" style="margin-top:8px"></div>`;
   abreHoja('pegar');$('hoja2').querySelector('.cierra').onclick=cierraPegar;
   if(texto)$('pegar-txt').value=texto;
-  const enlace=()=>{const t=tiendas.find(x=>x.host===$('pegar-t').value),q=$('pegar-q').value.trim(),a=$('pegar-ir');
+  const enlace=()=>{const t=tiendas.find(x=>x.host===$('pegar-t').value),q=$('pegar-q').value.trim(),a=$('pegar-ir');if(!t)return;
     a.href=enlaceT(t,q);a.textContent=`Abre ${nombreT(t.host)} ↗`+(q?` con «${q}»`:'');};
   $('pegar-t').onchange=()=>{try{localStorage.setItem('bt-pegar-t',$('pegar-t').value)}catch(e){}enlace();};$('pegar-q').oninput=enlace;enlace();
   (q0?$('pegar-txt'):$('pegar-q')).focus();
   $('pegar-ok').onclick=async()=>{const b=$('pegar-ok'),host=$('pegar-t').value,consulta=$('pegar-q').value.trim(),m=$('pegar-msg');
+    if(!host){m.className='err';m.textContent='Elige de qué tienda es lo que has compartido.';return;}
     if(!consulta){m.className='err';m.textContent='Escribe qué buscas: se guardan los productos cuyo nombre lo contiene.';return;}
     if(!$('pegar-txt').value.trim()){m.className='err';m.textContent='Pega primero lo que has copiado de la tienda.';return;}
     b.disabled=true;const r=await api('importar',{host,consulta,texto:$('pegar-txt').value});b.disabled=false;
@@ -1233,18 +1236,20 @@ let miLista=[],marcados=new Set();
 // Compra conjunta: la forma más barata de comprar los juegos marcados, con el envío de cada tienda
 async function mejorCompra(){const r=await api('compra',{grupos:[...marcados]});
   if(!Array.isArray(r)||!r.length){$('ml-compra').innerHTML='<p class="mut">No hay ofertas para esos juegos.</p>';return;}
+  const faltan=[...marcados].filter(k=>!r[0].pedidos.some(o=>o.juegos.some(j=>j.grupo===k)));
   const nom=g=>{const p=miLista.find(x=>x.grupo===g);return p?tituloProducto(p.titulos.map(t=>({titulo:t}))):g;};
-  $('ml-compra').innerHTML=r.slice(0,3).map((pl,i)=>`<div class="plan ${i?'':'mejor'}"><h4>${i?'Alternativa':'✅ Lo más barato'}: ${euro(pl.total)} <span class="mut" style="font-weight:600">(envío ${pl.envio>0?euro(pl.envio):'gratis'}${pl.desconocido.length?', en parte estimado':''})</span></h4>
+  $('ml-compra').innerHTML=(faltan.length?`<p class="err">Sin contar, porque ahora no tienen oferta con stock: ${faltan.map(k=>esc(nom(k))).join(', ')}</p>`:'')+r.slice(0,3).map((pl,i)=>`<div class="plan ${i?'':'mejor'}"><h4>${i?'Alternativa':'✅ Lo más barato'}: ${euro(pl.total)} <span class="mut" style="font-weight:600">(envío ${pl.envio>0?euro(pl.envio):'gratis'}${pl.desconocido.length?', en parte estimado':''})</span></h4>
     ${pl.pedidos.map(o=>`<div class="ped"><b>${esc(nombreT(o.tienda))}</b> · ${o.juegos.length} juego${o.juegos.length>1?'s':''} · ${euro(o.subtotal)} + ${o.envio>0?euro(o.envio)+' envío':'envío gratis'}${pl.desconocido.includes(o.tienda)?' <span class="mut">(envío estimado: pon el suyo en Ajustes)</span>':''}
       ${o.juegos.map(j=>`<a href="${esc(j.url)}" target="_blank" rel="noopener">· ${esc(nom(j.grupo))} — ${euro(j.precio)} ↗</a>`).join('')}</div>`).join('')}</div>`).join('');}
 async function cargaRebajas(){let c;try{c=await api('rebajas');}catch(e){return;}
   $('ml-rebajas').innerHTML=c&&c.nombre?`<div class="ml-reb">🏷️ ${c.ya?`Estás en <b>${esc(c.nombre)}</b>: buen momento para revisar precios.`:`Dentro de ${c.dias} día${c.dias===1?'':'s'} empieza <b>${esc(c.nombre)}</b>: si no corre prisa, quizá convenga esperar.`}</div>`:'';}
 // ¿Buen momento? El mejor precio de ahora frente a lo que se le ha visto (su precio habitual y su mínimo)
 function momento(p){const ahora=p.mejor.precio;
-  if(p.minimo!=null&&ahora<=p.minimo+0.01)return '🟢 el precio más bajo que se le ha visto';
+  if(p.mediana!=null&&p.mediana>p.minimo+0.01&&ahora<=p.minimo+0.01)return '🟢 el precio más bajo que se le ha visto';
   if(p.mediana==null)return '';
   return ahora<=p.mediana*0.95?'🟢 por debajo de su precio habitual ('+euro(p.mediana)+')':ahora<=p.mediana*1.05?'🟡 su precio habitual':'🔴 más caro que de costumbre ('+euro(p.mediana)+')';}
 async function cargaMiLista(){let l;try{l=await api('milista');}catch(e){return;}if(!Array.isArray(l))return;miLista=l;
+  for(const k of [...marcados])if(!l.some(p=>p.grupo===k))marcados.delete(k);
   $('ml-n').textContent=l.length||'';
   if(!l.length){$('ml').innerHTML='<p class="mut">Cuando tus vigiladas se revisen, aquí verás cada juego con su mejor precio.</p>';return;}
   let vig=null;
@@ -1262,7 +1267,7 @@ async function cargaMiLista(){let l;try{l=await api('milista');}catch(e){return;
   $('ml-compra-b').style.display=marcados.size>1?'':'none';$('ml-compra-ir').onclick=mejorCompra;
   $('ml').querySelectorAll('[data-mlh]').forEach(b=>b.onclick=()=>{const p=miLista[+b.dataset.mlh];abreHist(p.mejor.url,tituloProducto(p.titulos.map(t=>({titulo:t}))),p.mejor.tienda,p.grupo);});
   $('ml').querySelectorAll('[data-mlo]').forEach(b=>b.onclick=async()=>{const p=miLista[+b.dataset.mlo];
-    await pideObjetivo([{grupo:p.grupo,titulo:tituloProducto(p.titulos.map(t=>({titulo:t}))),precio:p.mejor.precio,objetivo_producto:p.objetivo_propio?p.objetivo:null}]);cargaMiLista();});}
+    await pideObjetivo([{grupo:p.objetivo_clave,titulo:p.mejor.titulo,deVigilada:true,precio:p.mejor.precio,objetivo_producto:p.objetivo_propio?p.objetivo:null}]);cargaMiLista();});}
 async function cargaSeg(){cargaMiLista();cargaRebajas();if(!$('s-id').value)pintaSin();const [l,h]=await Promise.all([api('seguimientos'),api('historico_vigiladas').catch(()=>({}))]);
   histAmz=h&&!h.error?h:{};pintaSeg(l);}
 const fechaCorta=f=>f?f.split('-').reverse().join('/'):'';
@@ -1320,7 +1325,7 @@ function revisando(s){return !!s.revisando||s.id in esperando;}
 function sigueRevisiones(){if(sondeo)return;let n=0,firma='';
   sondeo=setInterval(async()=>{const l=await api('seguimientos');if(!Array.isArray(l))return;n++;
     for(const s of l){if(!(s.id in esperando))continue;
-      if((s.ultima||0)>esperando[s.id]&&!s.revisando){delete esperando[s.id];cargaNavAv();aviso(`Revisión terminada («${s.nombre}»): ${s.estado}`);}}
+      if((s.ultima||0)>esperando[s.id]&&!s.revisando){delete esperando[s.id];cargaNavAv();cargaMiLista();aviso(`Revisión terminada («${s.nombre}»): ${s.estado}`);}}
     for(const id of Object.keys(esperando))if(!l.some(s=>s.id===+id)||n>400)delete esperando[id];   // borrada, o tarda demasiado (20 min: con el ritmo por tienda una revisión tarda minutos)
     const f=l.map(s=>`${s.id}:${s.revisando}:${s.ultima}:${s.id in esperando}`).join()+':'+Math.floor(Date.now()/60000);   // y cada minuto, para el tiempo que lleva
     const sigue=l.some(revisando);
@@ -1427,7 +1432,7 @@ async function cargaAvisos(){const mia=++avVuelta;const [todos,vig]=await Promis
   document.querySelectorAll('#av-lista .av').forEach(c=>{const d=c.querySelector('details');if(d&&abiertos.has(c.dataset.g))d.open=true;});
   document.querySelectorAll('#av-lista .graf').forEach(g=>g.onclick=()=>{const a=l[+g.dataset.i];abreHist(a.url,a.nombre,a.tienda,(a.grupo||'').split('|')[1]);});
   document.querySelectorAll('#av-lista .obj-av').forEach(g=>g.onclick=async()=>{const a=l[+g.dataset.i];
-    await pideObjetivo([{grupo:(a.grupo||'').split('|')[1],titulo:a.nombre,precio:a.precio,objetivo_producto:a.objetivo_producto}]);cargaAvisos();});
+    await pideObjetivo([{grupo:a.objetivo_clave,titulo:a.tituloTienda,deVigilada:true,precio:a.precio,objetivo_producto:a.objetivo_producto}]);cargaAvisos();});
   document.querySelectorAll('#av-lista .graf-o').forEach(g=>g.onclick=()=>abreHist(g.dataset.u,g.dataset.t,g.dataset.h));
   document.querySelectorAll('#av-lista .quita').forEach(g=>g.onclick=async()=>{const ids=g.dataset.ids.split(',').map(Number);g.disabled=true;
     let r;try{r=[await api('avisos',{accion:'borrar',ids})];}catch(e){r=null;}     // todas en una sola petición

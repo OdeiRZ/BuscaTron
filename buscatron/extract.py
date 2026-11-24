@@ -561,6 +561,6 @@ def detecta_envio(html):
     p.feed(html)
     texto = " ".join(e[1] for e in p.eventos if e[0] == "x")
     g = _GRATIS.search(texto) or _GRATIS2.search(texto)
-    c = _COSTE.search(texto)
+    c = next((m for m in _COSTE.finditer(texto) if not re.search(r"gratis|gratuit|partir|superior|m[aá]s de|desde", m.group(0), re.I)), None)
     coste = a_numero(c.group(1)) if c else None
     return {"gratis_desde": a_numero(g.group(1)) if g else None, "coste": coste if coste and 0 < coste < 40 else None}
