@@ -3,6 +3,11 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.25.6] - 2026-11-24
+
+### Cambiado
+- Por Telegram vuelven a llegar solo los cambios de límites y objetivos: el aviso de rebajas a la vista se ve solo en la página y las tiendas que dejan de funcionar, en Ajustes → Estado de las tiendas.
+
 ## [0.25.5] - 2026-11-24
 
 ### Corregido

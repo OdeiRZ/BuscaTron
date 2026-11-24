@@ -26,21 +26,5 @@ class Compra(unittest.TestCase):
         self.assertEqual((r[0]["total"], [o["tienda"] for o in r[0]["pedidos"]]), (60.0, ["x.es"]))   # todo en x: envío gratis
 
 
-class Salud(unittest.TestCase):
-    def test_avisa_de_la_que_dejo_de_funcionar(self):
-        d = tempfile.mkdtemp()
-        with mock.patch.object(bd, "RUTA", os.path.join(d, "t.db")), mock.patch.object(ajustes, "RUTA", os.path.join(d, "c.json")), \
-             mock.patch.object(programador.cfg, "carga", return_value=[{"host": "z.es", "nombre": "Zeta", "activa": True}]), \
-             mock.patch.object(programador, "_telegram") as tg:
-            ahora = time.time()
-            with bd.conecta() as c:
-                c.execute("INSERT INTO estado_tiendas VALUES('z.es',?,'x',3,'')", (ahora - 20 * 86400,))
-                for i in range(3):
-                    c.execute("INSERT INTO estado_tiendas VALUES('z.es',?,'x',0,'no responde')", (ahora - i * 86400,))
-            self.assertEqual(len(programador.salud(ahora)), 1)
-            tg.assert_called_once()
-            self.assertIsNone(programador.salud(ahora + 3600))          # una vez por semana
-
-
 if __name__ == "__main__":
     unittest.main()
