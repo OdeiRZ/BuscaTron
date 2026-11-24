@@ -546,6 +546,8 @@ class Handler(BaseHTTPRequestHandler):
                 t["nombre"] = c["nombre"].strip()
             if c.get("url", "").strip():
                 host, plantilla = analiza_direccion(c["url"])
+                if host != t["host"] and t.get("bloqueo"):
+                    raise ValueError("está bloqueada: reactívala antes de cambiar su dirección, o añade la web nueva como otra tienda")
                 if host != t["host"]:
                     if any(o["host"] == host for o in lista):
                         raise ValueError("ya existe una tienda con esa dirección")
@@ -555,6 +557,8 @@ class Handler(BaseHTTPRequestHandler):
                 if plantilla:
                     t["plantilla"] = plantilla
             if "manual" in c:
+                if t.get("bloqueo"):                 # bloqueada: sigue sin peticiones; tu elección vale al reactivarla
+                    t["bloqueo"]["manual"] = bool(c["manual"])
                 t["manual"] = bool(c["manual"]) or bool(t.get("bloqueo"))      # bloqueada: ninguna petición hasta reactivarla
             for campo in ("envio", "envio_gratis"):      # gastos de envío de la tienda (vacío = no se sabe)
                 if campo in c:
@@ -567,7 +571,7 @@ class Handler(BaseHTTPRequestHandler):
                 if t.get("bloqueo") and c.get("reactivar") != t["host"]:
                     t["activa"], t["manual"] = False, True      # página abierta de antes del bloqueo: sigue sin recibir peticiones
                 if t["activa"] and (bloqueo := t.pop("bloqueo", None)):     # la reactivas tú: deja de vigilarse como «te ha bloqueado»
-                    t["manual"] = bool(bloqueo.get("manual"))    # como la tenías antes del bloqueo
+                    t["manual"] = bool(bloqueo.get("manual", True))    # como la tenías; si no se sabe, solo enlace
                     t["suave_hasta"] = time.time() + programador.SUAVE_DIAS * 86400      # y vuelve con calma, como si volviera sola
         cfg.guarda(lista)
         return lista

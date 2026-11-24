@@ -233,8 +233,10 @@ def _registra_avisos(c, seg, opc, modo, res, ts):
     for x in res:
         if not x.get("agotado") and x.get("origen") != "segunda_mano":
             por_grupo.setdefault(x.get("grupo"), {}).setdefault(x["tienda"], x["precio"])
-    vistos = [dict(r) for r in c.execute("SELECT tienda, titulo, precio FROM precios WHERE seg_id=? AND ts>=? AND agotado=0 AND preventa=0",
+    vistos = [dict(r) for r in c.execute("SELECT tienda, titulo, url, precio FROM precios WHERE seg_id=? AND ts>=? AND agotado=0 AND preventa=0",
                                          (seg["id"], (seg.get("ultima") or ts) - 60))]      # lo pegado trae una sola tienda
+    stock = motor.stock_de_fichas([v["url"] for v in vistos])
+    vistos = [v for v in vistos if not stock.get(v["url"], (None, None))[0]]
     for v, g in zip(vistos, motor.grupos([v["titulo"] for v in vistos], seg["consulta"], opc.get("alguna", ""))):
         por_grupo.setdefault(g["grupo"], {}).setdefault(v["tienda"], v["precio"])
     medianas = {g: statistics.median(p.values()) for g, p in por_grupo.items() if g and len(p) >= 3}

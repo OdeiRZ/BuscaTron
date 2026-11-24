@@ -3,6 +3,15 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.25.4] - 2026-11-24
+
+### Corregido (cuarta revisión de código)
+- Reactivar una tienda bloqueada con el formato antiguo la dejaba en consulta automática: ahora, si no se sabe cómo estaba, sigue «solo enlace». Cambiar «solo enlace» mientras está bloqueada se recuerda; no se puede cambiar su dirección estando bloqueada.
+- La limpieza del historial conservaba un precio agotado y borraba el de ese día con stock.
+- «👁️ Vigilar» ya no crea una vigilada repetida y la lista se actualiza.
+- «Precio raro» no cuenta precios que su ficha dice agotados.
+- El envío visto por dos búsquedas a la vez ya no se pierde; la comprobación de bloqueadas no relee el archivo en cada petición.
+
 ## [0.25.3] - 2026-11-24
 
 ### Corregido (tercera revisión de código de v0.21-v0.25)

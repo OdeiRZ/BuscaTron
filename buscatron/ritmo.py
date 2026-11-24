@@ -19,9 +19,20 @@ class Prohibida(ValueError):
     """Petición a una tienda que te ha bloqueado: no se hace ninguna hasta que la reactives."""
 
 
+_bloqueadas = [None, frozenset()]      # (marca del archivo de tiendas, hosts bloqueados)
+
+
 def _comprueba(h):
+    import os
     from . import tiendas as cfg
-    if any(t.get("bloqueo") and host("https://" + t["host"]) == h for t in cfg.carga()):
+    try:
+        marca = (cfg.RUTA, os.stat(cfg.RUTA).st_mtime_ns)
+    except OSError:
+        marca = (cfg.RUTA, None)
+    if marca != _bloqueadas[0]:
+        lista = cfg.lee_json(cfg.RUTA) if marca[1] is not None else []
+        _bloqueadas[:] = [marca, frozenset(host("https://" + t["host"]) for t in lista if t.get("bloqueo"))]
+    if h in _bloqueadas[1]:
         raise Prohibida("esa tienda te ha bloqueado: no se le hace ninguna petición hasta que la reactives")
 
 

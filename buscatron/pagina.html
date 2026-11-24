@@ -743,9 +743,12 @@ async function vigilaJuego(g){const nombre=tituloProducto(g),barato=Math.min(...
   const v=prompt(`Vigilar «${nombre}».\n\nAhora está desde ${euro(barato)}. ¿A qué precio quieres que te avise?`,String(sug));
   if(v===null)return;const n=Number(v.replace(',','.').replace(/[^\d.]/g,''));if(!(n>0)){aviso('Escribe un precio, por ejemplo 30');return;}
   const consulta=nombre.replace(/[:\-–]/g,' ').replace(/\s+/g,' ').trim();
+  const norm=t=>(t||'').normalize('NFD').replace(/p{M}/gu,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+  const ya=(await api('seguimientos')||[]).find(s=>norm(s.consulta)===norm(consulta));
+  if(ya){aviso(`Ya vigilas «${ya.nombre}»: cambia su objetivo en Vigiladas`);return;}
   const r=await api('seguimientos',{nombre,consulta,objetivo:n,bajo_historico:15,sin_agotados:true,castellano:true,canales:'app,telegram',cada_horas:12,
     opciones:{idioma:'castellano',con_envio:true}});
-  if(r&&r.error){aviso(r.error);return;}aviso(`Vigilando «${nombre}»: te avisará a ${euro(n)} o menos`);}
+  if(r&&r.error){aviso(r.error);return;}aviso(`Vigilando «${nombre}»: te avisará a ${euro(n)} o menos`);if(typeof cargaSeg==='function')cargaSeg();}
 function guardaUltimos(){if(ultimoId)api('busquedas',{accion:'actualizar',id:ultimoId,resultados:ultimos});}
 
 /* 🎯 precio objetivo de un producto */

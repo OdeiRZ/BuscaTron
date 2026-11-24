@@ -47,7 +47,7 @@ def limpia(dias=180, ahora=None):
     borradas = {}
     with conecta() as c:
         borradas["precios"] = c.execute("""DELETE FROM precios WHERE ts < ? AND rowid NOT IN (
-            SELECT rid FROM (SELECT rowid rid, ROW_NUMBER() OVER (PARTITION BY url, CAST(ts / 86400 AS INTEGER) ORDER BY precio, rowid) n
+            SELECT rid FROM (SELECT rowid rid, ROW_NUMBER() OVER (PARTITION BY url, CAST(ts / 86400 AS INTEGER) ORDER BY agotado, precio, rowid) n
                              FROM precios WHERE ts < ?) WHERE n = 1)""", (corte, corte)).rowcount
         borradas["fichas"] = c.execute("DELETE FROM fichas WHERE ts < ?", (ahora - 60 * 86400,)).rowcount
         borradas["idiomas"] = c.execute("DELETE FROM idiomas WHERE ts < ?", (ahora - 60 * 86400,)).rowcount

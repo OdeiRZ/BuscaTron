@@ -499,7 +499,8 @@ def en_otro_idioma(titulo):
     return cod in ("en", "otro") and seguro
 
 
-_envio_visto = {}          # host → lo que anuncia su página de resultados (se guarda en la tienda al acabar la búsqueda)
+_envio_visto = {}
+_cerrojo_envio = threading.Lock()          # host → lo que anuncia su página de resultados (se guarda en la tienda al acabar la búsqueda)
 
 
 def _apunta_envio(host, html):
@@ -508,15 +509,17 @@ def _apunta_envio(host, html):
     except Exception:          # noqa: BLE001  (es solo una pista)
         return
     if d.get("coste") is not None or d.get("gratis_desde") is not None:
-        _envio_visto[host] = d
+        with _cerrojo_envio:
+            _envio_visto[host] = d
 
 
 def guarda_envios_vistos():
     """Guarda en cada tienda el envío que anuncia su web (campo «envio_auto»), sin tocar lo que hayas puesto tú."""
     if not _envio_visto:
         return
-    vistos = dict(_envio_visto)
-    _envio_visto.clear()
+    with _cerrojo_envio:
+        vistos = dict(_envio_visto)
+        _envio_visto.clear()
     with cfg.cerrojo:
         lista = cfg.carga()
         cambia = False
