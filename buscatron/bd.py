@@ -56,7 +56,7 @@ def limpia(dias=180, ahora=None):
         # un aviso quitado solo sirve para no repetirlo durante 30 días (seguimiento.REAVISO_DIAS)
         borradas["avisos"] = c.execute("DELETE FROM avisos WHERE oculto=1 AND ts < ?", (ahora - 60 * 86400,)).rowcount
         borradas["estado_tiendas"] = c.execute("""DELETE FROM estado_tiendas WHERE rowid NOT IN (
-            SELECT rid FROM (SELECT rowid rid, ROW_NUMBER() OVER (PARTITION BY host ORDER BY ts DESC) n FROM estado_tiendas) WHERE n <= 30)""").rowcount
+            SELECT rid FROM (SELECT rowid rid, ROW_NUMBER() OVER (PARTITION BY host ORDER BY ts DESC) n FROM estado_tiendas) WHERE n <= 30) AND ts < ?""", (ahora - 40 * 86400,)).rowcount
     return borradas
 
 
@@ -97,4 +97,5 @@ def _prepara(c):
         except sqlite3.OperationalError:
             pass
     c.execute("CREATE INDEX IF NOT EXISTS ix_precios_clave ON precios(clave, ts)")
+    c.execute("CREATE INDEX IF NOT EXISTS ix_precios_titulo ON precios(titulo)")
     c.commit()

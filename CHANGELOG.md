@@ -3,6 +3,17 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.25.1] - 2026-11-24
+
+### Corregido (revisión de código de v0.21-v0.25)
+- Compra conjunta: un juego que está en dos vigiladas ya no la deja sin planes.
+- «Salud semanal» no podía avisar de las tiendas más consultadas: la limpieza borraba su historial; ahora se conservan 40 días.
+- Lo que pegas de una tienda bloqueada cuenta en búsquedas y avisos (sigue sin recibir ninguna petición).
+- Al bajar el objetivo, los avisos «con envío» se comparan por el precio final. «Precio raro» funciona también con lo pegado.
+- 🎯 en Avisos muestra el objetivo que ya tenía (antes salía vacío y aceptar lo borraba).
+- Los vínculos de Amazon puestos a mano se recalculan con las claves nuevas, y los tapetes no sirven de referencia de un juego. El recálculo va por tandas y con índice.
+- El nombre de una tarjeta no se queda en el de la serie si lo de tras «:» es el nombre de la expansión. Compartir desde el móvil ya no se pierde si la última tienda usada dejó de ser «solo enlace».
+
 ## [0.25.0] - 2026-11-24
 
 ### Cambiado (interfaz en el móvil)

@@ -1127,13 +1127,12 @@ async function recogeCompartido(){if(!LLEGA_COMPARTIDO)return;
   const todo=`${d.url||''} ${d.text||''}`.toLowerCase();
   const t=manualesT().find(t=>todo.includes(t.host.replace(/^www\./,'')));
   abrePegar(t?t.host:undefined,(d.text||'').trim());}
-function abrePegar(host,texto){
+function abrePegar(host,texto){const pedida=host;
   const ms=manualesT();
   if(!ms.length){aviso('No tienes tiendas marcadas como «No consultar automáticamente»');return;}
   if(!host)try{host=localStorage.getItem('bt-pegar-t')}catch(e){}       // la última que usaste
-  const pedida=host;
   if(!ms.some(t=>t.host===host)){
-    if(pedida&&tiendas.some(t=>t.host===pedida)&&arguments.length){aviso(`${nombreT(pedida)} ya se consulta sola: no hace falta pegar sus resultados`);return;}
+    if(pedida&&tiendas.some(t=>t.host===pedida)){aviso(`${nombreT(pedida)} ya se consulta sola: no hace falta pegar sus resultados`);return;}
     host=ms[0].host;}
   const q0=((ultimoBody&&ultimoBody.q)||$('q').value||'').trim();
   $('hoja2').innerHTML=`<button type="button" class="cierra" aria-label="Cerrar">✕</button><h3>📋 Pegar resultados</h3>
@@ -1385,7 +1384,8 @@ function tituloProducto(items){
   const faltanTildes=t=>!/[áéíóúñü]/i.test(t)&&c.some(o=>o!==t&&sinTildes(o)===sinTildes(t)&&/[áéíóúñü]/i.test(o));
   const nota=t=>(t===t.toUpperCase()&&/[A-Z]/.test(t)?100:0)+(faltanTildes(t)?20:0)+(t.includes(':')?0:5)+t.length/100-(t.match(/(^|\s)\p{Lu}/gu)||[]).length/1000;   // a igualdad, el de nombre propio («La Próxima Evolución»)
   // «Eternal Decks» frente a «Eternal Decks: juego de cartas cooperativo…»: lo de tras «:» es la descripción de una tienda
-  const describe=t=>c.some(o=>o!==t&&o.toLowerCase().startsWith(t.toLowerCase().replace(/[.\s]+$/,'')+':'))?-10:0;
+  const describe=t=>c.some(o=>o!==t&&o.toLowerCase().startsWith(t.toLowerCase().replace(/[.\s]+$/,'')+':')
+    &&/\b(juego|cooperativo|estrat[eé]gico|familiar|tablero|cartas|jugadores)\b/i.test(o.slice(t.length)))?-10:0;
   return c.slice().sort((a,b)=>nota(a)+describe(a)-nota(b)-describe(b))[0];}
 // el envío de la tienda (lo que pusiste en Ajustes o lo que anuncia su web): «+3,95 € envío», «envío gratis» o nada si no se sabe
 function envioTxt(a){return a.envio==null?'':`<span class="av-envio">${a.envio>0?'+'+euro(a.envio)+' envío':'envío gratis'}</span>`;}
@@ -1426,7 +1426,7 @@ async function cargaAvisos(){const mia=++avVuelta;const [todos,vig]=await Promis
   document.querySelectorAll('#av-lista .av').forEach(c=>{const d=c.querySelector('details');if(d&&abiertos.has(c.dataset.g))d.open=true;});
   document.querySelectorAll('#av-lista .graf').forEach(g=>g.onclick=()=>{const a=l[+g.dataset.i];abreHist(a.url,a.nombre,a.tienda,(a.grupo||'').split('|')[1]);});
   document.querySelectorAll('#av-lista .obj-av').forEach(g=>g.onclick=async()=>{const a=l[+g.dataset.i];
-    await pideObjetivo([{grupo:(a.grupo||'').split('|')[1],titulo:a.nombre,precio:a.precio}]);});
+    await pideObjetivo([{grupo:(a.grupo||'').split('|')[1],titulo:a.nombre,precio:a.precio,objetivo_producto:a.objetivo_producto}]);cargaAvisos();});
   document.querySelectorAll('#av-lista .graf-o').forEach(g=>g.onclick=()=>abreHist(g.dataset.u,g.dataset.t,g.dataset.h));
   document.querySelectorAll('#av-lista .quita').forEach(g=>g.onclick=async()=>{const ids=g.dataset.ids.split(',').map(Number);g.disabled=true;
     let r;try{r=[await api('avisos',{accion:'borrar',ids})];}catch(e){r=null;}     // todas en una sola petición

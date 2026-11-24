@@ -670,7 +670,7 @@ def objetivo_para(x, objs):
     return None
 
 
-VERSION_CLAVES = 4      # súbela al cambiar clave_producto (RUIDO, DESCRIPCION, COLETILLAS): se recalcula todo lo guardado
+VERSION_CLAVES = 5      # súbela al cambiar clave_producto (RUIDO, DESCRIPCION, COLETILLAS): se recalcula todo lo guardado
 
 
 def rellena_claves():
@@ -681,9 +681,12 @@ def rellena_claves():
     with bd.conecta() as c:
         sql = "SELECT DISTINCT titulo FROM precios" + ("" if hecha < VERSION_CLAVES else " WHERE clave IS NULL")
         titulos = [r[0] for r in c.execute(sql)]
-        c.executemany("UPDATE precios SET clave=? WHERE titulo=?", [(clave_producto(t), t) for t in titulos])
+    for i in range(0, len(titulos), 200):       # por tandas: no bloquea la base a una revisión que empiece a la vez
+        with bd.conecta() as c:
+            c.executemany("UPDATE precios SET clave=? WHERE titulo=?", [(clave_producto(t), t) for t in titulos[i:i + 200]])
+    with bd.conecta() as c:
         if hecha < VERSION_CLAVES:
-            for tabla in ("ignorados", "objetivos"):
+            for tabla in ("ignorados", "objetivos", "vinculos_amazon"):
                 for clave, titulo in c.execute(f"SELECT clave, titulo FROM {tabla}").fetchall():
                     if not titulo or clave.startswith("f:"):
                         continue
@@ -820,8 +823,9 @@ def buscar(consulta, incluir="", excluir="", ocultar_agotados=True, hosts=None, 
     except (TypeError, ValueError):
         paginas = 1
     modo = modo_idioma(castellano, idioma)
-    activas = [t for t in lista if (t["host"] in hosts if hosts is not None else t.get("activa", True))
-               and not t.get("bloqueo")]        # bloqueada: ni aunque la pida una página abierta desde antes
+    # bloqueada: nunca se consulta, ni aunque la pida una página abierta desde antes; si va como «solo enlace», cuenta lo pegado
+    activas = [t for t in lista if (t["host"] in hosts if hosts is not None else t.get("activa", True) or t.get("bloqueo"))
+               and not (t.get("bloqueo") and not t.get("manual"))]
     if not segunda_mano:
         activas = [t for t in activas if t.get("tipo") != "segunda_mano"]
     # «solo enlace» aunque no tenga dirección de búsqueda (su enlace es la portada): si no, se consultaba igual

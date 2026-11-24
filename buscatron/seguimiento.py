@@ -1,5 +1,6 @@
 """Lista de seguimiento: búsquedas vigiladas y reglas de aviso."""
 import json
+import re
 import statistics
 import threading
 import time
@@ -109,10 +110,12 @@ def avisos(limite=500):
         filas = [dict(r) for r in c.execute("SELECT * FROM avisos WHERE oculto=0 ORDER BY ts DESC LIMIT ?", (limite,))]
         segs = {r["id"]: dict(r) for r in c.execute("SELECT id, consulta, opciones FROM seguimientos")}
     tiendas_ = {t["host"]: t for t in motor.cfg.carga()}
+    objs = motor.objetivos()
     for a in filas:
         s = segs.get(a["seg_id"]) or {}
         g = motor.grupos([a["titulo"]], s.get("consulta") or "", opciones_de(s).get("alguna", "") if s else "")[0]["grupo"]
         a["grupo"] = f"{a['seg_id']}|{g}"
+        a["objetivo_producto"] = (objs.get(g) or {}).get("precio")
         a["envio"] = motor.envio_de(tiendas_.get(a["tienda"], {}), a["precio"])      # None: no se sabe
     return filas
 
@@ -228,6 +231,10 @@ def _registra_avisos(c, seg, opc, modo, res, ts):
     for x in res:
         if not x.get("agotado"):
             por_grupo.setdefault(x.get("grupo"), {}).setdefault(x["tienda"], x["precio"])
+    vistos = [dict(r) for r in c.execute("SELECT tienda, titulo, precio FROM precios WHERE seg_id=? AND ts>=? AND agotado=0 AND preventa=0",
+                                         (seg["id"], (seg.get("ultima") or ts) - 60))]      # lo pegado trae una sola tienda
+    for v, g in zip(vistos, motor.grupos([v["titulo"] for v in vistos], seg["consulta"], opc.get("alguna", ""))):
+        por_grupo.setdefault(g["grupo"], {}).setdefault(v["tienda"], v["precio"])
     medianas = {g: statistics.median(p.values()) for g, p in por_grupo.items() if g and len(p) >= 3}
     for x in res:
         x["_ts"] = ts
@@ -441,7 +448,15 @@ def compra_conjunta(grupos):
     todos y cada pareja de tiendas (con 10 juegos y 30 tiendas son unos cientos de cuentas). Devuelve los planes, del
     más barato al más caro: [{total, envio, desconocido, pedidos: [{tienda, juegos: [...], subtotal, envio}]}]."""
     import itertools
-    lista = [p for p in mi_lista() if p["grupo"] in set(grupos)]
+    unicos = {}
+    for p in mi_lista():
+        if p["grupo"] not in set(grupos):
+            continue
+        u = unicos.setdefault(p["grupo"], {"grupo": p["grupo"], "por_tienda": {}})      # puede estar en dos vigiladas
+        for h, o in p["por_tienda"].items():
+            if h not in u["por_tienda"] or o["precio"] < u["por_tienda"][h]["precio"]:
+                u["por_tienda"][h] = o
+    lista = list(unicos.values())
     if not lista:
         return []
     tiendas_ = {t["host"]: t for t in motor.cfg.carga()}
@@ -650,8 +665,12 @@ def _fuera_de_objetivo(seg, aviso):
     """¿Aviso «por debajo de tu objetivo» que ya no lo está porque bajaste el objetivo (39 → 38: el de 38,65 € sobra)?"""
     m = aviso["motivo"] or ""
     de_objetivo = "por debajo de tu objetivo de" in m or m.startswith("≤ tu objetivo")       # el segundo, de versiones antiguas
+    precio = aviso["precio"]
+    final = re.match(r"cuesta ([\d.,]+) € con envío", m)
+    if final:
+        precio = float(final.group(1).replace(",", "."))
     return (de_objetivo and "para este producto" not in m and seg["objetivo"] is not None
-            and aviso["precio"] > seg["objetivo"] + 0.005)
+            and precio > seg["objetivo"] + 0.005)
 
 
 def limpia_avisos_por_filtros(seg_id):

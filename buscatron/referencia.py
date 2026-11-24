@@ -141,7 +141,7 @@ def _productos(c, ambito, estado="activas"):
 
 # Palabras de otro tipo de artículo: si el título de Amazon las lleva y el del producto no, no es el mismo producto
 # («Too Many Bones: Gasket Add-on Character» no es «Too Many Bones Edición Definitiva»).
-OTRO_ARTICULO = {"character", "personaje", "add", "addon", "sleeve", "funda", "tapete", "playmat", "organizador", "inserto", "insert", "accesorio"}
+OTRO_ARTICULO = {"character", "personaje", "add", "addon", "sleeve", "funda", "tapete", "playmat", "mat", "organizador", "inserto", "insert", "accesorio"}
 
 
 def es_otro_articulo(w, a):
