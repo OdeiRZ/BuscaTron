@@ -3,6 +3,11 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.25.5] - 2026-11-24
+
+### Corregido
+- La v0.25.4 dejaba la página sin funcionar (un error en «👁️ Vigilar»).
+
 ## [0.25.4] - 2026-11-24
 
 ### Corregido (cuarta revisión de código)
