@@ -3,6 +3,11 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.25.8] - 2026-11-25
+
+### Corregido
+- Avisos: lo que ya has visto se guarda en BuscaTron, no en cada navegador. Lo visto en el PC ya no sale como «nuevo» en el móvil, ni al revés.
+
 ## [0.25.7] - 2026-11-25
 
 ### Cambiado

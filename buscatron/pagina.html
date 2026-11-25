@@ -1399,12 +1399,15 @@ function tituloProducto(items){
 // el envío de la tienda (lo que pusiste en Ajustes o lo que anuncia su web): «+3,95 € envío», «envío gratis» o nada si no se sabe
 function envioTxt(a){return a.envio==null?'':`<span class="av-envio">${a.envio>0?'+'+euro(a.envio)+' envío':'envío gratis'}</span>`;}
 let vistosAntes=null;      // el último aviso que ya habías visto al entrar: los posteriores llevan «Nuevo»
+// Lo visto lo guarda BuscaTron (vale en todos tus dispositivos); lo que guardaba antes cada navegador se suma una vez.
+async function vistos(hasta){let local=0;try{local=Number(localStorage.getItem('bt-vistos')||0);localStorage.removeItem('bt-vistos');}catch(e){}
+  const r=await api('avisos_vistos',{hasta:Math.max(hasta||0,local)});return Number(r&&r.hasta)||0;}
 let avVuelta=0;
 async function cargaAvisos(){const mia=++avVuelta;const [todos,vig]=await Promise.all([api('avisos').catch(()=>null),api('seguimientos').catch(()=>segs)]);   // sin red: lo que haya   // vigiladas al día: su «última búsqueda»
  if(mia!==avVuelta||!Array.isArray(todos))return;     // otra carga más reciente manda
   if(Array.isArray(vig))segs=vig;
-  if(vistosAntes===null)try{vistosAntes=Number(localStorage.getItem('bt-vistos')||0)}catch(e){vistosAntes=0}
-  try{localStorage.setItem('bt-vistos',String(todos.length?Math.max(...todos.map(a=>a.id)):0))}catch(e){}
+  if(vistosAntes===null)vistosAntes=await vistos(0).catch(()=>0);
+  vistos(todos.length?Math.max(...todos.map(a=>a.id)):0).catch(()=>{});
   $('nav-av').textContent='';
   // Un producto, una tarjeta: las variantes de nombre del mismo juego (vienen agrupadas del servidor) van juntas, con la más
   // barata delante; de cada enlace solo cuenta su aviso más reciente (el de antes, si bajó de precio, ya no vale).
@@ -1443,7 +1446,7 @@ async function cargaAvisos(){const mia=++avVuelta;const [todos,vig]=await Promis
   if($('av-orden'))$('av-orden').onchange=()=>{ordenAv=$('av-orden').value;try{localStorage.setItem('bt-orden-av2',ordenAv)}catch(e){}cargaAvisos();};
   if($('av-ref'))$('av-ref').onclick=()=>abreRef('avisos');
   if($('av-vaciar'))$('av-vaciar').onclick=async()=>{if(confirm('¿Quitar todos los avisos de la lista? No volverán a avisarte salvo que bajen más de precio.')){await api('avisos',{accion:'vaciar'});cargaAvisos();aviso('Avisos borrados');}};}
-async function cargaNavAv(){try{const l=await api('avisos');const v=Number(localStorage.getItem('bt-vistos')||0);
+async function cargaNavAv(){try{const [l,v]=await Promise.all([api('avisos'),vistos(0)]);
   const n=new Set(l.filter(a=>a.id>v).map(a=>a.grupo||a.id)).size;$('nav-av').textContent=n?String(n):'';}catch(e){}}
 
 /* servicio: reiniciar y cerrar, como en PixelatIA (nunca con un trabajo en marcha) */
