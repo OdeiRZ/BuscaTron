@@ -3,6 +3,11 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.25.7] - 2026-11-25
+
+### Cambiado
+- «📋 Mi lista» aparece plegada al entrar en Vigiladas.
+
 ## [0.25.6] - 2026-11-24
 
 ### Cambiado
