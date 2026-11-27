@@ -80,6 +80,8 @@ def guarda(d):
          "activo": 1 if d.get("activo", True) else 0}
     if not v["consulta"]:
         raise ValueError("falta la búsqueda")
+    if v["objetivo"] is None and v["pmax"] is not None:     # con un precio máximo y sin aviso no avisaría nunca: avisa a ese precio
+        v["objetivo"] = v["pmax"]
     if v["pmin"] is not None and v["pmax"] is not None and v["pmin"] > v["pmax"]:
         raise ValueError("el precio mínimo es mayor que el máximo: no encontraría nada")
     with bd.conecta() as c:

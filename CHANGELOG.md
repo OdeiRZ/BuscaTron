@@ -3,6 +3,11 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.25.9] - 2026-11-27
+
+### Corregido
+- Una vigilada con precio máximo y sin «Avisarme si cuesta como mucho» nunca avisaba aunque encontrara precios por debajo. Ahora, si dejas el aviso vacío, avisa al precio máximo. Las vigiladas que ya estaban así se han ajustado.
+
 ## [0.25.8] - 2026-11-25
 
 ### Corregido
