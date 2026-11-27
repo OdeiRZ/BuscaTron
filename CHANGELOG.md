@@ -3,6 +3,11 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.25.11] - 2026-11-27
+
+### Corregido
+- El mismo juego salía en dos tarjetas cuando una tienda le añade una coletilla al nombre («La Tiranía de Cráneo Rojo | Cinco escenarios»). Ahora se junta con el otro grupo de la misma búsqueda si su nombre lo contiene y lo que sobra es solo relleno conocido («cinco escenarios», «color», el nombre de una tienda). Nunca se junta un accesorio con su juego, ni otro producto («Black Panther Shuri», «Héroes Reunidos 2»), ni el nombre a secas de la búsqueda («Marvel Champions» no se traga sus expansiones). Vale para búsquedas, avisos y Mi lista.
+
 ## [0.25.10] - 2026-11-27
 
 ### Corregido (auditoría con datos reales)

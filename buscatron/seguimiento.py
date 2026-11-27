@@ -113,9 +113,15 @@ def avisos(limite=500):
         segs = {r["id"]: dict(r) for r in c.execute("SELECT id, consulta, opciones FROM seguimientos")}
     tiendas_ = {t["host"]: t for t in motor.cfg.carga()}
     objs = motor.objetivos()
+    por_seg = {}
     for a in filas:
-        s = segs.get(a["seg_id"]) or {}
-        g = motor.grupos([a["titulo"]], s.get("consulta") or "", opciones_de(s).get("alguna", "") if s else "")[0]["grupo"]
+        por_seg.setdefault(a["seg_id"], []).append(a)
+    for sid, avs in por_seg.items():       # juntos: así se funden las variantes de nombre del mismo juego
+        s = segs.get(sid) or {}
+        for a, g in zip(avs, motor.grupos([a["titulo"] for a in avs], s.get("consulta") or "", opciones_de(s).get("alguna", "") if s else "")):
+            a["_g"] = g["grupo"]
+    for a in filas:
+        g = a.pop("_g")
         a["grupo"] = f"{a['seg_id']}|{g}"
         k = motor.clave_objetivo({"grupo": g, "titulo": a["titulo"]}, objs)
         a["objetivo_producto"], a["objetivo_clave"] = (objs[k]["precio"], k) if k else (None, g)

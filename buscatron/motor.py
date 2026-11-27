@@ -648,13 +648,45 @@ def grupo_de(titulo, frases=()):
     return "c:" + clave_producto(titulo)
 
 
+# Lo que una tienda añade al nombre sin cambiar de producto: se puede ignorar para juntar dos grupos. Cualquier otra palabra
+# de más puede ser otro producto («Black Panther» y «Black Panther Shuri» son dos packs), así que no se junta.
+RELLENO = {"cinco", "escenario", "color", "cueva", "roja", "ant", "man", "nuevo", "oferta", "precintado", "envio", "gratis",
+           "stock", "disponible", "original", "oficial", "lcg", "card", "game", "living", "unico", "completo", "esp", "es"}
+
+
+def fusiona_grupos(gs, consulta, tipos=None):
+    """{grupo: grupo con el que se junta}. El mismo juego con una coletilla en una tienda («… | Cinco escenarios», «… juego
+    de cartas») da una clave con palabras de más: si las de otro grupo de la misma búsqueda están todas en ella, es ese
+    juego. Solo si ese otro grupo ya dice algo más que la búsqueda (al menos 2 palabras propias: «Marvel Champions» a secas
+    no se traga sus expansiones), si los dos son del mismo tipo (un inserto no es el juego) y si lo que sobra es solo
+    RELLENO («Héroes Reunidos 2» no es «Héroes Reunidos»). tipos: {grupo: tipo}."""
+    base = set(clave_producto(consulta).split()) if consulta else set()
+    claves = {g: set(g[2:].split()) for g in set(gs) if g.startswith("c:")}
+    tipos = tipos or {}
+    clase = lambda g: tipos.get(g) if tipos.get(g) in ("accesorio", "lote") else "juego"     # una expansión también es el juego
+    out = {}
+    for g, pal in claves.items():
+        cand = [(len(p), o) for o, p in claves.items() if o != g and p < pal and len(p - base) >= 2
+                and pal - p <= RELLENO and clase(o) == clase(g)]
+        if cand:
+            out[g] = max(cand)[1]
+    for g in list(out):                  # en cadena: A→B→C acaba en C
+        while out[g] in out:
+            out[g] = out[out[g]]
+    return out
+
+
 def grupos(titulos, consulta, alguna=""):
     """El producto (grupo) de cada título con las reglas de ahora: la página lo usa para reagrupar una búsqueda guardada
     o lo pegado a mano sin repetir la búsqueda."""
     frases = [f for f in (extract.normaliza(x).strip() for x in (alguna or "").split(",")) if f]
     palabras = set(extract.normaliza(consulta).split())
     frases = [f for f in frases if not set(f.split()) <= palabras]
-    return [{"grupo": grupo_de(t, frases), "clave": clave_producto(t), "tipo": tipo_de(t)} for t in titulos]
+    out = [{"grupo": grupo_de(t, frases), "clave": clave_producto(t), "tipo": tipo_de(t)} for t in titulos]
+    junta = fusiona_grupos([o["grupo"] for o in out], consulta, {o["grupo"]: o["tipo"] for o in out})
+    for o in out:
+        o["grupo"] = junta.get(o["grupo"], o["grupo"])
+    return out
 
 
 def pvp_de(precios):
@@ -989,6 +1021,9 @@ def buscar(consulta, incluir="", excluir="", ocultar_agotados=True, hosts=None, 
     for x in res:
         x["grupo"] = grupo_de(x["titulo"], frases_grupo)
         x["clave"] = clave_producto(x["titulo"])
+    junta = fusiona_grupos([x["grupo"] for x in res], consulta, {x["grupo"]: tipo_de(x["titulo"]) for x in res})
+    for x in res:
+        x["grupo"] = junta.get(x["grupo"], x["grupo"])
         if not x["agotado"] and x.get("origen") != "segunda_mano":            # la segunda mano no marca el precio de mercado
             precios_grupo.setdefault(x["grupo"], {})
             precios_grupo[x["grupo"]].setdefault(x["tienda"], x["precio"])          # una vez por tienda
