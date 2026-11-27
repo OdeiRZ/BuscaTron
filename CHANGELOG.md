@@ -3,6 +3,12 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.25.10] - 2026-11-27
+
+### Corregido (auditoría con datos reales)
+- Una tienda sin buscador o que pide captcha se consultaba en cada revisión, también con Chrome, sin dar nunca nada, y saturaba la cola de Chrome de las demás («demasiadas páginas pendientes»). Ahora, tras 3 búsquedas seguidas así, se para sola y sale en Ajustes con el motivo; se reactiva con su chip.
+- Gameria se busca por su búsqueda normal (la suya se carga aparte y se leía vacía). Desactivadas 7 tiendas que nunca dieron resultados: Tradeinn, AliExpress, Hemolúdica, Hangar Rebelde, Khan Barrilete, Joker Comics y Arcadia Comics (captcha).
+
 ## [0.25.9] - 2026-11-27
 
 ### Corregido

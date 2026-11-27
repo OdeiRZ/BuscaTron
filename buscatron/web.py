@@ -575,6 +575,8 @@ class Handler(BaseHTTPRequestHandler):
                 t["activa"] = t["host"] in c["activas"]
                 if t.get("bloqueo") and c.get("reactivar") != t["host"]:
                     t["activa"], t["manual"] = False, True      # página abierta de antes del bloqueo: sigue sin recibir peticiones
+                if t["activa"]:
+                    t.pop("parada", None)                        # la reactivas tú: se vuelve a intentar
                 if t["activa"] and (bloqueo := t.pop("bloqueo", None)):     # la reactivas tú: deja de vigilarse como «te ha bloqueado»
                     t["manual"] = bool(bloqueo.get("manual", True))    # como la tenías; si no se sabe, solo enlace
                     t["suave_hasta"] = time.time() + programador.SUAVE_DIAS * 86400      # y vuelve con calma, como si volviera sola

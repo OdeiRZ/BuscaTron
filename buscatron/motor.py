@@ -513,6 +513,47 @@ def _apunta_envio(host, html):
             _envio_visto[host] = d
 
 
+FALLOS_PARA_PARAR = 3      # búsquedas seguidas sin poder leer una tienda (sin buscador o con captcha) antes de pararla
+
+
+def para_inservibles(informe, por_host):
+    """Una tienda cuyo buscador no se encuentra o que pide un captcha no da nada y gasta peticiones (y la cola de Chrome, que
+    comparten todas). Tras FALLOS_PARA_PARAR búsquedas seguidas así, se desactiva con el motivo («parada»), que se ve en
+    Ajustes; al reactivarla con su chip se vuelve a consultar. Devuelve los hosts parados ahora."""
+    malas, buenas = {}, set()
+    for h, i in informe.items():
+        t = por_host.get(h)
+        if t is None or "brutos" not in i:
+            continue
+        err = i.get("error_tienda") or i.get("error") or ""
+        if err.startswith(DESAFIO):
+            malas[h] = "pide demostrar que eres humano (captcha)"
+        elif not t.get("plantilla") and not i.get("encontrados") and not i.get("brutos") and not es_caida(err):
+            malas[h] = "no encuentro su buscador"
+        elif i.get("brutos") or i.get("encontrados"):
+            buenas.add(h)
+    if not malas and not buenas:
+        return []
+    paradas = []
+    with cfg.cerrojo:
+        lista = cfg.carga()
+        cambia = False
+        for t in lista:
+            h = t["host"]
+            if h in buenas and t.pop("fallos_auto", None):
+                cambia = True
+            elif h in malas and t.get("activa", True) and not t.get("bloqueo"):
+                t["fallos_auto"] = t.get("fallos_auto", 0) + 1
+                if t["fallos_auto"] >= FALLOS_PARA_PARAR:
+                    t["activa"], t["parada"] = False, {"desde": time.time(), "motivo": malas[h]}
+                    t.pop("fallos_auto")
+                    paradas.append(h)
+                cambia = True
+        if cambia:
+            cfg.guarda(lista)
+    return paradas
+
+
 def guarda_envios_vistos():
     """Guarda en cada tienda el envío que anuncia su web (campo «envio_auto»), sin tocar lo que hayas puesto tú."""
     if not _envio_visto:
@@ -937,6 +978,7 @@ def buscar(consulta, incluir="", excluir="", ocultar_agotados=True, hosts=None, 
                              if (t.get("plantilla"), bool(t.get("js"))) != aprendido[t["host"]]})
     registra_estado({h: {"brutos": i.get("brutos", 0), "error": i.get("error_tienda")} for h, i in informe.items() if "brutos" in i}, consulta)
     guarda_envios_vistos()
+    para_inservibles(informe, por_host)
 
     # producto (grupo) y PVP aproximado, con todas las tiendas; después, el filtro de precio
     # Una frase que no añade nada a la búsqueda («Vantage» buscando «Vantage») no distingue productos: juntaría en una sola
