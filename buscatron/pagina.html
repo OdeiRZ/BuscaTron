@@ -740,13 +740,13 @@ function pintaLista2(c){const N=Number($('top').value)||30,conE=ultimoBody.con_e
   c.querySelectorAll('[data-vig]').forEach(g=>g.onclick=()=>vigilaJuego(pintados[+g.dataset.vig]));}
 // «👁️ Vigilar»: una vigilada de ese juego (su nombre limpio como búsqueda), con un objetivo sugerido un 10 % por debajo
 // del más barato de ahora; en castellano, con envío incluido y en todas tus tiendas.
-async function vigilaJuego(g){const nombre=tituloProducto(g),barato=Math.min(...g.map(x=>x.precio));
+async function vigilaJuego(g){if(vigilaJuego.en)return;const nombre=tituloProducto(g),barato=Math.min(...g.map(x=>x.precio));
   const sug=Math.floor(barato*0.9);
   const v=prompt(`Vigilar «${nombre}».\n\nAhora está desde ${euro(barato)}. ¿A qué precio quieres que te avise?`,String(sug));
   if(v===null)return;const n=Number(v.replace(',','.').replace(/[^\d.]/g,''));if(!(n>0)){aviso('Escribe un precio, por ejemplo 30');return;}
   const consulta=nombre.replace(/[:\-–]/g,' ').replace(/\s+/g,' ').trim();
   const norm=t=>(t||'').normalize('NFD').replace(/\p{M}/gu,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
-  if(vigilaJuego.en)return;vigilaJuego.en=true;try{
+  vigilaJuego.en=true;try{
   const ls=await api('seguimientos');if(!Array.isArray(ls)){aviso(ls&&ls.error==='pin'?'Tu sesión ha caducado: recarga la página':'No se pudo consultar tus vigiladas');return;}
   const ya=ls.find(s=>norm(s.consulta)===norm(consulta));
   if(ya){aviso(`Ya vigilas «${ya.nombre}»: cambia su objetivo en Vigiladas`);return;}
@@ -852,7 +852,7 @@ async function sigueProgreso(){
       <div class="prog-det">${esc(t.fase)}${cuanto?' · '+cuanto:''} · lleva ${durTxt(t.lleva)}${queda}</div>
       <div class="prog-barra ${pct==null?'ind':''}"><i style="${pct!=null?`width:${Math.max(3,pct)}%`:''}"></i></div></div>`;}).join('');
   progTimer=setTimeout(sigueProgreso,l.length?1500:4000);}      // sin nada en marcha también se mira: revisiones automáticas, búsquedas desde el móvil
-document.addEventListener('visibilitychange',()=>{if(!document.hidden)sigueProgreso();});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden){sigueProgreso();if(tabActual==='avisos')cargaAvisos();}});
 async function sigueBusqueda(tid,body){
   sigueProgreso();
   buscando=tid;estadoBoton(true);let fallos=0;
@@ -1501,10 +1501,7 @@ async function cargaEstado(){let l=await api('estado_tiendas',{});if(!Array.isAr
   const bloq=tiendas.filter(t=>t.bloqueo);      // desactivadas porque bloquearon tu conexión: ninguna petición hasta que las reactives
   $('estado-t').innerHTML=bloq.map(t=>`<div class="est"><b>${esc(nombreT(t.host))} <span class="tag ko">te ha bloqueado</span></b>
       <span class="mut">Desactivada desde el ${fecha(t.bloqueo.desde)}: cortó tu conexión. BuscaTron ya no le hace ninguna petición (ni para ver si vuelve): cuando la tienda te desbloquee y entres a su web desde casa, reactívala con su chip en «Tus tiendas».</span></div>`).join('')
-    +tiendas.filter(t=>t.no_lee&&t.activa).map(t=>`<div class="est"><b>${esc(nombreT(t.host))} <span class="tag ko">no da resultados</span></b>
-      <span class="mut">Desde el ${fecha(t.no_lee.desde)}: ${esc(t.no_lee.motivo)}. Se sigue consultando en cada revisión sin dar nada y frena al resto. Conviene desactivarla.</span>
-      <button type="button" class="peli mini" data-act="${esc(t.host)}">Desactivar</button></div>`).join('')
-    +(atencion.length?atencion.filter(e=>!bloq.some(t=>t.host===e.host)&&!tiendas.some(t=>t.host===e.host&&t.no_lee&&t.activa)).map(fila).join(''):'<p class="ok">Todas tus tiendas responden bien.</p>')
+    +(atencion.length?atencion.filter(e=>!bloq.some(t=>t.host===e.host)).map(fila).join(''):'<p class="ok">Todas tus tiendas responden bien.</p>')
     +(ok.length?`<details id="estado-ok" ${abierto?'open':''}><summary>${ok.length} tienda${ok.length===1?'':'s'} sin problemas</summary>${ok.map(fila).join('')}</details>`:'');
   document.querySelectorAll('#estado-t [data-act]').forEach(b=>b.onclick=async()=>{const t=tiendas.find(x=>x.host===b.dataset.act);if(!t)return;
     t.activa=!t.activa;await guardaActivas(t);cargaEstado();aviso(t.activa?'Tienda activada: entra en tus búsquedas':'Tienda desactivada: ya no se consulta');});}

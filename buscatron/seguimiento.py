@@ -586,7 +586,7 @@ def mi_lista():
             por.setdefault(g["grupo"], {}).setdefault(x["url"], x)       # una oferta por enlace
         for grupo, ofertas in por.items():
             o = sorted(ofertas.values(), key=lambda x: (bool(x.get("agotado")), x["total"] if opc.get("con_envio") else x["precio"]))
-            k = next((k for x in o if (k := motor.clave_objetivo({"grupo": grupo, "titulo": x["titulo"]}, objs))), None)
+            k = motor.clave_objetivo({"grupo": grupo, "titulo": o[0]["titulo"]}, objs)
             obj = objs[k]["precio"] if k else None
             out.append({"seg_id": seg["id"], "vigilada": seg["nombre"], "activa": bool(seg["activo"]), "grupo": grupo,
                         "titulos": [x["titulo"] for x in o], "mejor": o[0], "ofertas": len(o),

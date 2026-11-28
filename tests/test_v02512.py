@@ -20,12 +20,6 @@ class Arreglos(unittest.TestCase):
             p.stop()
         motor._alias_leido[0] = None
 
-    def test_sin_el_juego_no_se_para(self):
-        tiendas.guarda([{"host": "a.es", "activa": True, "plantilla": None}])
-        for _ in range(4):
-            motor.para_inservibles({"a.es": {"brutos": 0, "encontrados": 0, "error": motor.SIN_COINCIDENCIAS}}, {"a.es": tiendas.carga()[0]})
-        self.assertTrue(tiendas.carga()[0]["activa"])
-
     def test_bloqueada_aunque_falle_leer_el_archivo(self):
         tiendas.guarda([{"host": "dm.es", "activa": False, "bloqueo": {"desde": 1}}])
         ritmo._bloqueadas[:] = [None, frozenset()]

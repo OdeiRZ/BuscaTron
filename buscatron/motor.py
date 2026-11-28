@@ -240,6 +240,7 @@ def _tienda_base(t, consulta, nav=None, paginas=1):
     try:
         return _tienda_viva(t, consulta, nav, paginas, estados)
     except navegador.Desafio:
+        marca_caida(h)                 # sin insistir: como una tienda caída, se vuelve a probar cada vez más tarde
         return h, [], DESAFIO
     except Exception as e:
         if isinstance(e, OSError) and "navegador" not in str(e):   # tiempo agotado, conexión rechazada… (no la cola de Chrome)
@@ -513,66 +514,6 @@ def _apunta_envio(host, html):
             _envio_visto[host] = d
 
 
-FALLOS_PARA_PARAR = 3      # búsquedas seguidas sin poder leer una tienda (sin buscador o con captcha) antes de pararla…
-HORAS_PARA_PARAR = 24      # …y entre la primera y la última al menos un día: un 429 o una web en mantenimiento duran poco
-
-
-def _sin_buscador(err):
-    """Respuestas de una tienda cuyo buscador no se encuentra: nada en las direcciones probadas, o su página de búsqueda no existe."""
-    return (not err or err.startswith(SIN_COINCIDENCIAS) or err.startswith("no encuentro su buscador")
-            or "404" in err)
-
-
-def nunca_sin_buscador(h):
-    """¿Ha dado esta tienda algún resultado en los últimos 40 días? Si sí, su buscador funciona aunque hoy no tenga nada."""
-    with bd.conecta() as c:
-        return bool(c.execute("SELECT 1 FROM estado_tiendas WHERE host=? AND encontrados>0 AND ts>? LIMIT 1",
-                              (h, time.time() - 40 * 86400)).fetchone())
-
-
-def para_inservibles(informe, por_host):
-    """Una tienda cuyo buscador no se encuentra o que pide un captcha no da nada y gasta peticiones (y la cola de Chrome, que
-    comparten todas). Tras FALLOS_PARA_PARAR búsquedas seguidas así, se marca («no_lee», con el motivo) para que la veas en
-    Ajustes y la desactives tú si quieres: BuscaTron no la apaga solo. Se desmarca en cuanto responde bien. Devuelve los
-    hosts marcados ahora."""
-    malas, buenas = {}, set()
-    for h, i in informe.items():
-        t = por_host.get(h)
-        if t is None or "brutos" not in i:
-            continue
-        err = i.get("error_tienda") or i.get("error") or ""
-        if err.startswith(DESAFIO) or err.startswith(DESAFIO_SIN_RESOLVER):
-            malas[h] = "pide demostrar que eres humano (captcha)"
-        elif not t.get("plantilla") and not i.get("brutos") and _sin_buscador(err) and not nunca_sin_buscador(h):
-            # sin dirección de búsqueda aprendida, nada en ninguna de las que se prueban y nunca un resultado en 40 días
-            malas[h] = "no consigo encontrar su buscador (nunca ha dado ningún resultado)"
-        elif not es_caida(err):
-            buenas.add(h)                # respondió (con o sin el juego): la cuenta vuelve a empezar
-    if not malas and not buenas:
-        return []
-    paradas = []
-    with cfg.cerrojo:
-        lista = cfg.carga()
-        cambia = False
-        for t in lista:
-            h = t["host"]
-            if h in buenas and (t.pop("fallos_auto", None) or t.pop("fallos_desde", None) or t.pop("no_lee", None)):
-                t.pop("fallos_desde", None)
-                t.pop("no_lee", None)
-                cambia = True
-            elif h in malas and t.get("activa", True) and not t.get("bloqueo"):
-                t["fallos_auto"] = t.get("fallos_auto", 0) + 1
-                t.setdefault("fallos_desde", time.time())
-                if (t["fallos_auto"] >= FALLOS_PARA_PARAR and time.time() - t["fallos_desde"] >= HORAS_PARA_PARAR * 3600
-                        and not t.get("no_lee")):
-                    t["no_lee"] = {"desde": time.time(), "motivo": malas[h]}     # solo se marca: la desactivas tú
-                    paradas.append(h)
-                cambia = True
-        if cambia:
-            cfg.guarda(lista)
-    return paradas
-
-
 def guarda_envios_vistos():
     """Guarda en cada tienda el envío que anuncia su web (campo «envio_auto»), sin tocar lo que hayas puesto tú."""
     if not _envio_visto:
@@ -690,7 +631,6 @@ def fusiona_grupos(gs, consulta, tipos=None):
         if cand:
             out[g] = max(cand)[1]
     conocidos = _alias()
-    nuevos = {g: a for g, a in out.items() if conocidos.get(g) != a} if base else {}      # sin búsqueda no se aprende nada
     for g in claves:                     # lo que ya se juntó otra vez sigue junto aunque hoy no venga su pareja
         if g not in out and g in conocidos:
             out[g] = conocidos[g]
@@ -699,6 +639,7 @@ def fusiona_grupos(gs, consulta, tipos=None):
         while out[g] in out and out[g] not in vistos:
             vistos.add(out[g])
             out[g] = out[out[g]]
+    nuevos = {g: a for g, a in out.items() if conocidos.get(g) != a} if base else {}      # ya resueltas; sin búsqueda no se aprende
     if nuevos:
         with bd.conecta() as c:
             c.executemany("INSERT OR REPLACE INTO alias_grupos(de, a, ts) VALUES(?,?,?)", [(g, a, time.time()) for g, a in nuevos.items()])
@@ -789,6 +730,10 @@ def clave_objetivo(x, objs):
     c = "c:" + (x.get("clave") or clave_producto(x["titulo"]))
     if c in objs:
         return c
+    grupo = x.get("grupo") or c
+    k = next((d for d, a in _alias().items() if d in objs and (a == grupo or a == c)), None)     # el 🎯 de una variante que se juntó con él
+    if k:
+        return k
     if tipo_de(x["titulo"]) in ("accesorio", "lote"):
         return None
     n = extract.normaliza(x["titulo"])
@@ -812,9 +757,10 @@ def rellena_claves():
     de aplicarse."""
     hecha = int(ajustes.carga().get("version_claves") or 0)
     if hecha < VERSION_CLAVES:           # las fusiones se hicieron con las claves de antes: se vuelven a aprender
-        with bd.conecta() as c:
+        with _alias_cerrojo, bd.conecta() as c:
             c.execute("DELETE FROM alias_grupos")
-        _alias_leido[0] = None
+            _alias_cache.clear()
+            _alias_leido[0] = None
     with bd.conecta() as c:
         sql = "SELECT DISTINCT titulo FROM precios" + ("" if hecha < VERSION_CLAVES else " WHERE clave IS NULL")
         titulos = [r[0] for r in c.execute(sql)]
@@ -851,7 +797,15 @@ def historial_producto(grupo):
                                                      % ",".join("?" * len(trozo)), trozo)]
         else:
             g = grupo if grupo.startswith("c:") else "c:" + grupo
-            claves = [g[2:]] + [d[2:] for d, a in dict(_alias()).items() if a == g]       # y las variantes que se juntaron con él
+            al = _alias()
+
+            def fin(a):                  # a dónde acaba una fusión (las antiguas pueden ir en cadena)
+                vistos = set()
+                while a in al and a not in vistos:
+                    vistos.add(a)
+                    a = al[a]
+                return a
+            claves = [g[2:]] + [d[2:] for d, a in al.items() if fin(a) == g]       # y las variantes que se juntaron con él
             filas = [dict(r) for r in c.execute("SELECT ts, precio, titulo, tienda, url FROM precios WHERE agotado=0 AND preventa=0 AND clave IN (%s)"
                                                 % ",".join("?" * len(claves)), claves)]
     puntos = {}
@@ -964,7 +918,7 @@ def buscar(consulta, incluir="", excluir="", ocultar_agotados=True, hosts=None, 
     modo = modo_idioma(castellano, idioma)
     # bloqueada: nunca se consulta, ni aunque la pida una página abierta desde antes; si va como «solo enlace», cuenta lo pegado
     activas = [t for t in lista if (t["host"] in hosts if hosts is not None else t.get("activa", True) or t.get("bloqueo"))
-               and not (t.get("bloqueo") and not t.get("manual")) and not (t.get("parada") and not t.get("activa", True))]
+               and not (t.get("bloqueo") and not t.get("manual"))]
     if not segunda_mano:
         activas = [t for t in activas if t.get("tipo") != "segunda_mano"]
     # «solo enlace» aunque no tenga dirección de búsqueda (su enlace es la portada): si no, se consultaba igual
@@ -1064,7 +1018,6 @@ def buscar(consulta, incluir="", excluir="", ocultar_agotados=True, hosts=None, 
                              if (t.get("plantilla"), bool(t.get("js"))) != aprendido[t["host"]]})
     registra_estado({h: {"brutos": i.get("brutos", 0), "error": i.get("error_tienda")} for h, i in informe.items() if "brutos" in i}, consulta)
     guarda_envios_vistos()
-    para_inservibles(informe, por_host)
 
     # producto (grupo) y PVP aproximado, con todas las tiendas; después, el filtro de precio
     # Una frase que no añade nada a la búsqueda («Vantage» buscando «Vantage») no distingue productos: juntaría en una sola

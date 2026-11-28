@@ -3,6 +3,17 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.25.15] - 2026-11-28
+
+### Cambiado (revisión max)
+- Fuera la marca «no da resultados» de la v0.25.14 y la parada automática de la v0.25.10-0.25.13: duplicaban lo que Ajustes → Estado de las tiendas ya hace (una tienda con 6 consultas sin nada sale arriba con «conviene desactivarla» y su botón) y daban datos desfasados. BuscaTron no desactiva ninguna tienda por su cuenta.
+- Una tienda que pide captcha ya no se consulta en cada revisión: espera cada vez más, como una tienda caída (10 min, 1 h, 6 h).
+
+### Corregido
+- Tarjetas fundidas: el historial 📈 incluye todas las variantes aunque se juntaran en cadena, y el 🎯 puesto en una variante vale igual para los avisos que para Mi lista.
+- Al volver a una pestaña que estaba en Avisos, lo que ves cuenta como visto.
+- «👁️ Vigilar» con doble pulsación ya no pide el precio para luego no hacer nada.
+
 ## [0.25.14] - 2026-11-28
 
 ### Cambiado
