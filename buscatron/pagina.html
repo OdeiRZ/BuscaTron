@@ -420,8 +420,9 @@ svg.graf-svg{width:100%;height:auto;display:block}
 </section>
 
 <section id="t-seguir" class="oculto">
+  <div id="ml-rebajas"></div>
   <details class="card" id="ml-det" style="margin-top:0"><summary>📋 Mi lista <span class="n" id="ml-n"></span></summary>
-    <div id="ml-rebajas"></div><div id="ml"></div>
+    <div id="ml"></div>
     <div class="acciones" id="ml-compra-b" style="display:none"><button type="button" id="ml-compra-ir">🧺 Mejor compra de los marcados</button></div>
     <div id="ml-compra"></div></details>
   <details class="card" id="sf-det" style="margin-top:0">
@@ -729,10 +730,11 @@ function pintaLista2(c){const N=Number($('top').value)||30,conE=ultimoBody.con_e
     cuenta=`${ofertas(pintados.length)}${ordenRes==='barato'?(u?' más barata':' más baratas'):ordenRes==='caro'?(u?' más cara':' más caras'):', '+que} de ${ultimoTotal} encontrada${ultimoTotal===1?'':'s'}${conE?' (precio con envío)':''}`;}
   const cu=$('cuenta-res');if(cu)cu.textContent=cuenta;
   c.querySelectorAll('.graf').forEach(g=>g.onclick=()=>{const x=pintados[+g.dataset.g][0];abreHist(x.url,x.titulo,x.tienda,$('agrupar').checked?x.grupo:null);});
-  c.querySelectorAll('[data-ign]').forEach(g=>g.onclick=async()=>{const t=pintados[+g.dataset.ign][0].titulo;
+  c.querySelectorAll('[data-ign]').forEach(g=>g.onclick=async()=>{const grp=pintados[+g.dataset.ign],t=grp[0].titulo;
     if(!confirm(`¿Ocultar «${t}» en todas tus búsquedas y avisos (ya lo tienes o no te interesa)? Puedes recuperarlo en Ajustes.`))return;
-    const r=await api('ignorar',{titulo:t});if(r.error){aviso(r.error);return;}
-    ultimos=ultimos.filter(y=>y.clave!==r.clave);guardaUltimos();
+    const vars=[...new Map(grp.map(x=>[x.clave||x.titulo,x.titulo])).values()],claves=new Set();   // una tarjeta fundida: todas sus variantes
+    for(const v of vars){const r=await api('ignorar',{titulo:v});if(r.error){aviso(r.error);return;}claves.add(r.clave);}
+    ultimos=ultimos.filter(y=>!claves.has(y.clave));guardaUltimos();
     pintaLista();aviso('Producto oculto. Lo puedes recuperar en Ajustes');});
   c.querySelectorAll('[data-obj]').forEach(g=>g.onclick=()=>pideObjetivo(pintados[+g.dataset.obj]));
   c.querySelectorAll('[data-vig]').forEach(g=>g.onclick=()=>vigilaJuego(pintados[+g.dataset.vig]));}
@@ -744,12 +746,14 @@ async function vigilaJuego(g){const nombre=tituloProducto(g),barato=Math.min(...
   if(v===null)return;const n=Number(v.replace(',','.').replace(/[^\d.]/g,''));if(!(n>0)){aviso('Escribe un precio, por ejemplo 30');return;}
   const consulta=nombre.replace(/[:\-–]/g,' ').replace(/\s+/g,' ').trim();
   const norm=t=>(t||'').normalize('NFD').replace(/\p{M}/gu,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
-  const ls=await api('seguimientos');if(!Array.isArray(ls)){aviso((ls&&ls.error)||'No se pudo consultar tus vigiladas');return;}
+  if(vigilaJuego.en)return;vigilaJuego.en=true;try{
+  const ls=await api('seguimientos');if(!Array.isArray(ls)){aviso(ls&&ls.error==='pin'?'Tu sesión ha caducado: recarga la página':'No se pudo consultar tus vigiladas');return;}
   const ya=ls.find(s=>norm(s.consulta)===norm(consulta));
   if(ya){aviso(`Ya vigilas «${ya.nombre}»: cambia su objetivo en Vigiladas`);return;}
   const r=await api('seguimientos',{nombre,consulta,objetivo:n,bajo_historico:15,sin_agotados:true,castellano:true,canales:'app,telegram',cada_horas:12,
     opciones:{idioma:'castellano',con_envio:true}});
-  if(r&&r.error){aviso(r.error);return;}aviso(`Vigilando «${nombre}»: te avisará a ${euro(n)} o menos`);if(typeof cargaSeg==='function')cargaSeg();}
+  if(r&&r.error){aviso(r.error);return;}aviso(`Vigilando «${nombre}»: te avisará a ${euro(n)} o menos`);if(typeof cargaSeg==='function')cargaSeg();
+  }finally{vigilaJuego.en=false;}}
 function guardaUltimos(){if(ultimoId)api('busquedas',{accion:'actualizar',id:ultimoId,resultados:ultimos});}
 
 /* 🎯 precio objetivo de un producto */
@@ -1295,7 +1299,8 @@ function cabeceraSeg(l){const act=l.filter(s=>s.activo).length,pau=l.length-act,
   ${pau&&act?`<div class="filtro-seg" role="group" aria-label="Mostrar">${Object.entries(FILTRO_SEG).map(([k,v])=>`<button type="button" class="chip ${k===filtroSeg?'on':''}" data-fseg="${k}" aria-pressed="${k===filtroSeg}">${v} · ${n[k]}</button>`).join('')}</div>`:''}
   <div class="orden-res"><label for="seg-orden">Ordenar por</label><select id="seg-orden">${Object.entries(ORDEN_SEG).map(([k,v])=>`<option value="${k}" ${k===ordenSeg?'selected':''}>${v}</option>`).join('')}</select></div>`;}
 function tarjetaSeg(s){
-  const reglas=[s.objetivo!=null&&`cuesta <b>${euro(s.objetivo)}</b> o menos`,s.bajo_historico&&`está un <b>${s.bajo_historico} %</b> por debajo de su precio habitual`].filter(Boolean).join(' o ')||'nunca (no tiene condición de aviso: solo guarda el historial de precios)';
+  const avisaA=s.objetivo!=null?s.objetivo:s.pmax;
+  const reglas=[avisaA!=null&&`cuesta <b>${euro(avisaA)}</b> o menos${s.objetivo==null?' (su precio máximo)':''}`,s.bajo_historico&&`está un <b>${s.bajo_historico} %</b> por debajo de su precio habitual`].filter(Boolean).join(' o ')||'nunca (no tiene condición de aviso: solo guarda el historial de precios)';
   const canales=s.canales.split(',').map(c=>({app:'pestaña Avisos',telegram:'Telegram',correo:'correo'}[c]||c)).join(' y ');
   const est=revisando(s)?'<span class="tag run estado-seg">Revisándose…</span>':s.activo?'<span class="tag ok estado-seg">Activa</span>':'<span class="tag estado-seg">En pausa</span>';
   const rango=`${s.pmin!=null?` · desde ${euro(s.pmin)}`:''}${s.pmax!=null?` · hasta ${euro(s.pmax)}`:''}`;
@@ -1408,7 +1413,7 @@ async function cargaAvisos(){const mia=++avVuelta;const [todos,vig]=await Promis
  if(mia!==avVuelta||!Array.isArray(todos))return;     // otra carga más reciente manda
   if(Array.isArray(vig))segs=vig;
   if(vistosAntes===null)vistosAntes=await vistos(0).catch(()=>0);
-  vistos(todos.length?Math.max(...todos.map(a=>a.id)):0).catch(()=>{});
+  if(document.visibilityState==='visible'&&tabActual==='avisos')vistos(todos.length?Math.max(...todos.map(a=>a.id)):0).catch(()=>{});   // solo si lo estás mirando
   $('nav-av').textContent='';
   // Un producto, una tarjeta: las variantes de nombre del mismo juego (vienen agrupadas del servidor) van juntas, con la más
   // barata delante; de cada enlace solo cuenta su aviso más reciente (el de antes, si bajó de precio, ya no vale).

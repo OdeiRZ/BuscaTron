@@ -33,7 +33,10 @@ def _comprueba(h):
     except OSError:                     # en pleno cambio de archivo: nada de suponer que no hay bloqueadas
         marca = None
     if marca is None or marca != _bloqueadas[0]:
-        lista = cfg.lee_json(cfg.RUTA) if marca is None or marca[1] is not None else []     # lee_json reintenta; si falla, no se pide nada
+        try:
+            lista = cfg.lee_json(cfg.RUTA) if marca is None or marca[1] is not None else []     # lee_json reintenta
+        except OSError as e:             # si aun así falla, no se pide nada (y no es culpa de la tienda: no cuenta como caída)
+            raise RuntimeError(f"no se pudo leer la lista de tiendas ({e})") from None
         _bloqueadas[:] = [marca, frozenset(host("https://" + t["host"]) for t in lista if t.get("bloqueo"))]
     if h in _bloqueadas[1]:
         raise Prohibida("esa tienda te ha bloqueado: no se le hace ninguna petición hasta que la reactives")

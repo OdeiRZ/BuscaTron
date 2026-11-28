@@ -89,7 +89,7 @@ def copia_de_seguridad():
 
 def _bucle(pausa):
     while True:
-        for tarea in (lambda: vigiladas(hilo=True), recordatorios, limpieza):
+        for tarea in (lambda: vigiladas(hilo=True), limpieza):
             try:
                 tarea()
             except Exception:

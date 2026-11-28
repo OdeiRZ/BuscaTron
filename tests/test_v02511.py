@@ -1,10 +1,22 @@
 """v0.25.11: las variantes de nombre del mismo juego se juntan; los productos distintos, no."""
+import os
+import tempfile
 import unittest
+from unittest import mock
 
-from buscatron import motor
+from buscatron import bd, motor
 
 
 class Fusion(unittest.TestCase):
+    def setUp(self):
+        self.p = mock.patch.object(bd, "RUTA", os.path.join(tempfile.mkdtemp(), "t.db"))
+        self.p.start()
+        motor._alias_leido[0] = None
+
+    def tearDown(self):
+        self.p.stop()
+        motor._alias_leido[0] = None
+
     def g(self, titulos, q):
         return [x["grupo"] for x in motor.grupos(titulos, q)]
 

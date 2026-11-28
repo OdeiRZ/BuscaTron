@@ -29,9 +29,15 @@ class Inservibles(unittest.TestCase):
                "c.es": {"brutos": 0, "encontrados": 0, "error": motor.SIN_COINCIDENCIAS}}
         self.assertEqual(self._vuelta(inf), [])
         self._vuelta(inf)
+        self.assertEqual(self._vuelta(inf), [])                    # tres seguidas, pero en menos de un día: aún no
+        l = tiendas.carga()
+        for t in l:
+            if "fallos_desde" in t:
+                t["fallos_desde"] -= 25 * 3600
+        tiendas.guarda(l)
         self.assertEqual(sorted(self._vuelta(inf)), ["a.es", "b.es"])
         t = {x["host"]: x for x in tiendas.carga()}
-        self.assertEqual((t["a.es"]["activa"], t["a.es"]["parada"]["motivo"]), (False, "no encuentro su buscador"))
+        self.assertEqual((t["a.es"]["activa"], t["a.es"]["parada"]["motivo"]), (False, "no consigo encontrar su buscador (nunca ha dado ningún resultado)"))
         self.assertTrue(t["c.es"]["activa"])                       # responde sin el juego: no es un fallo
         h = web.Handler.__new__(web.Handler)
         r = h._cambia_tiendas({"activas": ["a.es", "c.es"], "reactivar": "c.es"})      # página vieja tocando otra tienda

@@ -3,6 +3,17 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.25.13] - 2026-11-28
+
+### Corregido (revisión xhigh)
+- La parada automática de tiendas sin buscador nunca saltaba (ese error no llega a darse). Ahora se para la tienda sin buscador aprendido que nunca ha dado ningún resultado, con 404 o nada en todas las direcciones probadas. Hace falta que pase 3 veces seguidas y a lo largo de más de un día: un 429, una web en mantenimiento o una tienda caída no la paran, y una respuesta normal reinicia la cuenta.
+- Una tienda parada ya no se consulta en las búsquedas de una página abierta desde antes.
+- En una tarjeta fundida: el historial 📈 incluye todas sus variantes, «Ocultar» las oculta todas y Mi lista encuentra el 🎯 de cualquiera de ellas. Las fusiones no se aprenden sin búsqueda, se vuelven a aprender si cambian las claves y ya no pueden fallar con dos hilos a la vez.
+- Lo visto en Avisos solo cuenta si tienes la pestaña delante: una pestaña olvidada en el PC ya no marca como vistos los avisos del móvil.
+- Las vigiladas dicen a qué precio avisan de verdad (su precio máximo si no tienen otro) y las que se ajustaron el 27/11 vuelven a seguir a su máximo.
+- El aviso de rebajas ya no queda escondido dentro de Mi lista plegada.
+- Un fallo al leer la lista de tiendas ya no se apunta como tienda caída. «👁️ Vigilar» dice si la sesión ha caducado y no crea dos vigiladas con una doble pulsación. Añadir de nuevo una tienda parada con su buscador la vuelve a activar.
+
 ## [0.25.12] - 2026-11-28
 
 ### Corregido (quinta revisión de código)

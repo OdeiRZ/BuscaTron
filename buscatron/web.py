@@ -538,6 +538,8 @@ class Handler(BaseHTTPRequestHandler):
             if plantilla:
                 t["plantilla"] = plantilla
                 t["manual"] = bool(c.get("manual")) or bool(t.get("bloqueo"))
+                if t.pop("parada", None):        # le das su buscador: se vuelve a probar
+                    t["activa"] = True
             if c.get("tipo") == "segunda_mano":
                 t["tipo"] = "segunda_mano"
         if c.get("editar"):  # nombre, dirección y modo «solo enlace» de una tienda existente

@@ -499,8 +499,8 @@ def en_otro_idioma(titulo):
     return cod in ("en", "otro") and seguro
 
 
-_envio_visto = {}
-_cerrojo_envio = threading.Lock()          # host → lo que anuncia su página de resultados (se guarda en la tienda al acabar la búsqueda)
+_envio_visto = {}          # host → lo que anuncia su página de resultados (se guarda en la tienda al acabar la búsqueda)
+_cerrojo_envio = threading.Lock()
 
 
 def _apunta_envio(host, html):
@@ -513,7 +513,21 @@ def _apunta_envio(host, html):
             _envio_visto[host] = d
 
 
-FALLOS_PARA_PARAR = 3      # búsquedas seguidas sin poder leer una tienda (sin buscador o con captcha) antes de pararla
+FALLOS_PARA_PARAR = 3      # búsquedas seguidas sin poder leer una tienda (sin buscador o con captcha) antes de pararla…
+HORAS_PARA_PARAR = 24      # …y entre la primera y la última al menos un día: un 429 o una web en mantenimiento duran poco
+
+
+def _sin_buscador(err):
+    """Respuestas de una tienda cuyo buscador no se encuentra: nada en las direcciones probadas, o su página de búsqueda no existe."""
+    return (not err or err.startswith(SIN_COINCIDENCIAS) or err.startswith("no encuentro su buscador")
+            or "404" in err)
+
+
+def nunca_sin_buscador(h):
+    """¿Ha dado esta tienda algún resultado en los últimos 40 días? Si sí, su buscador funciona aunque hoy no tenga nada."""
+    with bd.conecta() as c:
+        return bool(c.execute("SELECT 1 FROM estado_tiendas WHERE host=? AND encontrados>0 AND ts>? LIMIT 1",
+                              (h, time.time() - 40 * 86400)).fetchone())
 
 
 def para_inservibles(informe, por_host):
@@ -528,10 +542,11 @@ def para_inservibles(informe, por_host):
         err = i.get("error_tienda") or i.get("error") or ""
         if err.startswith(DESAFIO) or err.startswith(DESAFIO_SIN_RESOLVER):
             malas[h] = "pide demostrar que eres humano (captcha)"
-        elif err.startswith("no encuentro su buscador"):        # sin el juego no cuenta: «no tiene nada que coincida»
-            malas[h] = "no encuentro su buscador"
-        elif i.get("brutos") or i.get("encontrados"):
-            buenas.add(h)
+        elif not t.get("plantilla") and not i.get("brutos") and _sin_buscador(err) and not nunca_sin_buscador(h):
+            # sin dirección de búsqueda aprendida, nada en ninguna de las que se prueban y nunca un resultado en 40 días
+            malas[h] = "no consigo encontrar su buscador (nunca ha dado ningún resultado)"
+        elif not es_caida(err):
+            buenas.add(h)                # respondió (con o sin el juego): la cuenta vuelve a empezar
     if not malas and not buenas:
         return []
     paradas = []
@@ -540,13 +555,16 @@ def para_inservibles(informe, por_host):
         cambia = False
         for t in lista:
             h = t["host"]
-            if h in buenas and t.pop("fallos_auto", None):
+            if h in buenas and (t.pop("fallos_auto", None) or t.pop("fallos_desde", None)):
+                t.pop("fallos_desde", None)
                 cambia = True
             elif h in malas and t.get("activa", True) and not t.get("bloqueo"):
                 t["fallos_auto"] = t.get("fallos_auto", 0) + 1
-                if t["fallos_auto"] >= FALLOS_PARA_PARAR:
+                t.setdefault("fallos_desde", time.time())
+                if t["fallos_auto"] >= FALLOS_PARA_PARAR and time.time() - t["fallos_desde"] >= HORAS_PARA_PARAR * 3600:
                     t["activa"], t["parada"] = False, {"desde": time.time(), "motivo": malas[h]}
                     t.pop("fallos_auto")
+                    t.pop("fallos_desde")
                     paradas.append(h)
                 cambia = True
         if cambia:
@@ -671,7 +689,7 @@ def fusiona_grupos(gs, consulta, tipos=None):
         if cand:
             out[g] = max(cand)[1]
     conocidos = _alias()
-    nuevos = {g: a for g, a in out.items() if conocidos.get(g) != a}
+    nuevos = {g: a for g, a in out.items() if conocidos.get(g) != a} if base else {}      # sin búsqueda no se aprende nada
     for g in claves:                     # lo que ya se juntó otra vez sigue junto aunque hoy no venga su pareja
         if g not in out and g in conocidos:
             out[g] = conocidos[g]
@@ -683,22 +701,26 @@ def fusiona_grupos(gs, consulta, tipos=None):
     if nuevos:
         with bd.conecta() as c:
             c.executemany("INSERT OR REPLACE INTO alias_grupos(de, a, ts) VALUES(?,?,?)", [(g, a, time.time()) for g, a in nuevos.items()])
-        _alias_cache.update(nuevos)
+        with _alias_cerrojo:
+            _alias_cache.update(nuevos)
     return out
 
 
 _alias_cache = {}
 _alias_leido = [None]
+_alias_cerrojo = threading.Lock()
 
 
 def _alias():
-    """Las fusiones ya hechas (grupo largo → grupo con el que se juntó), de la base de datos."""
-    if _alias_leido[0] != bd.RUTA:
-        with bd.conecta() as c:
-            _alias_cache.clear()
-            _alias_cache.update({r["de"]: r["a"] for r in c.execute("SELECT de, a FROM alias_grupos")})
-        _alias_leido[0] = bd.RUTA
-    return _alias_cache
+    """Las fusiones ya hechas (grupo largo → grupo con el que se juntó), de la base de datos. Devuelve una copia: varios
+    hilos agrupan a la vez (búsqueda, revisión y la página)."""
+    with _alias_cerrojo:
+        if _alias_leido[0] != bd.RUTA:
+            with bd.conecta() as c:
+                _alias_cache.clear()
+                _alias_cache.update({r["de"]: r["a"] for r in c.execute("SELECT de, a FROM alias_grupos")})
+            _alias_leido[0] = bd.RUTA
+        return dict(_alias_cache)
 
 
 def grupos(titulos, consulta, alguna=""):
@@ -788,6 +810,10 @@ def rellena_claves():
     recalcula en todo lo guardado (historial, «No me interesa» y objetivos 🎯), para que nada pierda su historial ni deje
     de aplicarse."""
     hecha = int(ajustes.carga().get("version_claves") or 0)
+    if hecha < VERSION_CLAVES:           # las fusiones se hicieron con las claves de antes: se vuelven a aprender
+        with bd.conecta() as c:
+            c.execute("DELETE FROM alias_grupos")
+        _alias_leido[0] = None
     with bd.conecta() as c:
         sql = "SELECT DISTINCT titulo FROM precios" + ("" if hecha < VERSION_CLAVES else " WHERE clave IS NULL")
         titulos = [r[0] for r in c.execute(sql)]
@@ -823,8 +849,10 @@ def historial_producto(grupo):
                 filas += [dict(r) for r in c.execute("SELECT ts, precio, titulo, tienda, url FROM precios WHERE agotado=0 AND preventa=0 AND titulo IN (%s)"
                                                      % ",".join("?" * len(trozo)), trozo)]
         else:
-            filas = [dict(r) for r in c.execute("SELECT ts, precio, titulo, tienda, url FROM precios WHERE agotado=0 AND preventa=0 AND clave=?",
-                                                (grupo[2:] if grupo.startswith("c:") else grupo,))]
+            g = grupo if grupo.startswith("c:") else "c:" + grupo
+            claves = [g[2:]] + [d[2:] for d, a in dict(_alias()).items() if a == g]       # y las variantes que se juntaron con él
+            filas = [dict(r) for r in c.execute("SELECT ts, precio, titulo, tienda, url FROM precios WHERE agotado=0 AND preventa=0 AND clave IN (%s)"
+                                                % ",".join("?" * len(claves)), claves)]
     puntos = {}
     for f in filas:
         if f["tienda"] in segunda:
@@ -935,7 +963,7 @@ def buscar(consulta, incluir="", excluir="", ocultar_agotados=True, hosts=None, 
     modo = modo_idioma(castellano, idioma)
     # bloqueada: nunca se consulta, ni aunque la pida una página abierta desde antes; si va como «solo enlace», cuenta lo pegado
     activas = [t for t in lista if (t["host"] in hosts if hosts is not None else t.get("activa", True) or t.get("bloqueo"))
-               and not (t.get("bloqueo") and not t.get("manual"))]
+               and not (t.get("bloqueo") and not t.get("manual")) and not (t.get("parada") and not t.get("activa", True))]
     if not segunda_mano:
         activas = [t for t in activas if t.get("tipo") != "segunda_mano"]
     # «solo enlace» aunque no tenga dirección de búsqueda (su enlace es la portada): si no, se consultaba igual
