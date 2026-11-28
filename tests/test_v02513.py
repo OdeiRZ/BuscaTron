@@ -30,15 +30,16 @@ class Paradas(unittest.TestCase):
         return tiendas.carga()[0]
 
     def test_sin_buscador_404_se_para(self):
-        self.assertFalse(self._tres_dias("no encuentra la página de búsqueda (error 404)")["activa"])
+        t = self._tres_dias("no encuentra la página de búsqueda (error 404)")
+        self.assertTrue(t["activa"] and t["no_lee"])      # marcada, pero activa: la desactivas tú
 
     def test_si_alguna_vez_dio_resultados_no_se_para(self):
         with bd.conecta() as c:
             c.execute("INSERT INTO estado_tiendas(host, ts, consulta, encontrados, error) VALUES('a.es', ?, 'x', 3, '')", (time.time() - 86400,))
-        self.assertTrue(self._tres_dias(motor.SIN_COINCIDENCIAS)["activa"])
+        self.assertNotIn("no_lee", self._tres_dias(motor.SIN_COINCIDENCIAS))
 
     def test_caida_no_cuenta_ni_reinicia(self):
-        self.assertTrue(self._tres_dias("no se pudo conectar (timed out)")["activa"])
+        self.assertNotIn("no_lee", self._tres_dias("no se pudo conectar (timed out)"))
 
 
 if __name__ == "__main__":

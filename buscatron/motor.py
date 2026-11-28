@@ -532,8 +532,9 @@ def nunca_sin_buscador(h):
 
 def para_inservibles(informe, por_host):
     """Una tienda cuyo buscador no se encuentra o que pide un captcha no da nada y gasta peticiones (y la cola de Chrome, que
-    comparten todas). Tras FALLOS_PARA_PARAR búsquedas seguidas así, se desactiva con el motivo («parada»), que se ve en
-    Ajustes; al reactivarla con su chip se vuelve a consultar. Devuelve los hosts parados ahora."""
+    comparten todas). Tras FALLOS_PARA_PARAR búsquedas seguidas así, se marca («no_lee», con el motivo) para que la veas en
+    Ajustes y la desactives tú si quieres: BuscaTron no la apaga solo. Se desmarca en cuanto responde bien. Devuelve los
+    hosts marcados ahora."""
     malas, buenas = {}, set()
     for h, i in informe.items():
         t = por_host.get(h)
@@ -555,16 +556,16 @@ def para_inservibles(informe, por_host):
         cambia = False
         for t in lista:
             h = t["host"]
-            if h in buenas and (t.pop("fallos_auto", None) or t.pop("fallos_desde", None)):
+            if h in buenas and (t.pop("fallos_auto", None) or t.pop("fallos_desde", None) or t.pop("no_lee", None)):
                 t.pop("fallos_desde", None)
+                t.pop("no_lee", None)
                 cambia = True
             elif h in malas and t.get("activa", True) and not t.get("bloqueo"):
                 t["fallos_auto"] = t.get("fallos_auto", 0) + 1
                 t.setdefault("fallos_desde", time.time())
-                if t["fallos_auto"] >= FALLOS_PARA_PARAR and time.time() - t["fallos_desde"] >= HORAS_PARA_PARAR * 3600:
-                    t["activa"], t["parada"] = False, {"desde": time.time(), "motivo": malas[h]}
-                    t.pop("fallos_auto")
-                    t.pop("fallos_desde")
+                if (t["fallos_auto"] >= FALLOS_PARA_PARAR and time.time() - t["fallos_desde"] >= HORAS_PARA_PARAR * 3600
+                        and not t.get("no_lee")):
+                    t["no_lee"] = {"desde": time.time(), "motivo": malas[h]}     # solo se marca: la desactivas tú
                     paradas.append(h)
                 cambia = True
         if cambia:

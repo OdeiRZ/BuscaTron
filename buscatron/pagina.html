@@ -1501,9 +1501,10 @@ async function cargaEstado(){let l=await api('estado_tiendas',{});if(!Array.isAr
   const bloq=tiendas.filter(t=>t.bloqueo);      // desactivadas porque bloquearon tu conexión: ninguna petición hasta que las reactives
   $('estado-t').innerHTML=bloq.map(t=>`<div class="est"><b>${esc(nombreT(t.host))} <span class="tag ko">te ha bloqueado</span></b>
       <span class="mut">Desactivada desde el ${fecha(t.bloqueo.desde)}: cortó tu conexión. BuscaTron ya no le hace ninguna petición (ni para ver si vuelve): cuando la tienda te desbloquee y entres a su web desde casa, reactívala con su chip en «Tus tiendas».</span></div>`).join('')
-    +tiendas.filter(t=>t.parada&&!t.activa).map(t=>`<div class="est"><b>${esc(nombreT(t.host))} <span class="tag ko">parada</span></b>
-      <span class="mut">Desactivada sola el ${fecha(t.parada.desde)}: ${esc(t.parada.motivo)}, así que no daba resultados y frenaba al resto. Si la quieres probar otra vez, actívala con su chip en «Tus tiendas»; si no, bórrala.</span></div>`).join('')
-    +(atencion.length?atencion.filter(e=>!bloq.some(t=>t.host===e.host)&&!tiendas.some(t=>t.host===e.host&&t.parada&&!t.activa)).map(fila).join(''):'<p class="ok">Todas tus tiendas responden bien.</p>')
+    +tiendas.filter(t=>t.no_lee&&t.activa).map(t=>`<div class="est"><b>${esc(nombreT(t.host))} <span class="tag ko">no da resultados</span></b>
+      <span class="mut">Desde el ${fecha(t.no_lee.desde)}: ${esc(t.no_lee.motivo)}. Se sigue consultando en cada revisión sin dar nada y frena al resto. Conviene desactivarla.</span>
+      <button type="button" class="peli mini" data-act="${esc(t.host)}">Desactivar</button></div>`).join('')
+    +(atencion.length?atencion.filter(e=>!bloq.some(t=>t.host===e.host)&&!tiendas.some(t=>t.host===e.host&&t.no_lee&&t.activa)).map(fila).join(''):'<p class="ok">Todas tus tiendas responden bien.</p>')
     +(ok.length?`<details id="estado-ok" ${abierto?'open':''}><summary>${ok.length} tienda${ok.length===1?'':'s'} sin problemas</summary>${ok.map(fila).join('')}</details>`:'');
   document.querySelectorAll('#estado-t [data-act]').forEach(b=>b.onclick=async()=>{const t=tiendas.find(x=>x.host===b.dataset.act);if(!t)return;
     t.activa=!t.activa;await guardaActivas(t);cargaEstado();aviso(t.activa?'Tienda activada: entra en tus búsquedas':'Tienda desactivada: ya no se consulta');});}

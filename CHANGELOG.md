@@ -3,6 +3,11 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.25.14] - 2026-11-28
+
+### Cambiado
+- BuscaTron ya no desactiva tiendas solo. Una tienda que no se puede leer (sin buscador o con captcha) 3 veces seguidas durante más de un día sale en Ajustes → Estado de las tiendas como «no da resultados», con el motivo y un botón «Desactivar»: lo decides tú. La marca se quita sola en cuanto vuelve a responder bien.
+
 ## [0.25.13] - 2026-11-28
 
 ### Corregido (revisión xhigh)

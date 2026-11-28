@@ -37,13 +37,8 @@ class Inservibles(unittest.TestCase):
         tiendas.guarda(l)
         self.assertEqual(sorted(self._vuelta(inf)), ["a.es", "b.es"])
         t = {x["host"]: x for x in tiendas.carga()}
-        self.assertEqual((t["a.es"]["activa"], t["a.es"]["parada"]["motivo"]), (False, "no consigo encontrar su buscador (nunca ha dado ningún resultado)"))
-        self.assertTrue(t["c.es"]["activa"])                       # responde sin el juego: no es un fallo
-        h = web.Handler.__new__(web.Handler)
-        r = h._cambia_tiendas({"activas": ["a.es", "c.es"], "reactivar": "c.es"})      # página vieja tocando otra tienda
-        self.assertEqual((r[0]["activa"], "parada" in r[0]), (False, True))
-        r = h._cambia_tiendas({"activas": ["a.es", "c.es"], "reactivar": "a.es"})
-        self.assertNotIn("parada", r[0])
+        self.assertEqual((t["a.es"]["activa"], t["a.es"]["no_lee"]["motivo"]), (True, "no consigo encontrar su buscador (nunca ha dado ningún resultado)"))
+        self.assertNotIn("no_lee", t["c.es"])                      # responde sin el juego: no es un fallo
 
     def test_un_acierto_reinicia_la_cuenta(self):
         tiendas.guarda([{"host": "a.es", "activa": True, "plantilla": None}])
@@ -51,7 +46,7 @@ class Inservibles(unittest.TestCase):
         self._vuelta(mala), self._vuelta(mala)
         self._vuelta({"a.es": {"brutos": 5, "encontrados": 2, "error": None}})
         self._vuelta(mala), self._vuelta(mala)
-        self.assertTrue(tiendas.carga()[0]["activa"])
+        self.assertNotIn("no_lee", tiendas.carga()[0])
 
     def test_caida_no_cuenta(self):
         tiendas.guarda([{"host": "a.es", "activa": True, "plantilla": None}])
