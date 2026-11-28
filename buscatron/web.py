@@ -287,7 +287,7 @@ class Handler(BaseHTTPRequestHandler):
             return self._enviar(LOGIN.encode(), "text/html; charset=utf-8")
         url = urlparse(self.path)
         rutas = {"/api/tiendas": cfg.carga, "/api/progreso": progreso.lista, "/api/rebajas": lambda: historico.proxima_campana(), "/api/compartido": recoge_compartido, "/api/milista": seguimiento.mi_lista, "/api/seguimientos": seguimiento.lista, "/api/avisos": seguimiento.avisos,
-                 "/api/ajustes": ajustes.publico, "/api/red": self._red, "/api/avisos_vistos": lambda: {"hasta": int(ajustes.carga().get("avisos_vistos") or 0)},
+                 "/api/ajustes": ajustes.publico, "/api/red": self._red, "/api/avisos_vistos": lambda: {"hasta": seguimiento.marca_vistos(0)},
                  "/api/arranque": lambda: {"disponible": arranque.disponible(), "activo": arranque.activo()},
                  "/api/historial": lambda: (motor.historial_producto(parse_qs(url.query)["grupo"][0]) if parse_qs(url.query).get("grupo")
                                             else motor.historial_de(parse_qs(url.query).get("url", [""])[0])),
@@ -468,10 +468,7 @@ class Handler(BaseHTTPRequestHandler):
         if ruta == "/api/compra":             # la forma más barata de comprar varios juegos de Mi lista a la vez
             return seguimiento.compra_conjunta(c.get("grupos") or [])
         if ruta == "/api/avisos_vistos":      # el último aviso que ya has visto, igual en el PC y en el móvil
-            with cfg.cerrojo:
-                hasta = max(int(ajustes.carga().get("avisos_vistos") or 0), int(c.get("hasta") or 0))
-                ajustes.guarda({"avisos_vistos": hasta})
-            return {"hasta": hasta}
+            return {"hasta": seguimiento.marca_vistos(int(c.get("hasta") or 0))}
         if ruta == "/api/avisos":
             if c.get("accion") == "vaciar":
                 seguimiento.vacia_avisos()
@@ -575,6 +572,8 @@ class Handler(BaseHTTPRequestHandler):
                 t["activa"] = t["host"] in c["activas"]
                 if t.get("bloqueo") and c.get("reactivar") != t["host"]:
                     t["activa"], t["manual"] = False, True      # página abierta de antes del bloqueo: sigue sin recibir peticiones
+                if t.get("parada") and c.get("reactivar") != t["host"]:
+                    t["activa"] = False                          # página abierta de antes de pararse: sigue parada
                 if t["activa"]:
                     t.pop("parada", None)                        # la reactivas tú: se vuelve a intentar
                 if t["activa"] and (bloqueo := t.pop("bloqueo", None)):     # la reactivas tú: deja de vigilarse como «te ha bloqueado»

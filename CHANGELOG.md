@@ -3,6 +3,16 @@
 Todos los cambios relevantes de BuscaTron se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [0.25.12] - 2026-11-28
+
+### Corregido (quinta revisión de código)
+- La parada automática apagaba una tienda que funciona y solo no tenía el juego; ahora solo cuenta «no encuentro su buscador» de verdad y el captcha también con ventana. Una página abierta de antes ya no reactiva una tienda parada.
+- Tiendas bloqueadas: si el archivo de tiendas no se puede leer en ese instante, ya no se da por hecho que no hay ninguna bloqueada, y un bloqueo justo después de otro guardado ya no se pasa por alto.
+- Las fusiones de nombres se recuerdan: el mismo juego va siempre al mismo grupo, venga solo o con su variante, así que su objetivo 🎯 y su historial siguen aplicándose. «Ant-Man» ya no cuenta como relleno.
+- El precio máximo como aviso se calcula al avisar, no se guarda: si subes el máximo, el aviso sube con él.
+- Lo visto en Avisos se lee sin reescribir los ajustes, solo se guarda si cambia, y nunca pasa del último aviso (con una base restaurada vuelven a salir los nuevos).
+- «👁️ Vigilar» avisa si la sesión ha caducado en vez de no hacer nada.
+
 ## [0.25.11] - 2026-11-27
 
 ### Corregido

@@ -526,9 +526,9 @@ def para_inservibles(informe, por_host):
         if t is None or "brutos" not in i:
             continue
         err = i.get("error_tienda") or i.get("error") or ""
-        if err.startswith(DESAFIO):
+        if err.startswith(DESAFIO) or err.startswith(DESAFIO_SIN_RESOLVER):
             malas[h] = "pide demostrar que eres humano (captcha)"
-        elif not t.get("plantilla") and not i.get("encontrados") and not i.get("brutos") and not es_caida(err):
+        elif err.startswith("no encuentro su buscador"):        # sin el juego no cuenta: «no tiene nada que coincida»
             malas[h] = "no encuentro su buscador"
         elif i.get("brutos") or i.get("encontrados"):
             buenas.add(h)
@@ -650,8 +650,7 @@ def grupo_de(titulo, frases=()):
 
 # Lo que una tienda añade al nombre sin cambiar de producto: se puede ignorar para juntar dos grupos. Cualquier otra palabra
 # de más puede ser otro producto («Black Panther» y «Black Panther Shuri» son dos packs), así que no se junta.
-RELLENO = {"cinco", "escenario", "color", "cueva", "roja", "ant", "man", "nuevo", "oferta", "precintado", "envio", "gratis",
-           "stock", "disponible", "original", "oficial", "lcg", "card", "game", "living", "unico", "completo", "esp", "es"}
+RELLENO = {"cinco", "escenario", "color", "cueva", "roja", "precintado", "unico", "completo"}
 
 
 def fusiona_grupos(gs, consulta, tipos=None):
@@ -662,6 +661,7 @@ def fusiona_grupos(gs, consulta, tipos=None):
     RELLENO («Héroes Reunidos 2» no es «Héroes Reunidos»). tipos: {grupo: tipo}."""
     base = set(clave_producto(consulta).split()) if consulta else set()
     claves = {g: set(g[2:].split()) for g in set(gs) if g.startswith("c:")}
+    claves.update({a: set(a[2:].split()) for g, a in _alias().items() if g in claves and a not in claves})
     tipos = tipos or {}
     clase = lambda g: tipos.get(g) if tipos.get(g) in ("accesorio", "lote") else "juego"     # una expansión también es el juego
     out = {}
@@ -670,10 +670,35 @@ def fusiona_grupos(gs, consulta, tipos=None):
                 and pal - p <= RELLENO and clase(o) == clase(g)]
         if cand:
             out[g] = max(cand)[1]
+    conocidos = _alias()
+    nuevos = {g: a for g, a in out.items() if conocidos.get(g) != a}
+    for g in claves:                     # lo que ya se juntó otra vez sigue junto aunque hoy no venga su pareja
+        if g not in out and g in conocidos:
+            out[g] = conocidos[g]
     for g in list(out):                  # en cadena: A→B→C acaba en C
-        while out[g] in out:
+        vistos = {g}
+        while out[g] in out and out[g] not in vistos:
+            vistos.add(out[g])
             out[g] = out[out[g]]
+    if nuevos:
+        with bd.conecta() as c:
+            c.executemany("INSERT OR REPLACE INTO alias_grupos(de, a, ts) VALUES(?,?,?)", [(g, a, time.time()) for g, a in nuevos.items()])
+        _alias_cache.update(nuevos)
     return out
+
+
+_alias_cache = {}
+_alias_leido = [None]
+
+
+def _alias():
+    """Las fusiones ya hechas (grupo largo → grupo con el que se juntó), de la base de datos."""
+    if _alias_leido[0] != bd.RUTA:
+        with bd.conecta() as c:
+            _alias_cache.clear()
+            _alias_cache.update({r["de"]: r["a"] for r in c.execute("SELECT de, a FROM alias_grupos")})
+        _alias_leido[0] = bd.RUTA
+    return _alias_cache
 
 
 def grupos(titulos, consulta, alguna=""):

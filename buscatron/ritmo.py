@@ -26,11 +26,14 @@ def _comprueba(h):
     import os
     from . import tiendas as cfg
     try:
-        marca = (cfg.RUTA, os.stat(cfg.RUTA).st_mtime_ns)
-    except OSError:
-        marca = (cfg.RUTA, None)
-    if marca != _bloqueadas[0]:
-        lista = cfg.lee_json(cfg.RUTA) if marca[1] is not None else []
+        st = os.stat(cfg.RUTA)
+        marca = (cfg.RUTA, st.st_mtime_ns, st.st_size, cfg.escrituras[0])
+    except FileNotFoundError:
+        marca = (cfg.RUTA, None, None, cfg.escrituras[0])
+    except OSError:                     # en pleno cambio de archivo: nada de suponer que no hay bloqueadas
+        marca = None
+    if marca is None or marca != _bloqueadas[0]:
+        lista = cfg.lee_json(cfg.RUTA) if marca is None or marca[1] is not None else []     # lee_json reintenta; si falla, no se pide nada
         _bloqueadas[:] = [marca, frozenset(host("https://" + t["host"]) for t in lista if t.get("bloqueo"))]
     if h in _bloqueadas[1]:
         raise Prohibida("esa tienda te ha bloqueado: no se le hace ninguna petición hasta que la reactives")

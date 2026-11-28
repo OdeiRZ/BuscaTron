@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS ignorados(clave TEXT PRIMARY KEY, titulo TEXT, ts REA
 CREATE TABLE IF NOT EXISTS estado_tiendas(host TEXT, ts REAL, consulta TEXT, encontrados INTEGER, error TEXT);
 CREATE INDEX IF NOT EXISTS ix_estado_tiendas ON estado_tiendas(host, ts);
 CREATE TABLE IF NOT EXISTS objetivos(clave TEXT PRIMARY KEY, titulo TEXT, precio REAL, ts REAL);
+CREATE TABLE IF NOT EXISTS alias_grupos(de TEXT PRIMARY KEY, a TEXT, ts REAL);
 CREATE TABLE IF NOT EXISTS vinculos_amazon(clave TEXT PRIMARY KEY, asin TEXT, titulo TEXT, ts REAL);
 CREATE TABLE IF NOT EXISTS caidas(host TEXT PRIMARY KEY, desde REAL, fallos INTEGER);
 CREATE TABLE IF NOT EXISTS camel_extremos(asin TEXT PRIMARY KEY, minimo REAL, fecha_minimo TEXT, maximo REAL, fecha_maximo TEXT, media REAL, actual REAL, ts REAL);

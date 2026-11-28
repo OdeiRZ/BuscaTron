@@ -141,9 +141,13 @@ def escribe_json(ruta, datos):
     os.replace(tmp, ruta)
 
 
+escrituras = [0]                # veces que se ha guardado la lista en este proceso (ritmo.py no se fía solo de la fecha)
+
+
 def guarda(tiendas):
     with cerrojo:
         escribe_json(RUTA, tiendas)
+        escrituras[0] += 1
 
 
 def aplica_descubiertas(cambios):

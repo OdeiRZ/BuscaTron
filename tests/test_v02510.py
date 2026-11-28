@@ -24,7 +24,7 @@ class Inservibles(unittest.TestCase):
     def test_para_tras_tres_y_se_reactiva(self):
         tiendas.guarda([{"host": "a.es", "activa": True, "plantilla": None}, {"host": "b.es", "activa": True, "plantilla": "https://b.es/?q={q}"},
                         {"host": "c.es", "activa": True, "plantilla": "https://c.es/?q={q}"}])
-        inf = {"a.es": {"brutos": 0, "encontrados": 0, "error": motor.SIN_COINCIDENCIAS},
+        inf = {"a.es": {"brutos": 0, "encontrados": 0, "error": "no encuentro su buscador: añade la dirección"},
                "b.es": {"brutos": 0, "encontrados": 0, "error": motor.DESAFIO},
                "c.es": {"brutos": 0, "encontrados": 0, "error": motor.SIN_COINCIDENCIAS}}
         self.assertEqual(self._vuelta(inf), [])
@@ -33,12 +33,15 @@ class Inservibles(unittest.TestCase):
         t = {x["host"]: x for x in tiendas.carga()}
         self.assertEqual((t["a.es"]["activa"], t["a.es"]["parada"]["motivo"]), (False, "no encuentro su buscador"))
         self.assertTrue(t["c.es"]["activa"])                       # responde sin el juego: no es un fallo
-        r = web.Handler.__new__(web.Handler)._cambia_tiendas({"activas": ["a.es", "c.es"], "reactivar": "a.es"})
+        h = web.Handler.__new__(web.Handler)
+        r = h._cambia_tiendas({"activas": ["a.es", "c.es"], "reactivar": "c.es"})      # página vieja tocando otra tienda
+        self.assertEqual((r[0]["activa"], "parada" in r[0]), (False, True))
+        r = h._cambia_tiendas({"activas": ["a.es", "c.es"], "reactivar": "a.es"})
         self.assertNotIn("parada", r[0])
 
     def test_un_acierto_reinicia_la_cuenta(self):
         tiendas.guarda([{"host": "a.es", "activa": True, "plantilla": None}])
-        mala = {"a.es": {"brutos": 0, "encontrados": 0, "error": motor.SIN_COINCIDENCIAS}}
+        mala = {"a.es": {"brutos": 0, "encontrados": 0, "error": "no encuentro su buscador: añade la dirección"}}
         self._vuelta(mala), self._vuelta(mala)
         self._vuelta({"a.es": {"brutos": 5, "encontrados": 2, "error": None}})
         self._vuelta(mala), self._vuelta(mala)

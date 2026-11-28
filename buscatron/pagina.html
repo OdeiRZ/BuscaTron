@@ -744,7 +744,8 @@ async function vigilaJuego(g){const nombre=tituloProducto(g),barato=Math.min(...
   if(v===null)return;const n=Number(v.replace(',','.').replace(/[^\d.]/g,''));if(!(n>0)){aviso('Escribe un precio, por ejemplo 30');return;}
   const consulta=nombre.replace(/[:\-–]/g,' ').replace(/\s+/g,' ').trim();
   const norm=t=>(t||'').normalize('NFD').replace(/\p{M}/gu,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
-  const ya=(await api('seguimientos')||[]).find(s=>norm(s.consulta)===norm(consulta));
+  const ls=await api('seguimientos');if(!Array.isArray(ls)){aviso((ls&&ls.error)||'No se pudo consultar tus vigiladas');return;}
+  const ya=ls.find(s=>norm(s.consulta)===norm(consulta));
   if(ya){aviso(`Ya vigilas «${ya.nombre}»: cambia su objetivo en Vigiladas`);return;}
   const r=await api('seguimientos',{nombre,consulta,objetivo:n,bajo_historico:15,sin_agotados:true,castellano:true,canales:'app,telegram',cada_horas:12,
     opciones:{idioma:'castellano',con_envio:true}});
@@ -1401,7 +1402,7 @@ function envioTxt(a){return a.envio==null?'':`<span class="av-envio">${a.envio>0
 let vistosAntes=null;      // el último aviso que ya habías visto al entrar: los posteriores llevan «Nuevo»
 // Lo visto lo guarda BuscaTron (vale en todos tus dispositivos); lo que guardaba antes cada navegador se suma una vez.
 async function vistos(hasta){let local=0;try{local=Number(localStorage.getItem('bt-vistos')||0);localStorage.removeItem('bt-vistos');}catch(e){}
-  const r=await api('avisos_vistos',{hasta:Math.max(hasta||0,local)});return Number(r&&r.hasta)||0;}
+  const h=Math.max(hasta||0,local),r=await api('avisos_vistos',h?{hasta:h}:undefined);return Number(r&&r.hasta)||0;}
 let avVuelta=0;
 async function cargaAvisos(){const mia=++avVuelta;const [todos,vig]=await Promise.all([api('avisos').catch(()=>null),api('seguimientos').catch(()=>segs)]);   // sin red: lo que haya   // vigiladas al día: su «última búsqueda»
  if(mia!==avVuelta||!Array.isArray(todos))return;     // otra carga más reciente manda

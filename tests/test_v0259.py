@@ -15,7 +15,7 @@ class AvisoPorMaximo(unittest.TestCase):
             a = seguimiento.guarda({"consulta": "x", "pmax": "39"})
             b = seguimiento.guarda({"consulta": "y", "pmax": "39", "objetivo": "35"})
             c = seguimiento.guarda({"consulta": "z"})
-            obj = {s["id"]: s["objetivo"] for s in seguimiento.lista()}
+            obj = {s["id"]: seguimiento.objetivo_de(s) for s in seguimiento.lista()}
         self.assertEqual((obj[a], obj[b], obj[c]), (39, 35, None))
 
 

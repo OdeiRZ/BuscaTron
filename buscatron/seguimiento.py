@@ -5,7 +5,7 @@ import statistics
 import threading
 import time
 
-from . import bd, motor, notifica, progreso
+from . import ajustes, bd, motor, notifica, progreso
 
 CAMPOS = ("nombre", "consulta", "incluir", "excluir", "pmin", "pmax", "objetivo", "bajo_historico",
           "sin_agotados", "castellano", "opciones", "canales", "cada_horas", "activo")
@@ -29,6 +29,12 @@ def _num(v):
         return float(str(v).replace(",", ".")) if str(v).strip() != "" else None
     except ValueError:
         return None
+
+
+def objetivo_de(seg):
+    """A qué precio avisa una vigilada: su «Avisarme si cuesta como mucho» o, si está vacío, su precio máximo (con un
+    máximo y sin aviso no avisaría nunca)."""
+    return seg["objetivo"] if seg.get("objetivo") is not None else seg.get("pmax")
 
 
 def opciones_de(seg):
@@ -80,8 +86,6 @@ def guarda(d):
          "activo": 1 if d.get("activo", True) else 0}
     if not v["consulta"]:
         raise ValueError("falta la búsqueda")
-    if v["objetivo"] is None and v["pmax"] is not None:     # con un precio máximo y sin aviso no avisaría nunca: avisa a ese precio
-        v["objetivo"] = v["pmax"]
     if v["pmin"] is not None and v["pmax"] is not None and v["pmin"] > v["pmax"]:
         raise ValueError("el precio mínimo es mayor que el máximo: no encontraría nada")
     with bd.conecta() as c:
@@ -127,6 +131,19 @@ def avisos(limite=500):
         a["objetivo_producto"], a["objetivo_clave"] = (objs[k]["precio"], k) if k else (None, g)
         a["envio"] = motor.envio_de(tiendas_.get(a["tienda"], {}), a["precio"])      # None: no se sabe
     return filas
+
+
+def marca_vistos(hasta):
+    """El último aviso que ya has visto (igual en todos tus dispositivos); sube a `hasta` si es mayor. Nunca pasa del último
+    aviso que existe: con una base restaurada de una copia, los avisos nuevos vuelven a salir como nuevos."""
+    with bd.conecta() as c:
+        maximo = c.execute("SELECT COALESCE(MAX(id), 0) FROM avisos").fetchone()[0]
+    with ajustes._cerrojo:
+        visto = int(ajustes.carga().get("avisos_vistos") or 0)
+        nuevo = min(max(visto, hasta), maximo)
+        if nuevo != visto:
+            ajustes.guarda({"avisos_vistos": nuevo})
+    return nuevo
 
 
 def borra_aviso(aviso_id):
@@ -187,8 +204,8 @@ def _motivo(c, seg, x):
     if propio is not None:
         if p <= propio:
             return cuesta + f", por debajo de tu objetivo para este producto de {propio:.2f} €".replace(".", ",")
-    elif seg["objetivo"] is not None and p <= seg["objetivo"]:
-        return cuesta + f", por debajo de tu objetivo de {seg['objetivo']:.2f} €".replace(".", ",")
+    elif objetivo_de(seg) is not None and p <= objetivo_de(seg):
+        return cuesta + f", por debajo de tu objetivo de {objetivo_de(seg):.2f} €".replace(".", ",")
     if seg["bajo_historico"]:
         previos = [r[0] for r in c.execute(
             "SELECT precio FROM precios WHERE url=? AND ts < ? AND agotado=0 AND preventa=0",
@@ -201,7 +218,7 @@ def _motivo(c, seg, x):
     if not x.get("agotado") and not x.get("importado"):
         ult = c.execute("SELECT agotado FROM precios WHERE url=? AND ts < ? AND seg_id=? ORDER BY ts DESC LIMIT 1",
                         (x["url"], x["_ts"], seg.get("id"))).fetchone()
-        tope = x.get("objetivo_producto") or seg["objetivo"]
+        tope = x.get("objetivo_producto") or objetivo_de(seg)
         if ult and ult[0] and (tope is None or p <= tope * 1.15):
             return f"vuelve a estar disponible a {x['precio']:.2f} €".replace(".", ",")
     return None
@@ -575,7 +592,7 @@ def mi_lista():
                         "titulos": [x["titulo"] for x in o], "mejor": o[0], "ofertas": len(o),
                         "tiendas": len({x["tienda"] for x in o}), "minimo": min(minimos.get(grupo, o[0]["precio"]), o[0]["precio"]),
                         "mediana": statistics.median(vistos[grupo]) if len(vistos.get(grupo, [])) >= 5 else None,
-                        "objetivo": obj if obj is not None else seg["objetivo"], "objetivo_propio": obj is not None, "objetivo_clave": k or grupo,
+                        "objetivo": obj if obj is not None else objetivo_de(seg), "objetivo_propio": obj is not None, "objetivo_clave": k or grupo,
                         "con_envio": bool(opc.get("con_envio")), "revisada": seg["ultima"],
                         "por_tienda": _mejor_por_tienda(o)})
     return out
@@ -702,8 +719,8 @@ def _fuera_de_objetivo(seg, aviso):
     final = re.match(r"cuesta ([\d.,]+) € con envío", m)
     if final:
         precio = float(final.group(1).replace(",", "."))
-    return (de_objetivo and "para este producto" not in m and seg["objetivo"] is not None
-            and precio > seg["objetivo"] + 0.005)
+    return (de_objetivo and "para este producto" not in m and objetivo_de(seg) is not None
+            and precio > objetivo_de(seg) + 0.005)
 
 
 def limpia_avisos_por_filtros(seg_id):
